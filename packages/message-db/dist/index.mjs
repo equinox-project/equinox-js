@@ -1,39 +1,5 @@
-"use strict";
-var __create = Object.create;
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-
-// src/index.ts
-var src_exports = {};
-__export(src_exports, {
-  MessageDbCategory: () => MessageDbCategory,
-  MessageDbConnection: () => MessageDbConnection,
-  MessageDbContext: () => MessageDbContext
-});
-module.exports = __toCommonJS(src_exports);
-
 // src/lib/Category.ts
-var Equinox = __toESM(require("@equinox-js/core"));
+import * as Equinox from "@equinox-js/core";
 
 // src/lib/Token.ts
 var create = (version) => ({
@@ -69,13 +35,13 @@ var decode = (tryDecode, events) => {
 };
 
 // src/lib/Write.ts
-var import_api = require("@opentelemetry/api");
-var tracer = import_api.trace.getTracer("@birdiecare/eqx-message-db", "1.0.0");
+import { SpanKind, trace } from "@opentelemetry/api";
+var tracer = trace.getTracer("@birdiecare/eqx-message-db", "1.0.0");
 function writeEvents(conn, category, streamId, streamName2, version, events) {
   return tracer.startActiveSpan(
     "WriteEvents",
     {
-      kind: import_api.SpanKind.CLIENT,
+      kind: SpanKind.CLIENT,
       attributes: {
         "eqx.category": category,
         "eqx.stream_id": streamId,
@@ -89,8 +55,8 @@ function writeEvents(conn, category, streamId, streamName2, version, events) {
 }
 
 // src/lib/Read.ts
-var import_api2 = require("@opentelemetry/api");
-var tracer2 = import_api2.trace.getTracer("@birdiecare/eqx-message-db", "1.0.0");
+import { context, SpanKind as SpanKind2, trace as trace2 } from "@opentelemetry/api";
+var tracer2 = trace2.getTracer("@birdiecare/eqx-message-db", "1.0.0");
 var toSlice = (events, isLast) => {
   const lastVersion = events.length === 0 ? -1n : events[events.length - 1].position;
   return { messages: events, isEnd: isLast, lastVersion };
@@ -117,7 +83,7 @@ function loggedReadSlice(reader, streamName2, batchSize, startPos, batchIndex, r
   return tracer2.startActiveSpan(
     "ReadSlice",
     {
-      kind: import_api2.SpanKind.CLIENT,
+      kind: SpanKind2.CLIENT,
       attributes: {
         "eqx.stream_name": streamName2,
         "eqx.batch_index": batchIndex,
@@ -157,7 +123,7 @@ function loadForwardsFrom(reader, batchSize, maxPermittedBatchReads, streamName2
     }
     return [versionFromStream, events];
   };
-  const span = import_api2.trace.getSpan(import_api2.context.active());
+  const span = trace2.getSpan(context.active());
   span?.setAttributes({
     "eqx.batch_size": batchSize,
     "eqx.start_position": Number(startPosition),
@@ -170,11 +136,11 @@ function loadForwardsFrom(reader, batchSize, maxPermittedBatchReads, streamName2
   );
 }
 function loadLastEvent(reader, requiresLeader, streamName2, eventType) {
-  import_api2.trace.getSpan(import_api2.context.active())?.setAttribute("eqx.load_method", "Last");
+  trace2.getSpan(context.active())?.setAttribute("eqx.load_method", "Last");
   return tracer2.startActiveSpan(
     "ReadLast",
     {
-      kind: import_api2.SpanKind.CLIENT,
+      kind: SpanKind2.CLIENT,
       attributes: {
         "eqx.stream_name": streamName2,
         "eqx.require_leader": requiresLeader
@@ -188,7 +154,9 @@ function loadLastEvent(reader, requiresLeader, streamName2, eventType) {
 }
 
 // src/lib/Caching.ts
-var import_core = require("@equinox-js/core");
+import {
+  CacheEntry
+} from "@equinox-js/core";
 var Decorator = class {
   constructor(inner, updateCache) {
     this.inner = inner;
@@ -234,7 +202,7 @@ var Decorator = class {
   }
 };
 function applyCacheUpdatesWithSlidingExpiration(cache, prefix, slidingExpirationInMs, category, supersedes2) {
-  const mkCacheEntry = ([initialToken, initialState]) => new import_core.CacheEntry(initialToken, initialState);
+  const mkCacheEntry = ([initialToken, initialState]) => new CacheEntry(initialToken, initialState);
   const options = { relative: slidingExpirationInMs };
   const addOrUpdateSlidingExpirationCacheEntry = (streamName2, value) => cache.updateIfNewer(
     prefix + streamName2,
@@ -248,7 +216,7 @@ function applyCacheUpdatesWithSlidingExpiration(cache, prefix, slidingExpiration
   );
 }
 function applyCacheUpdatesWithFixedTimeSpan(cache, prefix, lifetimeInMs, category, supersedes2) {
-  const mkCacheEntry = ([initialToken, initialState]) => new import_core.CacheEntry(initialToken, initialState);
+  const mkCacheEntry = ([initialToken, initialState]) => new CacheEntry(initialToken, initialState);
   const addOrUpdateFixedLifetimeCacheEntry = (streamName2, value) => {
     const expirationPoint = Date.now() + lifetimeInMs;
     const options = { absolute: expirationPoint };
@@ -263,11 +231,11 @@ function applyCacheUpdatesWithFixedTimeSpan(cache, prefix, lifetimeInMs, categor
 }
 
 // src/lib/Category.ts
-var import_api4 = require("@opentelemetry/api");
+import { context as context3, trace as trace4 } from "@opentelemetry/api";
 
 // src/lib/MessageDbClient.ts
-var import_crypto = require("crypto");
-var import_api3 = require("@opentelemetry/api");
+import { randomUUID } from "crypto";
+import { trace as trace3, context as context2, propagation, SpanStatusCode } from "@opentelemetry/api";
 var MessageDbWriter = class {
   constructor(pool) {
     this.pool = pool;
@@ -280,11 +248,11 @@ var MessageDbWriter = class {
       for (let i = 0; i < messages.length; ++i) {
         const message = messages[i];
         const metadata = message.metadata || {};
-        import_api3.propagation.inject(import_api3.context.active(), metadata);
+        propagation.inject(context2.active(), metadata);
         const results = await client.query(
-          `select position from message_store.write_message($1, $2, $3, $4, $5, $6)`,
+          `select message_store.write_message($1, $2, $3, $4, $5, $6)`,
           [
-            message.id || (0, import_crypto.randomUUID)(),
+            message.id || randomUUID(),
             streamName2,
             message.type,
             JSON.stringify(message.data),
@@ -292,16 +260,17 @@ var MessageDbWriter = class {
             expectedVersion == null ? null : Number(expectedVersion++)
           ]
         );
-        position = results.rows[0].position;
+        position = BigInt(results.rows[0].write_message);
       }
       await client.query("COMMIT");
     } catch (err) {
-      const span = import_api3.trace.getActiveSpan();
+      const span = trace3.getActiveSpan();
       span?.recordException(err);
       span?.setStatus({
-        code: import_api3.SpanStatusCode.ERROR,
+        code: SpanStatusCode.ERROR,
         message: "ConflictUnknown"
       });
+      console.error(err);
       return { type: "ConflictUnknown" };
     } finally {
       client.release();
@@ -596,7 +565,7 @@ var Folder = class {
     }
     const [cache, prefix] = this.readCache;
     const cacheItem = await cache.tryGet(prefix + streamName2);
-    import_api4.trace.getSpan(import_api4.context.active())?.setAttribute("eqx.cache_hit", cacheItem != null);
+    trace4.getSpan(context3.active())?.setAttribute("eqx.cache_hit", cacheItem != null);
     if (!cacheItem)
       return load();
     if (allowStale)
@@ -676,9 +645,8 @@ var MessageDbCategory = class extends Equinox.Category {
     return new MessageDbCategory(resolveInner, empty);
   }
 };
-// Annotate the CommonJS export names for ESM import in node:
-0 && (module.exports = {
+export {
   MessageDbCategory,
   MessageDbConnection,
   MessageDbContext
-});
+};

@@ -25,7 +25,7 @@ export class MessageDbWriter {
         const metadata = message.metadata || {}
         propagation.inject(context.active(), metadata)
         const results = await client.query(
-          `select position from message_store.write_message($1, $2, $3, $4, $5, $6)`,
+          `select message_store.write_message($1, $2, $3, $4, $5, $6)`,
           [
             message.id || randomUUID(),
             streamName,
@@ -33,10 +33,11 @@ export class MessageDbWriter {
             JSON.stringify(message.data),
             JSON.stringify(metadata || null),
             expectedVersion == null ? null : Number(expectedVersion++),
+
           ]
         )
 
-        position = results.rows[0].position
+        position = BigInt(results.rows[0].write_message)
       }
 
       await client.query("COMMIT")
@@ -47,6 +48,7 @@ export class MessageDbWriter {
         code: SpanStatusCode.ERROR,
         message: "ConflictUnknown",
       })
+      console.error(err)
       return { type: "ConflictUnknown" }
     } finally {
       client.release()

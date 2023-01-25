@@ -1,0 +1,8 @@
+version: '3.7'
+
+services:
+  messagedb:
+    image: ethangarofolo/message-db
+    ports:
+      - "5432:5432"
+

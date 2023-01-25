@@ -1,5 +1,5 @@
-import * as Equinox from '@equinox/core';
-import { StreamEvent, TimelineEvent, StreamToken, ICache, ICategory, StateTuple, Codec } from '@equinox/core';
+import * as Equinox from '@equinox-js/core';
+import { StreamEvent, TimelineEvent, StreamToken, ICache, ICategory, StateTuple, Codec } from '@equinox-js/core';
 import { Pool } from 'pg';
 
 type MdbWriteResult = {
