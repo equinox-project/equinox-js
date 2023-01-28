@@ -62,7 +62,7 @@ export async function scanTip<E>(
   isOrigin: (ev: E) => boolean,
   [pos, i, xs]: [Position, bigint, TimelineEvent<InternalBody>[]]
 ): Promise<ScanResult<E>> {
-  const items = new Array(xs.length)
+  const items: E[] = []
   const isOrigin_ = async (ev: TimelineEvent<InternalBody>) => {
     const x = await tryDecode(ofInternal(ev))
     if (x == undefined) return false
@@ -178,24 +178,6 @@ export async function* walkLazy<E>(
   }
 }
 
-enum LoadResT {
-  Pos,
-  Empty,
-  Next,
-}
-
-type LoadRes = { type: LoadResT.Pos; position: Position } | { type: LoadResT.Empty } | { type: LoadResT.Next; next: bigint }
-const toPosition = (x: LoadRes) => {
-  switch (x.type) {
-    case LoadResT.Pos:
-      return x.position
-    case LoadResT.Empty:
-      return undefined
-    case LoadResT.Next:
-      throw new Error("unexpected")
-  }
-}
-
 export async function load<E>(
   minIndex: bigint | undefined,
   maxIndex: bigint | undefined,
@@ -211,26 +193,19 @@ export async function load<E>(
   let events = tip?.events ?? []
   const primary_ = await primary(minIndex, i)
   events = primary_ ? primary_.events.concat(events) : events
-  // match pos |> Option.orElse primary.maybeTipPos with Some p -> Pos p | None -> Next primary.next
   const tipPos = tip?.maybeTipPos ?? primary_?.maybeTipPos
-  const pos: LoadRes = tipPos
-    ? { type: LoadResT.Pos, position: tipPos }
-    : primary_
-    ? { type: LoadResT.Next, next: primary_.next }
-    : { type: LoadResT.Empty }
   // origin found in primary, no need to look in fallback
-  if (primary_?.found) return [toPosition(pos), events]
+  if (primary_?.found) return [tipPos, events]
   // primary had required earliest event Index, no need to look at fallback
-  if (primary_ && primary_.minIndex <= minI) return [toPosition(pos), events]
+  if (primary_ && primary_.minIndex <= minI) return [tipPos, events]
   // initial load where no documents present in stream
-  if (!primary_ && tip == null) return [toPosition(pos), events]
+  if (!primary_ && tip == null) return [tipPos, events]
   if (typeof fallback === "boolean") {
     const allowMissing = fallback
-    if (allowMissing) return [toPosition(pos), events]
+    if (allowMissing) return [tipPos, events]
     throw new Error("Origin event not found; no Archive Table supplied")
   }
-  const maxIndex_ = primary_?.minIndex ?? maxIndex
   const fb = await fallback(minIndex, primary_?.minIndex ?? maxIndex)
   const eventsWithFallback = fb?.events.concat(events) ?? events
-  return [toPosition(pos), eventsWithFallback]
+  return [tipPos, eventsWithFallback]
 }
