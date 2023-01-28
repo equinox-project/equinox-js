@@ -1,6 +1,6 @@
 import { IStream, StateTuple, StreamToken, SyncResult } from "./core"
 import { SpanKind } from "@opentelemetry/api"
-import { tracer } from "./tracing"
+import { tracer } from "./Tracing"
 
 /** Store-agnostic interface representing interactions an Application can have with a set of streams with a given pair of Event and State types */
 export interface ICategory<Event, State, Context = null> {
