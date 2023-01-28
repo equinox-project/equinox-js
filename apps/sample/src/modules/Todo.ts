@@ -118,11 +118,11 @@ export class Service {
   }
 
   static buildDynamo(context: Ddb.DynamoStoreContext, cache: Ddb.CachingStrategy) {
-    const category = Ddb.DynamoStoreCategory.build<Event, State, null>(context, ddbCodec, fold, initial, cache, {
-      type: "Snapshot",
-      toSnapshot: (s: State): Event => ({ type: "Snapshotted", data: { items: s.items, nextId: s.nextId } }),
-      isOrigin: (x) => x.type === "Snapshotted" || x.type === "Cleared",
-    })
+    const access = Ddb.AccessStrategy.Snapshot(
+      (x: Event) => x.type === "Snapshotted" || x.type === "Cleared",
+      (s: State): Event => ({ type: "Snapshotted", data: { items: s.items, nextId: s.nextId } })
+    )
+    const category = Ddb.DynamoStoreCategory.build<Event, State, null>(context, ddbCodec, fold, initial, cache, access)
     const resolve = (streamId: string) => Decider.resolve<Event, State, null>(category, Category, streamId, null)
     return new Service(resolve)
   }

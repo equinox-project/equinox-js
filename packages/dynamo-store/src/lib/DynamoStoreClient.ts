@@ -8,6 +8,7 @@ import { ICategory } from "@equinox-js/core/src"
 import { applyCacheUpdatesWithFixedTimeSpan, applyCacheUpdatesWithSlidingExpiration, CachingCategory } from "./Caching"
 import { InternalCategory } from "./Category"
 import { EncodedBody } from "./EncodedBody"
+import { AccessStrategy } from "./AccessStrategy"
 
 export class DynamoStoreClient {
   private primaryTableToSecondary: (x: string) => string
@@ -110,49 +111,6 @@ export type CachingStrategy =
    */
   | { type: "FixedTimeSpan"; cache: ICache; periodInMs: number }
 
-export type AccessStrategy<E, S> =
-  /**
-   * Don't apply any optimized reading logic. Note this can be extremely RU cost prohibitive
-   * and can severely impact system scalability. Should hence only be used with careful consideration.
-   */
-  | { type: "Unoptimized" }
-  /**
-   * Load only the single most recent event defined in <c>'event</c> and trust that doing a <c>fold</c> from any such event
-   * will yield a correct and complete state
-   * In other words, the <c>fold</c> function should not need to consider either the preceding <c>'state</state> or <c>'event</c>s.
-   * <remarks>
-   * A copy of the event is also retained in the `Tip` document in order that the state of the stream can be
-   * retrieved using a single (cached, etag-checked) point read.
-   * </remarks
-   */
-  | { type: "LatestKnownEvent" }
-  /**
-   * Allow a 'snapshot' event (and/or other events that that pass the <c>isOrigin</c> test) to be used to build the state
-   * in lieu of folding all the events from the start of the stream, as a performance optimization.
-   * <c>toSnapshot</c> is used to generate the <c>unfold</c> that will be held in the Tip document in order to
-   * enable efficient reading without having to query the Event documents.
-   */
-  | { type: "Snapshot"; isOrigin: IsOrigin<E>; toSnapshot: (s: S) => E }
-  /**
-   * Allow any events that pass the `isOrigin` test to be used in lieu of folding all the events from the start of the stream
-   * When writing, uses `toSnapshots` to 'unfold' the <c>'state</c>, representing it as one or more Event records to be stored in
-   * the Tip with efficient read cost.
-   */
-  | { type: "MultiSnapshot"; isOrigin: IsOrigin<E>; toSnapshots: (s: S) => E[] }
-  /**
-   * Instead of actually storing the events representing the decisions, only ever update a snapshot stored in the Tip document
-   * <remarks>In this mode, Optimistic Concurrency Control is necessarily based on the etag</remarks>
-   */
-  | { type: "RollingState"; toSnapshot: (s: S) => E }
-  /**
-   * Allow produced events to be filtered, transformed or removed completely and/or to be transmuted to unfolds.
-   * <remarks>
-   * In this mode, Optimistic Concurrency Control is based on the etag (rather than the normal Expected Version strategy)
-   * in order that conflicting updates to the state not involving the writing of an event can trigger retries.
-   * </remarks>
-   */
-  | { type: "Custom"; isOrigin: IsOrigin<E>; transmute: (es: E[], s: S) => [E[], E[]] }
-
 export class DynamoStoreCategory<E, S, C> extends Category<E, S, C> {
   constructor(resolveInner: (categoryName: string, streamId: string) => readonly [ICategory<E, S, C>, string], empty: [StreamToken, S]) {
     super(resolveInner, empty)
@@ -176,28 +134,9 @@ export class DynamoStoreCategory<E, S, C> extends Category<E, S, C> {
             : caching.type === "FixedTimeSpan"
             ? applyCacheUpdatesWithFixedTimeSpan(caching.cache, "", caching.periodInMs)
             : () => Promise.resolve(undefined)
-        const isOrigin =
-          access.type === "Unoptimized"
-            ? (_e: E) => false
-            : access.type === "LatestKnownEvent"
-            ? (_e: E) => true
-            : access.type === "RollingState"
-            ? (_e: E) => true
-            : access.isOrigin
-        const checkUnfolds = access.type !== "Unoptimized"
-        const mapUnfolds: MapUnfolds<E, S> =
-          access.type === "Unoptimized"
-            ? { type: "None" }
-            : access.type === "LatestKnownEvent"
-            ? { type: "Unfold", unfold: (events: E[]) => [events[events.length - 1]] }
-            : access.type === "Snapshot"
-            ? { type: "Unfold", unfold: (_: E[], state: S) => [access.toSnapshot(state)] }
-            : access.type === "MultiSnapshot"
-            ? { type: "Unfold", unfold: (_: E[], s: S) => access.toSnapshots(s) }
-            : access.type === "RollingState"
-            ? { type: "Transmute", transmute: (_: E[], s: S) => [[], [access.toSnapshot(s)]] }
-            : { type: "Transmute", transmute: access.transmute }
-
+        const isOrigin = access.isOrigin
+        const checkUnfolds = access.checkUnfolds
+        const mapUnfolds = access.mapUnfolds
         const category = new InternalCategory<E, S, C>(storeClient, codec)
         return new CachingCategory<E, S, C>(category, fold, initial, isOrigin, tryReadCache, updateCache, checkUnfolds, mapUnfolds)
       }
