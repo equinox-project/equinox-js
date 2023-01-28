@@ -1,4 +1,4 @@
-import { IStream, StateTuple, StreamToken, SyncResult } from "./core"
+import { IStream, StateTuple, StreamToken, SyncResult } from "./Core"
 import { SpanKind } from "@opentelemetry/api"
 import { tracer } from "./Tracing"
 

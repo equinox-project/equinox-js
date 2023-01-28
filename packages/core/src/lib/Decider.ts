@@ -1,5 +1,5 @@
-import { IStream, queryAsync, StateTuple, StreamToken, transactAsync } from "./core"
-import { Category } from "./category"
+import { IStream, queryAsync, StateTuple, StreamToken, transactAsync } from "./Core"
+import { Category } from "./Category"
 
 type LoadOption<State> =
   /** Default policy; Obtain the latest state from store based on consistency level configured */

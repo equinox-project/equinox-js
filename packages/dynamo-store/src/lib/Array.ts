@@ -1,5 +1,3 @@
-import { eventToSchema } from "./Schema"
-
 export const sumBy =
   <T>(fn: (x: T) => number) =>
   (xs: T[]) => {

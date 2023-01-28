@@ -1,4 +1,4 @@
-import { StreamToken } from "./core"
+import { StreamToken } from "./Core"
 import LRUCache from "lru-cache"
 
 type Expiration = { absolute: number } | { relative: number }

@@ -1,4 +1,4 @@
-import { StreamEvent, TimelineEvent } from "./types"
+import { StreamEvent, TimelineEvent } from "./Types"
 import * as zlib from "node:zlib"
 import { promisify } from "node:util"
 
@@ -37,7 +37,12 @@ export abstract class AsyncCodec<E, F, C = undefined> {
   static deflate<E, C>(codec: AsyncCodec<E, Record<string, any>, C>): AsyncCodec<E, [number, Buffer], C> {
     return AsyncCodec.map(
       codec,
-      async (x) => [1, await deflate(Buffer.from(JSON.stringify(x)))],
+      async (x) => {
+        const raw = Buffer.from(JSON.stringify(x))
+        const deflated = await deflate(raw)
+        if (deflated.length < raw.length) return [1, deflated]
+        return [0, raw]
+      },
       async ([encoding, b]) => {
         if (encoding === 0) return JSON.parse(b.toString())
         const inflated = await inflate(b, { finishFlush: zlib.constants.Z_SYNC_FLUSH })
