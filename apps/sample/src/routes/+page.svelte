@@ -1,12 +1,14 @@
 <script>
+  import {enhance} from "$app/forms"
+
   /** @type {import('./$types').PageData} */
   export let data
 </script>
 
 <h1>Todos</h1>
 
-<form method="POST" action="?/create">
-  <input type="text" name="title" />
+<form method="POST" action="?/create" use:enhance>
+  <input type="text" name="title" autofocus />
   <input type="submit" />
   <button formaction="?/clear">Clear</button>
 </form>

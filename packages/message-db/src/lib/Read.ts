@@ -1,37 +1,22 @@
 import { TimelineEvent } from "@equinox-js/core"
-import { MessageDbReader } from "./MessageDbClient"
+import { Format, MessageDbReader } from "./MessageDbClient"
 import { context, SpanKind, trace } from "@opentelemetry/api"
 
 const tracer = trace.getTracer("@birdiecare/eqx-message-db", "1.0.0")
 
 type StreamEventsSlice = {
-  messages: TimelineEvent[]
+  messages: TimelineEvent<Format>[]
   isEnd: boolean
   lastVersion: bigint
 }
 
-const toSlice = (
-  events: TimelineEvent[],
-  isLast: boolean
-): StreamEventsSlice => {
-  const lastVersion =
-    events.length === 0 ? -1n : events[events.length - 1].position
+const toSlice = (events: TimelineEvent<Format>[], isLast: boolean): StreamEventsSlice => {
+  const lastVersion = events.length === 0 ? -1n : events[events.length - 1].index
   return { messages: events, isEnd: isLast, lastVersion }
 }
 
-const readSliceAsync = async (
-  reader: MessageDbReader,
-  streamName: string,
-  batchSize: number,
-  startPos: bigint,
-  requiresLeader: boolean
-) => {
-  const page = await reader.readStream(
-    streamName,
-    startPos,
-    batchSize,
-    requiresLeader
-  )
+const readSliceAsync = async (reader: MessageDbReader, streamName: string, batchSize: number, startPos: bigint, requiresLeader: boolean) => {
+  const page = await reader.readStream(streamName, startPos, batchSize, requiresLeader)
   const isLast = page.length < batchSize
   return toSlice(page, isLast)
 }
@@ -42,11 +27,7 @@ const readLastEventAsync = async (
   requiresLeader: boolean,
   eventType?: string
 ): Promise<StreamEventsSlice> => {
-  const events = await reader.readLastEvent(
-    streamName,
-    requiresLeader,
-    eventType
-  )
+  const events = await reader.readLastEvent(streamName, requiresLeader, eventType)
   return toSlice(events == null ? [] : [events], false)
 }
 
@@ -87,12 +68,8 @@ function readBatches(
   maxPermittedReads: number | undefined,
   startPosition: bigint
 ) {
-  async function* loop(
-    batchCount: number,
-    pos: bigint
-  ): AsyncIterable<[bigint, TimelineEvent[]]> {
-    if (maxPermittedReads && batchCount >= maxPermittedReads)
-      throw new Error("Batch limit exceeded")
+  async function* loop(batchCount: number, pos: bigint): AsyncIterable<[bigint, TimelineEvent<any>[]]> {
+    if (maxPermittedReads && batchCount >= maxPermittedReads) throw new Error("Batch limit exceeded")
     const slice = await readSlice(pos, batchCount)
     yield [slice.lastVersion, slice.messages]
     if (!slice.isEnd) {
@@ -110,9 +87,7 @@ export function loadForwardsFrom(
   startPosition: bigint,
   requiresLeader: boolean
 ) {
-  const mergeBatches = async (
-    batches: AsyncIterable<[bigint, TimelineEvent[]]>
-  ) => {
+  const mergeBatches = async (batches: AsyncIterable<[bigint, TimelineEvent<any>[]]>) => {
     let versionFromStream = -1n
     const events = []
     for await (const [version, messages] of batches) {
@@ -128,20 +103,12 @@ export function loadForwardsFrom(
     "eqx.load_method": "BatchForward",
     "eqx.require_leader": requiresLeader,
   })
-  const readSlice = (start: bigint, index: number) =>
-    loggedReadSlice(reader, streamName, batchSize, start, index, requiresLeader)
+  const readSlice = (start: bigint, index: number) => loggedReadSlice(reader, streamName, batchSize, start, index, requiresLeader)
 
-  return mergeBatches(
-    readBatches(readSlice, maxPermittedBatchReads, startPosition)
-  )
+  return mergeBatches(readBatches(readSlice, maxPermittedBatchReads, startPosition))
 }
 
-export function loadLastEvent(
-  reader: MessageDbReader,
-  requiresLeader: boolean,
-  streamName: string,
-  eventType?: string
-) {
+export function loadLastEvent(reader: MessageDbReader, requiresLeader: boolean, streamName: string, eventType?: string) {
   trace.getSpan(context.active())?.setAttribute("eqx.load_method", "Last")
   return tracer.startActiveSpan(
     "ReadLast",

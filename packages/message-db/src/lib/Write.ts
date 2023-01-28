@@ -1,12 +1,10 @@
-import { MessageDbWriter } from "./MessageDbClient"
+import { Format, MessageDbWriter } from "./MessageDbClient"
 import { StreamEvent } from "@equinox-js/core"
 import { SpanKind, trace } from "@opentelemetry/api"
 
 const tracer = trace.getTracer("@birdiecare/eqx-message-db", "1.0.0")
 
-type SyncResult =
-  | { type: "Written"; position: bigint }
-  | { type: "ConflictUnknown" }
+type SyncResult = { type: "Written"; position: bigint } | { type: "ConflictUnknown" }
 
 export function writeEvents(
   conn: MessageDbWriter,
@@ -14,7 +12,7 @@ export function writeEvents(
   streamId: string,
   streamName: string,
   version: bigint | null,
-  events: StreamEvent[]
+  events: StreamEvent<Format>[]
 ): Promise<SyncResult> {
   return tracer.startActiveSpan(
     "WriteEvents",
@@ -28,7 +26,6 @@ export function writeEvents(
         "eqx.count": events.length,
       },
     },
-    (span) =>
-      conn.writeMessages(streamName, events, version).finally(() => span.end())
+    (span) => conn.writeMessages(streamName, events, version).finally(() => span.end())
   )
 }

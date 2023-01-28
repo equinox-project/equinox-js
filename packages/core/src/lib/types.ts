@@ -1,22 +1,18 @@
-export type StreamEvent = {
+export type StreamEvent<Format> = {
   /* optional id for the event */
   id?: string
   type: string
-  data: any
-  metadata?: any
+  data: Format
+  meta: Format
 }
 
-export type TimelineEvent = {
+export type TimelineEvent<Format> = {
   id: string
   time: Date
   type: string
-  data: any
-  metadata: any
-  stream_name: string
-  position: bigint
-}
-
-export type Codec<E, C=undefined> = {
-  decode(event: TimelineEvent): E | undefined
-  encode(event: E, ctx: C): StreamEvent
+  data: Format
+  meta: Format
+  index: bigint
+  isUnfold: boolean
+  size: number
 }

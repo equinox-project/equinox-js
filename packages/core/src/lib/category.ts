@@ -5,13 +5,7 @@ import { tracer } from "./tracing"
 /** Store-agnostic interface representing interactions an Application can have with a set of streams with a given pair of Event and State types */
 export interface ICategory<Event, State, Context = null> {
   /** Obtain the state from the target stream */
-  load(
-    categoryName: string,
-    streamId: string,
-    streamName: string,
-    allowStale: boolean,
-    requireLeader: boolean
-  ): Promise<StateTuple<State>>
+  load(categoryName: string, streamId: string, streamName: string, allowStale: boolean, requireLeader: boolean): Promise<StateTuple<State>>
 
   /**
    * Given the supplied `token` [and related `originState`], attempt to move to state `state'` by appending the supplied `events` to the underlying stream
@@ -31,18 +25,11 @@ export interface ICategory<Event, State, Context = null> {
 
 export class Category<Event, State, Context = null> {
   constructor(
-    private readonly resolveInner: (
-      categoryName: string,
-      streamId: string
-    ) => readonly [ICategory<Event, State, Context>, string],
+    private readonly resolveInner: (categoryName: string, streamId: string) => readonly [ICategory<Event, State, Context>, string],
     private readonly empty: StateTuple<State>
   ) {}
 
-  stream(
-    context: Context,
-    categoryName: string,
-    streamId: string
-  ): IStream<Event, State> {
+  stream(context: Context, categoryName: string, streamId: string): IStream<Event, State> {
     const [inner, streamName] = this.resolveInner(categoryName, streamId)
     return {
       loadEmpty: () => this.empty,
@@ -59,16 +46,7 @@ export class Category<Event, State, Context = null> {
               "eqx.allow_stale": allowStale,
             },
           },
-          (span) =>
-            inner
-              .load(
-                categoryName,
-                streamId,
-                streamName,
-                allowStale,
-                requireLeader
-              )
-              .finally(() => span.end())
+          (span) => inner.load(categoryName, streamId, streamName, allowStale, requireLeader).finally(() => span.end())
         ),
       trySync: (attempt, origin, events) =>
         tracer.startActiveSpan(
@@ -82,18 +60,7 @@ export class Category<Event, State, Context = null> {
               "eqx.resync_count": attempt > 1 ? attempt - 1 : undefined,
             },
           },
-          (span) =>
-            inner
-              .trySync(
-                categoryName,
-                streamId,
-                streamName,
-                context,
-                origin[0],
-                origin[1],
-                events
-              )
-              .finally(() => span.end())
+          (span) => inner.trySync(categoryName, streamId, streamName, context, origin[0], origin[1], events).finally(() => span.end())
         ),
     }
   }

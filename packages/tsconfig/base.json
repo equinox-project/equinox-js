@@ -3,7 +3,6 @@
   "display": "Default",
   "compilerOptions": {
     "target": "es2020",
-    "composite": false,
     "declaration": true,
     "declarationMap": true,
     "esModuleInterop": true,

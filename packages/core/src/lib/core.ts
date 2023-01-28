@@ -13,6 +13,7 @@ export type SyncResult<State> =
 export type StreamToken = {
   value: unknown
   version: bigint
+  bytes: number
 }
 
 /**
@@ -30,11 +31,7 @@ export interface IStream<Event, State> {
    * SyncResult.Written: implies the state is now the value represented by the Result's value
    * SyncResult.Conflict: implies the `events` were not synced; if desired the consumer can use the included resync workflow in order to retry
    */
-  trySync(
-    attempt: number,
-    originTokenAndState: [StreamToken, State],
-    events: Event[]
-  ): Promise<SyncResult<State>>
+  trySync(attempt: number, originTokenAndState: [StreamToken, State], events: Event[]): Promise<SyncResult<State>>
 }
 
 function run<Event, State, Result, V = Result>(
@@ -44,10 +41,7 @@ function run<Event, State, Result, V = Result>(
   mapResult: (r: Result, ctx: StateTuple<State>) => V,
   origin: StateTuple<State>
 ) {
-  async function loop(
-    attempt: number,
-    tokenAndState: StateTuple<State>
-  ): Promise<V> {
+  async function loop(attempt: number, tokenAndState: StateTuple<State>): Promise<V> {
     const [result, events] = await decide(tokenAndState)
     if (events.length === 0) return mapResult(result, tokenAndState)
 

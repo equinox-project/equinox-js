@@ -1,1 +1,7 @@
-{ "semi": false, "plugins": ["prettier-plugin-svelte"] }
+{
+  "semi": false,
+  "plugins": [
+    "prettier-plugin-svelte"
+  ],
+  "printWidth": 150
+}

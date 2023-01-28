@@ -1,6 +1,7 @@
 {
   "name": "@equinox-js/core",
   "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts"

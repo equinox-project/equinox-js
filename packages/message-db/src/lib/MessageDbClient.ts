@@ -3,18 +3,13 @@ import { randomUUID } from "crypto"
 import { trace, context, propagation, SpanStatusCode } from "@opentelemetry/api"
 import { StreamEvent, TimelineEvent } from "@equinox-js/core"
 
-type MdbWriteResult =
-  | { type: "Written"; position: bigint }
-  | { type: "ConflictUnknown" }
+type MdbWriteResult = { type: "Written"; position: bigint } | { type: "ConflictUnknown" }
+export type Format = Record<string, any>
 
 export class MessageDbWriter {
   constructor(private readonly pool: Pool) {}
 
-  async writeMessages(
-    streamName: string,
-    messages: StreamEvent[],
-    expectedVersion: bigint | null
-  ): Promise<MdbWriteResult> {
+  async writeMessages(streamName: string, messages: StreamEvent<Format>[], expectedVersion: bigint | null): Promise<MdbWriteResult> {
     const client = await this.pool.connect()
     let position = -1n
     try {
@@ -22,20 +17,16 @@ export class MessageDbWriter {
 
       for (let i = 0; i < messages.length; ++i) {
         const message = messages[i]
-        const metadata = message.metadata || {}
+        const metadata = message.meta || {}
         propagation.inject(context.active(), metadata)
-        const results = await client.query(
-          `select message_store.write_message($1, $2, $3, $4, $5, $6)`,
-          [
-            message.id || randomUUID(),
-            streamName,
-            message.type,
-            JSON.stringify(message.data),
-            JSON.stringify(metadata || null),
-            expectedVersion == null ? null : Number(expectedVersion++),
-
-          ]
-        )
+        const results = await client.query(`select message_store.write_message($1, $2, $3, $4, $5, $6)`, [
+          message.id || randomUUID(),
+          streamName,
+          message.type,
+          JSON.stringify(message.data),
+          JSON.stringify(metadata || null),
+          expectedVersion == null ? null : Number(expectedVersion++),
+        ])
 
         position = BigInt(results.rows[0].write_message)
       }
@@ -65,29 +56,17 @@ export class MessageDbReader {
     return this.pool.connect()
   }
 
-  async readLastEvent(
-    streamName: string,
-    requiresLeader: boolean,
-    eventType?: string
-  ) {
+  async readLastEvent(streamName: string, requiresLeader: boolean, eventType?: string) {
     const client = await this.connect(requiresLeader)
     try {
-      const result = await client.query(
-        "select * from message_store.get_last_stream_message($1, $2)",
-        [streamName, eventType ?? null]
-      )
+      const result = await client.query("select * from message_store.get_last_stream_message($1, $2)", [streamName, eventType ?? null])
       return result.rows.map(fromDb)[0]
     } finally {
       client.release()
     }
   }
 
-  async readStream(
-    streamName: string,
-    fromPosition: bigint,
-    batchSize: number,
-    requiresLeader: boolean
-  ): Promise<TimelineEvent[]> {
+  async readStream(streamName: string, fromPosition: bigint, batchSize: number, requiresLeader: boolean): Promise<TimelineEvent<Format>[]> {
     const client = await this.connect(requiresLeader)
     try {
       const result = await client.query(
@@ -106,14 +85,15 @@ export class MessageDbReader {
   }
 }
 
-function fromDb(row: any): TimelineEvent {
+function fromDb(row: any): TimelineEvent<Format> {
   return {
+    size: -1,
     id: row.id,
-    stream_name: row.stream_name,
     time: new Date(row.time),
     type: row.type,
     data: JSON.parse(row.data),
-    metadata: JSON.parse(row.metadata || "null"),
-    position: BigInt(row.position),
+    meta: JSON.parse(row.metadata || "null"),
+    index: BigInt(row.position),
+    isUnfold: false,
   }
 }

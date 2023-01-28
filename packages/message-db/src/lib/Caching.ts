@@ -1,53 +1,21 @@
-import {
-  StateTuple,
-  StreamToken,
-  SyncResult,
-  ICategory,
-  CacheEntry,
-  ICache,
-} from "@equinox-js/core"
+import { StateTuple, StreamToken, SyncResult, ICategory, CacheEntry, ICache } from "@equinox-js/core"
 
-class Decorator<Event, State, Context>
-  implements ICategory<Event, State, Context>
-{
-  private readonly cache: (
-    streamName: string,
-    inner: Promise<[StreamToken, State]>
-  ) => Promise<[StreamToken, State]>
+class Decorator<Event, State, Context> implements ICategory<Event, State, Context> {
+  private readonly cache: (streamName: string, inner: Promise<[StreamToken, State]>) => Promise<[StreamToken, State]>
+
   constructor(
     private readonly inner: ICategory<Event, State, Context>,
-    private readonly updateCache: (
-      key: string,
-      value: [StreamToken, State]
-    ) => Promise<void>
+    private readonly updateCache: (key: string, value: [StreamToken, State]) => Promise<void>
   ) {
-    this.cache = async (
-      streamName: string,
-      inner: Promise<[StreamToken, State]>
-    ) => {
+    this.cache = async (streamName: string, inner: Promise<[StreamToken, State]>) => {
       const tokenAndState = await inner
       await updateCache(streamName, tokenAndState)
       return tokenAndState
     }
   }
 
-  load(
-    categoryName: string,
-    streamId: string,
-    streamName: string,
-    allowStale: boolean,
-    requireLeader: boolean
-  ): Promise<StateTuple<State>> {
-    return this.cache(
-      streamName,
-      this.inner.load(
-        categoryName,
-        streamId,
-        streamName,
-        allowStale,
-        requireLeader
-      )
-    )
+  load(categoryName: string, streamId: string, streamName: string, allowStale: boolean, requireLeader: boolean): Promise<StateTuple<State>> {
+    return this.cache(streamName, this.inner.load(categoryName, streamId, streamName, allowStale, requireLeader))
   }
 
   async trySync(
@@ -59,15 +27,7 @@ class Decorator<Event, State, Context>
     originState: State,
     events: Event[]
   ): Promise<SyncResult<State>> {
-    const result = await this.inner.trySync(
-      categoryName,
-      streamId,
-      streamName,
-      context,
-      originToken,
-      originState,
-      events
-    )
+    const result = await this.inner.trySync(categoryName, streamId, streamName, context, originToken, originState, events)
     switch (result.type) {
       case "Conflict":
         return {
@@ -88,24 +48,12 @@ export function applyCacheUpdatesWithSlidingExpiration<E, S, C>(
   category: ICategory<E, S, C>,
   supersedes: (a: StreamToken, b: StreamToken) => boolean
 ) {
-  const mkCacheEntry = ([initialToken, initialState]: [StreamToken, S]) =>
-    new CacheEntry(initialToken, initialState)
+  const mkCacheEntry = ([initialToken, initialState]: [StreamToken, S]) => new CacheEntry(initialToken, initialState)
   const options = { relative: slidingExpirationInMs }
-  const addOrUpdateSlidingExpirationCacheEntry = (
-    streamName: string,
-    value: [StreamToken, S]
-  ) =>
-    cache.updateIfNewer(
-      prefix + streamName,
-      options,
-      supersedes,
-      mkCacheEntry(value)
-    )
+  const addOrUpdateSlidingExpirationCacheEntry = (streamName: string, value: [StreamToken, S]) =>
+    cache.updateIfNewer(prefix + streamName, options, supersedes, mkCacheEntry(value))
 
-  return new Decorator<E, S, C>(
-    category,
-    addOrUpdateSlidingExpirationCacheEntry
-  )
+  return new Decorator<E, S, C>(category, addOrUpdateSlidingExpirationCacheEntry)
 }
 
 export function applyCacheUpdatesWithFixedTimeSpan<E, S, C>(
@@ -115,20 +63,11 @@ export function applyCacheUpdatesWithFixedTimeSpan<E, S, C>(
   category: ICategory<E, S, C>,
   supersedes: (a: StreamToken, b: StreamToken) => boolean
 ) {
-  const mkCacheEntry = ([initialToken, initialState]: [StreamToken, S]) =>
-    new CacheEntry(initialToken, initialState)
-  const addOrUpdateFixedLifetimeCacheEntry = (
-    streamName: string,
-    value: [StreamToken, S]
-  ) => {
+  const mkCacheEntry = ([initialToken, initialState]: [StreamToken, S]) => new CacheEntry(initialToken, initialState)
+  const addOrUpdateFixedLifetimeCacheEntry = (streamName: string, value: [StreamToken, S]) => {
     const expirationPoint = Date.now() + lifetimeInMs
     const options = { absolute: expirationPoint }
-    return cache.updateIfNewer(
-      prefix + streamName,
-      options,
-      supersedes,
-      mkCacheEntry(value)
-    )
+    return cache.updateIfNewer(prefix + streamName, options, supersedes, mkCacheEntry(value))
   }
   return new Decorator(category, addOrUpdateFixedLifetimeCacheEntry)
 }

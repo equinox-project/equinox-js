@@ -6,16 +6,13 @@ type Expiration = { absolute: number } | { relative: number }
 export class CacheEntry<State> {
   constructor(public token: StreamToken, public state: State) {}
 
-  updateIfNewer(
-    supersedes: (a: StreamToken, b: StreamToken) => boolean,
-    other: CacheEntry<State>
-  ) {
+  updateIfNewer(supersedes: (a: StreamToken, b: StreamToken) => boolean, other: CacheEntry<State>) {
     if (supersedes(this.token, other.token)) {
       this.token = other.token
       this.state = other.state
     }
   }
-  value() {
+  value(): [StreamToken, State] {
     return [this.token, this.state]
   }
 }
@@ -41,7 +38,7 @@ export class MemoryCache implements ICache {
   }
 
   async tryGet<State>(key: string): Promise<[StreamToken, State] | null> {
-    return this.cache.get(key) ?? null
+    return this.cache.get(key)?.value() ?? null
   }
 
   async updateIfNewer<State>(
@@ -50,10 +47,7 @@ export class MemoryCache implements ICache {
     supersedes: (a: StreamToken, b: StreamToken) => boolean,
     entry: CacheEntry<State>
   ): Promise<void> {
-    const ttl =
-      "absolute" in expiration
-        ? expiration.absolute - Date.now()
-        : expiration.relative
+    const ttl = "absolute" in expiration ? expiration.absolute - Date.now() : expiration.relative
     if (!this.cache.has(key)) {
       this.cache.set(key, entry, { ttl })
     } else {
