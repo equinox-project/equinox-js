@@ -34,7 +34,7 @@ export abstract class AsyncCodec<E, F, C = undefined> {
     }
   }
 
-  static deflate<E, C>(codec: AsyncCodec<E, Record<string, any>, C>): AsyncCodec<E, [number, Buffer], C> {
+  static deflate<E, C>(codec: AsyncCodec<E, Record<string, any>, C>): AsyncCodec<E, [number, Uint8Array], C> {
     return AsyncCodec.map(
       codec,
       async (x) => {

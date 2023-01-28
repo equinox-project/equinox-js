@@ -20,11 +20,11 @@ export const eventToSchema = (x: Event): EventSchema => {
   const result: EventSchema = { t: { S: x.t.toISOString() } }
   if (d) {
     result.d = { B: d }
-    result.D = { N: String(D) }
+    if (D) result.D = { N: String(D) }
   }
   if (m) {
     result.m = { B: m }
-    result.M = { N: String(M) }
+    if (M) result.M = { N: String(M) }
   }
   if (x.correlationId) result.x = { S: x.correlationId }
   if (x.causationId) result.y = { S: x.causationId }
@@ -57,11 +57,11 @@ export const unfoldToSchema = (x: Unfold): { M: UnfoldSchema } => {
   const [m, M] = InternalBody.toBufferAndEncoding(x.m)
   if (d) {
     result.d = { B: d }
-    result.D = { N: String(D) }
+    if (D) result.D = { N: String(D) }
   }
   if (m) {
     result.m = { B: m }
-    result.M = { N: String(M) }
+    if (M) result.M = { N: String(M) }
   }
   return { M: result }
 }
