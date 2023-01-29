@@ -52,19 +52,16 @@ export class CachingCategory<E, S, C> implements ICategory<E, S, C> {
 }
 
 export function applyCacheUpdatesWithSlidingExpiration<E, S, C>(cache: ICache, prefix: string, slidingExpirationInMs: number) {
-  const mkCacheEntry = ([initialToken, initialState]: [StreamToken, S]) => new CacheEntry(initialToken, initialState)
   const options = { relative: slidingExpirationInMs }
-  const addOrUpdateSlidingExpirationCacheEntry = (streamName: string, value: [StreamToken, S]) =>
-    cache.updateIfNewer(prefix + streamName, options, Token.supersedes, mkCacheEntry(value))
-  return addOrUpdateSlidingExpirationCacheEntry
+  return function addOrUpdateSlidingExpirationCacheEntry(streamName: string, value: [StreamToken, S]) {
+    return cache.updateIfNewer(prefix + streamName, options, Token.supersedes, CacheEntry.ofTokenAndState(value))
+  }
 }
 
 export function applyCacheUpdatesWithFixedTimeSpan<E, S, C>(cache: ICache, prefix: string, lifetimeInMs: number) {
-  const mkCacheEntry = ([initialToken, initialState]: [StreamToken, S]) => new CacheEntry(initialToken, initialState)
-  const addOrUpdateFixedLifetimeCacheEntry = (streamName: string, value: [StreamToken, S]) => {
+  return function addOrUpdateFixedLifetimeCacheEntry(streamName: string, value: [StreamToken, S]) {
     const expirationPoint = Date.now() + lifetimeInMs
     const options = { absolute: expirationPoint }
-    return cache.updateIfNewer(prefix + streamName, options, Token.supersedes, mkCacheEntry(value))
+    return cache.updateIfNewer(prefix + streamName, options, Token.supersedes, CacheEntry.ofTokenAndState(value))
   }
-  return addOrUpdateFixedLifetimeCacheEntry
 }

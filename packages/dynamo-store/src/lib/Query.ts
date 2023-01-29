@@ -8,6 +8,7 @@ import { containsBackAsync, tryPick } from "./Array"
 import { TimelineEvent } from "@equinox-js/core"
 import { ofInternal, EncodedBody } from "./EncodedBody"
 import { InternalBody } from "./InternalBody"
+import { trace } from "@opentelemetry/api"
 
 export enum Direction {
   Forward,
@@ -45,6 +46,9 @@ const mapPage =
     }
     const events = batches.flatMap(unwrapBatch)
     const maybePosition = tryPick(tryFromBatch)(batches)
+    trace.getActiveSpan()?.addEvent("QueryResponse", {
+      direction: direction === Direction.Forward ? "Forward" : "Backward",
+    })
     return [events, maybePosition]
   }
 

@@ -15,6 +15,10 @@ export class CacheEntry<State> {
   value(): [StreamToken, State] {
     return [this.token, this.state]
   }
+
+  static ofTokenAndState<S>([token, state]: [StreamToken, S]) {
+    return new CacheEntry(token, state)
+  }
 }
 
 export interface ICache {

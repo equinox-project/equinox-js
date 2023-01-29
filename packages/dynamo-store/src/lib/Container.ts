@@ -1,12 +1,15 @@
 import { Batch, isTip, tableKeyForStreamTip } from "./Batch"
 import { AttributeValue, ConsumedCapacity, DynamoDB, ReturnConsumedCapacity, ReturnValue } from "@aws-sdk/client-dynamodb"
 import { schemaToBatch } from "./Schema"
-import { metrics } from "@opentelemetry/api"
+import { metrics, SpanKind, trace } from "@opentelemetry/api"
+import { tracer } from "./Tracing"
 
 const counter = metrics.getMeter("@equinox-js/dynamo-store").createCounter("consumed_capacity")
 
 export const reportRU = <T extends { ConsumedCapacity?: ConsumedCapacity }>(response: T): T => {
-  counter.add(response.ConsumedCapacity?.CapacityUnits ?? 0)
+  const cost = response.ConsumedCapacity?.CapacityUnits ?? 0
+  trace.getActiveSpan()?.setAttribute("eqx.ru", cost)
+  counter.add(cost)
   return response
 }
 export const reportRUs = <T extends { ConsumedCapacity?: ConsumedCapacity[] }>(response: T): T => {
@@ -22,6 +25,16 @@ export type DynamoExpr = {
   text: string
   condition?: string
   values: Record<string, AttributeValue>
+}
+
+const attributesOfList = (l: [string, AttributeValue | undefined][]) => {
+  const result: Record<string, AttributeValue> = {}
+  for (let i = 0; i < l.length; ++i) {
+    const key = l[i][0]
+    const value = l[i][1]
+    if (value != null) result[key] = value
+  }
+  return result
 }
 
 export class Container {
@@ -55,23 +68,40 @@ export class Container {
 
   queryBatches(stream: string, consistentRead: boolean, minN: bigint | undefined, maxI: bigint | undefined, backwards: boolean, batchSize: number) {
     const send = (le?: Record<string, any>) =>
-      this.context
-        .query({
-          TableName: this.tableName,
-          KeyConditionExpression: maxI == null ? "p = :p" : "p = :p AND i < :maxI",
-          FilterExpression: minN == null ? undefined : "n > :minN",
-          ExpressionAttributeValues: {
-            ":p": { S: stream },
-            ":maxI": { N: String(maxI) },
-            ":minN": { N: String(minN) },
+      tracer.startActiveSpan(
+        "QueryBatch",
+        {
+          kind: SpanKind.CLIENT,
+          attributes: {
+            "eqx.direction": backwards ? "Backwards" : "Forwards",
+            "eqx.batch_size": batchSize,
+            "eqx.table_name": this.tableName,
+            "eqx.stream_name": stream,
+            "eqx.require_leader": consistentRead,
+            "eqx.min_n": minN ? String(minN) : undefined,
+            "eqx.max_i": maxI ? String(maxI) : undefined,
           },
-          Limit: batchSize,
-          ExclusiveStartKey: le,
-          ScanIndexForward: !backwards,
-          ConsistentRead: consistentRead,
-          ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
-        })
-        .then(reportRU)
+        },
+        (span) =>
+          this.context
+            .query({
+              TableName: this.tableName,
+              KeyConditionExpression: maxI == null ? "p = :p" : "p = :p AND i < :maxI",
+              FilterExpression: minN == null ? undefined : "n > :minN",
+              ExpressionAttributeValues: attributesOfList([
+                [":p", { S: stream }],
+                [":maxI", maxI == null ? undefined : { N: String(maxI) }],
+                [":minN", minN == null ? undefined : { N: String(minN) }],
+              ]),
+              Limit: batchSize,
+              ExclusiveStartKey: le,
+              ScanIndexForward: !backwards,
+              ConsistentRead: consistentRead,
+              ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
+            })
+            .then(reportRU)
+            .finally(() => span.end())
+      )
     async function* aux(i: number, le?: Record<string, any>): AsyncIterable<[number, Batch[]]> {
       const result = await send(le)
       yield [i, result.Items?.map((x) => schemaToBatch(x as any)) ?? []]

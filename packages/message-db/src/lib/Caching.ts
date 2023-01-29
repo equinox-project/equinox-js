@@ -48,10 +48,9 @@ export function applyCacheUpdatesWithSlidingExpiration<E, S, C>(
   category: ICategory<E, S, C>,
   supersedes: (a: StreamToken, b: StreamToken) => boolean
 ) {
-  const mkCacheEntry = ([initialToken, initialState]: [StreamToken, S]) => new CacheEntry(initialToken, initialState)
   const options = { relative: slidingExpirationInMs }
   const addOrUpdateSlidingExpirationCacheEntry = (streamName: string, value: [StreamToken, S]) =>
-    cache.updateIfNewer(prefix + streamName, options, supersedes, mkCacheEntry(value))
+    cache.updateIfNewer(prefix + streamName, options, supersedes, CacheEntry.ofTokenAndState(value))
 
   return new Decorator<E, S, C>(category, addOrUpdateSlidingExpirationCacheEntry)
 }
@@ -63,11 +62,10 @@ export function applyCacheUpdatesWithFixedTimeSpan<E, S, C>(
   category: ICategory<E, S, C>,
   supersedes: (a: StreamToken, b: StreamToken) => boolean
 ) {
-  const mkCacheEntry = ([initialToken, initialState]: [StreamToken, S]) => new CacheEntry(initialToken, initialState)
   const addOrUpdateFixedLifetimeCacheEntry = (streamName: string, value: [StreamToken, S]) => {
     const expirationPoint = Date.now() + lifetimeInMs
     const options = { absolute: expirationPoint }
-    return cache.updateIfNewer(prefix + streamName, options, supersedes, mkCacheEntry(value))
+    return cache.updateIfNewer(prefix + streamName, options, supersedes, CacheEntry.ofTokenAndState(value))
   }
   return new Decorator(category, addOrUpdateFixedLifetimeCacheEntry)
 }

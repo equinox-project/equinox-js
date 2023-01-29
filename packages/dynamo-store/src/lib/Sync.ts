@@ -4,9 +4,8 @@ import { eventsToSchema, Schema, unfoldsToSchema } from "./Schema"
 import { tableKeyForStreamTip, tipMagicI } from "./Batch"
 import type { DynamoExpr } from "./Container"
 import { Container, reportRU, reportRUs } from "./Container"
-import { PutCommand, TransactWriteCommand, TransactWriteCommandInput, UpdateCommand } from "@aws-sdk/lib-dynamodb"
 import { randomUUID } from "crypto"
-import { AttributeValue, ReturnConsumedCapacity } from "@aws-sdk/client-dynamodb"
+import { AttributeValue, ReturnConsumedCapacity, TransactWriteItemsInput } from "@aws-sdk/client-dynamodb"
 import { flatten, Position } from "./Position"
 import { StreamEvent } from "@equinox-js/core"
 import { EncodedBody, toInternal } from "./EncodedBody"
@@ -28,7 +27,7 @@ export type ExpectedVersion = bigint | string
 
 type ItemType<T> = T extends Array<infer P> ? P : never
 
-type TransactWriteItem = ItemType<TransactWriteCommandInput["TransactItems"]>
+type TransactWriteItem = ItemType<TransactWriteItemsInput["TransactItems"]>
 const updateTip = (table: string, stream: string, expr: DynamoExpr): TransactWriteItem => {
   return {
     Update: {
