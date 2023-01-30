@@ -1,10 +1,13 @@
 {
   "name": "@equinox-js/message-db",
-  "main": "./dist/index.mjs",
-  "module": "./dist/index.mjs",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "type": "module",
+  "version": "1.0.0-alpha.1",
+  "files": ["./dist"],
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts"
+    "build": "tsup src/index.ts --format esm,cjs --dts"
   },
   "devDependencies": {
     "@types/node": "^18.11.18",

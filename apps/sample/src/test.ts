@@ -2,7 +2,7 @@ import { ddbContext, caching } from "./modules/context.js"
 import * as Todo from "./modules/Todo"
 import { randomUUID } from "node:crypto"
 
-const service = Todo.Service.buildDynamo(ddbContext, caching)
+const service = Todo.create(ddbContext, caching)
 const id = randomUUID()
 console.time("appendAll")
 for (let i = 0; i < 1000; ++i) {

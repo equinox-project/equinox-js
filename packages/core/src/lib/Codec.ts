@@ -54,7 +54,7 @@ export abstract class AsyncCodec<E, F, C = undefined> {
     )
   }
 
-  static unsafeEmpty<E extends { type: string; data: Record<string, any> }>() {
+  static unsafeEmpty<E extends { type: string; data?: Record<string, any> }>() {
     return AsyncCodec.deflate({
       tryDecode: (e) => e as any as E,
       encode: (e) => e as any as StreamEvent<Record<string, any>>,
