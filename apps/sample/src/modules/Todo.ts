@@ -117,7 +117,7 @@ export class Service {
     return new Service(resolve)
   }
 
-  static buildDynamo(context: Ddb.DynamoStoreContext, cache: Ddb.CachingStrategy) {
+  static buildDynamo(context: Ddb.DynamoStoreContext, cache: Ddb.CachingStrategy.CachingStrategy) {
     const access = Ddb.AccessStrategy.Snapshot(
       (x: Event) => x.type === "Snapshotted" || x.type === "Cleared",
       (s: State): Event => ({ type: "Snapshotted", data: { items: s.items, nextId: s.nextId } })
