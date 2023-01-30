@@ -1,7 +1,7 @@
 import { InternalBody } from "./InternalBody"
 import { TimelineEvent } from "@equinox-js/core"
 
-export type EncodedBody = [number, Uint8Array]
+export type EncodedBody = [number | undefined, Uint8Array | undefined]
 
 const decodeBody = (raw: InternalBody): EncodedBody => [raw.encoding, raw.data == null ? new Uint8Array() : raw.data]
 export const ofInternal = (x: TimelineEvent<InternalBody>): TimelineEvent<EncodedBody> => ({
@@ -11,6 +11,6 @@ export const ofInternal = (x: TimelineEvent<InternalBody>): TimelineEvent<Encode
 })
 
 export const toInternal = ([encoding, encodedBody]: EncodedBody): InternalBody => ({
-  encoding,
-  data: encodedBody.length === 0 ? undefined : encodedBody,
+  encoding: encoding ?? 0,
+  data: !encodedBody || encodedBody.length === 0 ? undefined : encodedBody,
 })

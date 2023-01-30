@@ -1,6 +1,9 @@
 {
   "name": "integration-tests",
   "private": true,
+  "scripts": {
+    "test": "vitest run"
+  },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.258.0",
     "@aws-sdk/smithy-client": "^3.257.0",

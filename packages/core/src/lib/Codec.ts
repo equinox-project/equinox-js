@@ -45,7 +45,7 @@ export abstract class AsyncCodec<E, F, C = undefined> {
         return [0, raw]
       },
       async ([encoding, b]) => {
-        if (b == null) return null
+        if (b == null || b.length === 0) return null
         const buf = Buffer.from(b)
         if (encoding === 0) return JSON.parse(buf.toString())
         const inflated = await inflate(buf, { finishFlush: zlib.constants.Z_SYNC_FLUSH })

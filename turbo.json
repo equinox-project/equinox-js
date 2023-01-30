@@ -5,6 +5,10 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".svelte-kit/**"]
     },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
     "lint": {
       "outputs": []
     },

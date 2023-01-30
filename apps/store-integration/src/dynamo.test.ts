@@ -130,14 +130,6 @@ describe("DynamoStore", () => {
     count: number
   ) => addAndThenRemoveItems(false, true, context, cartId, skuId, service, count)
 
-  const addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne = (
-    context: Cart.Context,
-    cartId: Cart.CartId,
-    skuId: Cart.SkuId,
-    service: Cart.Service,
-    count: number
-  ) => addAndThenRemoveItems(true, true, context, cartId, skuId, service, count)
-
   const provider = new NodeTracerProvider()
   const memoryExporter = new InMemorySpanExporter()
   const spanProcessor = new SimpleSpanProcessor(memoryExporter)
