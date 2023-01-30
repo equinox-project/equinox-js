@@ -2,7 +2,7 @@ import { Batch, isTip, tableKeyForStreamTip } from "./Batch"
 import { AttributeValue, ConsumedCapacity, DynamoDB, ReturnConsumedCapacity, ReturnValue } from "@aws-sdk/client-dynamodb"
 import { schemaToBatch } from "./Schema"
 import { metrics, SpanKind, trace } from "@opentelemetry/api"
-import { tracer } from "./Tracing"
+import * as Tracing from "./Tracing"
 
 const counter = metrics.getMeter("@equinox-js/dynamo-store").createCounter("consumed_capacity")
 
@@ -43,7 +43,12 @@ export class Container {
   async tryGetTip(stream: string, consistentRead: boolean): Promise<Batch | undefined> {
     const pk = tableKeyForStreamTip(stream)
     const result = await this.context
-      .getItem({ Key: pk, TableName: this.tableName, ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL, ConsistentRead: consistentRead })
+      .getItem({
+        Key: pk,
+        TableName: this.tableName,
+        ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
+        ConsistentRead: consistentRead,
+      })
       .then(reportRU)
 
     if (result.Item) {
@@ -51,24 +56,32 @@ export class Container {
     }
   }
 
-  async tryUpdateTip(stream: string, expr: DynamoExpr): Promise<Batch | undefined> {
-    const pk = tableKeyForStreamTip(stream)
-    const result = await this.context
-      .updateItem({
-        TableName: this.tableName,
-        Key: pk,
-        UpdateExpression: expr.text,
-        ConditionExpression: expr.condition,
-        ExpressionAttributeValues: expr.values,
-        ReturnValues: ReturnValue.ALL_NEW,
-      })
-      .then(reportRU)
-    if (result.Attributes) return schemaToBatch(result.Attributes as any)
+  tryUpdateTip(stream: string, expr: DynamoExpr): Promise<Batch | undefined> {
+    return Tracing.withSpan(
+      "TryUpdateTip",
+      {
+        attributes: { "eqx.stream": stream },
+      },
+      async () => {
+        const pk = tableKeyForStreamTip(stream)
+        const result = await this.context
+          .updateItem({
+            TableName: this.tableName,
+            Key: pk,
+            UpdateExpression: expr.text,
+            ConditionExpression: expr.condition,
+            ExpressionAttributeValues: expr.values,
+            ReturnValues: ReturnValue.ALL_NEW,
+          })
+          .then(reportRU)
+        if (result.Attributes) return schemaToBatch(result.Attributes as any)
+      }
+    )
   }
 
   queryBatches(stream: string, consistentRead: boolean, minN: bigint | undefined, maxI: bigint | undefined, backwards: boolean, batchSize: number) {
     const send = (le?: Record<string, any>) =>
-      tracer.startActiveSpan(
+      Tracing.withSpan(
         "QueryBatch",
         {
           kind: SpanKind.CLIENT,
@@ -82,7 +95,7 @@ export class Container {
             "eqx.max_i": maxI ? String(maxI) : undefined,
           },
         },
-        (span) =>
+        () =>
           this.context
             .query({
               TableName: this.tableName,
@@ -100,7 +113,6 @@ export class Container {
               ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
             })
             .then(reportRU)
-            .finally(() => span.end())
       )
     async function* aux(i: number, le?: Record<string, any>): AsyncIterable<[number, Batch[]]> {
       const result = await send(le)

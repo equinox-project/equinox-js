@@ -34,21 +34,30 @@ export abstract class AsyncCodec<E, F, C = undefined> {
     }
   }
 
-  static deflate<E, C>(codec: AsyncCodec<E, Record<string, any>, C>): AsyncCodec<E, [number, Uint8Array], C> {
+  static deflate<E, C>(codec: AsyncCodec<E, Record<string, any>, C>): AsyncCodec<E, [number | undefined, Uint8Array | undefined], C> {
     return AsyncCodec.map(
       codec,
       async (x) => {
+        if (x == null) return [undefined, undefined]
         const raw = Buffer.from(JSON.stringify(x))
         const deflated = await deflate(raw)
         if (deflated.length < raw.length) return [1, deflated]
         return [0, raw]
       },
       async ([encoding, b]) => {
+        if (b == null) return null
         const buf = Buffer.from(b)
         if (encoding === 0) return JSON.parse(buf.toString())
         const inflated = await inflate(buf, { finishFlush: zlib.constants.Z_SYNC_FLUSH })
         return JSON.parse(inflated.toString())
       }
     )
+  }
+
+  static unsafeEmpty<E extends { type: string; data: Record<string, any> }>() {
+    return AsyncCodec.deflate({
+      tryDecode: (e) => e as any as E,
+      encode: (e) => e as any as StreamEvent<Record<string, any>>,
+    })
   }
 }

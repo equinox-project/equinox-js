@@ -9,6 +9,7 @@ import { AttributeValue, ReturnConsumedCapacity, TransactWriteItemsInput } from 
 import { flatten, Position } from "./Position"
 import { StreamEvent } from "@equinox-js/core"
 import { EncodedBody, toInternal } from "./EncodedBody"
+import { SpanStatusCode, trace } from "@opentelemetry/api"
 
 enum ReqType {
   Append,
@@ -201,7 +202,9 @@ async function transact(
     }
     return { type: "Written", etag: etag_ }
   } catch (err: any) {
-    console.error(err)
+    const span = trace.getActiveSpan()
+    span?.recordException(err)
+    span?.setStatus({ code: SpanStatusCode.ERROR, message: "ConflictUnknown" })
     return { type: "ConflictUnknown" }
   }
 }

@@ -1,3 +1,4 @@
+import "./trace"
 import pg from "pg"
 import { MessageDbConnection, MessageDbContext, type CachingStrategy } from "@equinox-js/message-db"
 import { MemoryCache } from "@equinox-js/core"

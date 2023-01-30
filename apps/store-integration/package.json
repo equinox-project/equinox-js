@@ -1,0 +1,21 @@
+{
+  "name": "integration-tests",
+  "private": true,
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.258.0",
+    "@aws-sdk/smithy-client": "^3.257.0",
+    "@equinox-js/core": "workspace:*",
+    "@equinox-js/dynamo-store": "workspace:*",
+    "@equinox-js/message-db": "workspace:*",
+    "@opentelemetry/api": "^1.4.0",
+    "@opentelemetry/sdk-trace-base": "^1.9.0",
+    "@opentelemetry/sdk-trace-node": "^1.9.0",
+    "ramda": "^0.28.0",
+    "vitest": "^0.25.3"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.18",
+    "@types/ramda": "^0.28.21",
+    "tsconfig": "workspace:*"
+  }
+}

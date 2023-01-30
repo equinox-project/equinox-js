@@ -5,6 +5,8 @@ import { unfoldToTimelineEvent } from "./Unfold"
 import { eventToTimelineEvent } from "./Event"
 import { TimelineEvent } from "@equinox-js/core"
 import { InternalBody } from "./InternalBody"
+import * as Tracing from "./Tracing"
+import { context, SpanKind, trace } from "@opentelemetry/api"
 
 export enum ResType {
   Found,
@@ -25,18 +27,31 @@ const enumEventsAndUnfolds = (minIndex: bigint | undefined, maxIndex: bigint | u
   })
 }
 
-export async function tryLoad(
-  container: Container,
-  stream: string,
-  consistentRead: boolean,
-  pos?: Position,
-  maxIndex?: bigint
-): Promise<Res<[Position, bigint, TimelineEvent<InternalBody>[]]>> {
-  const tip = await container.tryGetTip(stream, consistentRead)
-  if (tip == null) return { type: ResType.NotFound }
-  if (toEtag(pos) === tip.etag) return { type: ResType.NotModified }
-  return {
-    type: ResType.Found,
-    value: [fromTip(tip), baseIndex(tip), enumEventsAndUnfolds(pos?.index, maxIndex, tip)],
-  }
+export async function tryLoad(container: Container, stream: string, consistentRead: boolean, pos?: Position, maxIndex?: bigint) {
+  return Tracing.withSpan(
+    "Tip.tryLoad",
+    {
+      kind: SpanKind.CLIENT,
+      attributes: {
+        "eqx.stream": stream,
+        "eqx.require_leader": consistentRead,
+      },
+    },
+    async (span): Promise<Res<[Position, bigint, TimelineEvent<InternalBody>[]]>> => {
+      const tip = await container.tryGetTip(stream, consistentRead)
+      if (tip == null) {
+        span.setAttribute("eqx.result", "NotFound")
+        return { type: ResType.NotFound }
+      }
+      if (toEtag(pos) === tip.etag) {
+        span.setAttribute("eqx.result", "NotModified")
+        return { type: ResType.NotModified }
+      }
+      span.setAttribute("eqx.result", "Found")
+      return {
+        type: ResType.Found,
+        value: [fromTip(tip), baseIndex(tip), enumEventsAndUnfolds(pos?.index, maxIndex, tip)],
+      }
+    }
+  )
 }
