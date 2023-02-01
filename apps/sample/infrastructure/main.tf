@@ -19,8 +19,8 @@ provider "aws" {
   secret_key = "local"
 
   skip_credentials_validation = true
-  skip_region_validation = true
-  skip_requesting_account_id = true
+  skip_region_validation      = true
+  skip_requesting_account_id  = true
 
   endpoints {
     dynamodb = "http://localhost:8000"
@@ -31,8 +31,18 @@ module "events_table" {
   source = "../../../packages/dynamo-store-tf"
 
   billing_mode     = "PAY_PER_REQUEST"
-  stream_view_type = null
+  stream_view_type = "NEW_IMAGE"
   read_cu          = null
   write_cu         = null
   table_name       = "sample_events"
+}
+
+module "index_table" {
+  source = "../../../packages/dynamo-store-tf"
+
+  billing_mode     = "PAY_PER_REQUEST"
+  stream_view_type = null
+  read_cu          = null
+  write_cu         = null
+  table_name       = "sample_events_index"
 }

@@ -30,7 +30,7 @@ resource "aws_dynamodb_table" "this" {
     type = "N"
   }
 
-  stream_enabled   = tobool(var.stream_view_type)
+  stream_enabled   = var.stream_view_type != null
   stream_view_type = var.stream_view_type
 
   billing_mode   = var.billing_mode

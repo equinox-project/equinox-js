@@ -3,7 +3,7 @@ import { StreamToken } from "@equinox-js/core"
 export const create = (version: bigint): StreamToken => ({
   value: version,
   version: version + 1n,
-  bytes: 0,
+  bytes: -1n,
 })
 export const streamVersion = (token: StreamToken) => token.value as bigint
 export const shouldSnapshot = (batchSize: number, prev: StreamToken, next: StreamToken) => {

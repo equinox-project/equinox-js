@@ -13,7 +13,7 @@ export type SyncResult<State> =
 export type StreamToken = {
   value: unknown
   version: bigint
-  bytes: number
+  bytes: bigint
 }
 
 /**
