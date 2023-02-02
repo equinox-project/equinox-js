@@ -35,7 +35,7 @@ export namespace Events {
 }
 
 const next = (x: Events.StreamSpan) => Number(x.i) + x.c.length
-const flatten = (spans: Events.StreamSpan[]): Events.StreamSpan[] => {
+export const flatten = (spans: Events.StreamSpan[]): Events.StreamSpan[] => {
   const grouped: Record<IndexStreamId.t, Events.StreamSpan[]> = {}
   for (const span of spans) {
     grouped[span.p] || (grouped[span.p] = [])
@@ -202,7 +202,7 @@ export namespace Reader {
     },
   }
   const asyncCodec = AsyncCodec.deflate(codec)
-  type State = { changes: [number, Events.StreamSpan[]][]; closed: boolean }
+  export type State = { changes: [number, Events.StreamSpan[]][]; closed: boolean }
 
   const initial: State = { changes: [], closed: false }
   const fold = (state: State, events: Event[]) => {

@@ -20,6 +20,8 @@
     "@aws-sdk/types": "^3.257.0",
     "@equinox-js/core": "workspace:*",
     "@equinox-js/dynamo-store": "workspace:*",
-    "@opentelemetry/api": "^1.4.0"
+    "@equinox-js/stream-name": "workspace:*",
+    "@opentelemetry/api": "^1.4.0",
+    "p-limit": "^4.0.0"
   }
 }

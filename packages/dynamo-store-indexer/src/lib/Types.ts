@@ -14,13 +14,13 @@ export namespace AppendsTrancheId {
 }
 
 export namespace Checkpoint {
-  type t = bigint & { __brand: "Checkpoint" }
+  export type t = bigint & { __brand: "Checkpoint" }
   /** The absolute upper limit of number of streams that can be indexed within a single Epoch (defines how Checkpoints are encoded, so cannot be changed) */
   export const MAX_ITEMS_PER_EPOCH = 1_000_000
   const maxItemsPerEpoch = 1_000_000n
 
-  const positionOfEpochAndOffset = (epoch: AppendsEpochId.t, offset: bigint) => BigInt(epoch) * maxItemsPerEpoch + offset
-  const positionOfEpochClosedAndVersion = (epoch: AppendsEpochId.t, isClosed: boolean, version: bigint) => {
+  export const positionOfEpochAndOffset = (epoch: AppendsEpochId.t, offset: bigint) => BigInt(epoch) * maxItemsPerEpoch + offset
+  export const positionOfEpochClosedAndVersion = (epoch: AppendsEpochId.t, isClosed: boolean, version: bigint) => {
     const offset = isClosed ? 0n : version
     return positionOfEpochAndOffset(epoch, offset)
   }

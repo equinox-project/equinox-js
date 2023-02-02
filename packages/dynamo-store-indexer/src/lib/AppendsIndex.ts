@@ -58,15 +58,41 @@ export class Service {
 }
 
 export namespace Config {
+  export const createCategory = (context: DynamoStoreContext, cache: CachingStrategy.CachingStrategy) =>
+    DynamoStoreCategory.build(context, Events.codec, Fold.fold, Fold.initial, cache, AccessStrategy.Snapshot(Fold.isOrigin, Fold.toSnapshot))
+
   export const create = (context: DynamoStoreContext, cache: CachingStrategy.CachingStrategy) => {
-    const category = DynamoStoreCategory.build(
-      context,
-      Events.codec,
-      Fold.fold,
-      Fold.initial,
-      cache,
-      AccessStrategy.Snapshot(Fold.isOrigin, Fold.toSnapshot)
-    )
+    const category = createCategory(context, cache)
+    return new Service(() => Decider.resolve(category, Category, streamId(), null))
+  }
+}
+
+export namespace Reader {
+  const readKnownTranches = (state: Fold.State) => Object.keys(state) as any as AppendsTrancheId.t[]
+
+  const readIngestionEpochId = (trancheId: AppendsTrancheId.t) => (state: Fold.State) => state[trancheId] ?? AppendsEpochId.initial
+
+  export class Service {
+    constructor(private readonly resolve: () => Decider<Events.Event, Fold.State>) {}
+
+    read() {
+      const decider = this.resolve()
+      return decider.query((x) => x)
+    }
+
+    readKnownTranches() {
+      const decider = this.resolve()
+      return decider.query(readKnownTranches)
+    }
+
+    readIngestionEpochId(trancheId: AppendsTrancheId.t) {
+      const decider = this.resolve()
+      return decider.query(readIngestionEpochId(trancheId))
+    }
+  }
+
+  export const create = (context: DynamoStoreContext) => {
+    const category = Config.createCategory(context, { type: "NoCaching" })
     return new Service(() => Decider.resolve(category, Category, streamId(), null))
   }
 }
