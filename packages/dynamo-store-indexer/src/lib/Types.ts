@@ -19,11 +19,12 @@ export namespace Checkpoint {
   export const MAX_ITEMS_PER_EPOCH = 1_000_000
   const maxItemsPerEpoch = 1_000_000n
 
-  export const positionOfEpochAndOffset = (epoch: AppendsEpochId.t, offset: bigint) => BigInt(epoch) * maxItemsPerEpoch + offset
+  export const positionOfEpochAndOffset = (epoch: AppendsEpochId.t, offset: bigint) => (BigInt(epoch) * maxItemsPerEpoch + offset) as t
   export const positionOfEpochClosedAndVersion = (epoch: AppendsEpochId.t, isClosed: boolean, version: bigint) => {
     const offset = isClosed ? 0n : version
     return positionOfEpochAndOffset(epoch, offset)
   }
+  export const initial = 0n as t
   export const toEpochAndOffset = (value: t): [AppendsEpochId.t, bigint] => {
     const d = value / maxItemsPerEpoch
     const r = value % maxItemsPerEpoch

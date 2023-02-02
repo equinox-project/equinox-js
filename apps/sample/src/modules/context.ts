@@ -11,9 +11,9 @@ export const caching: Ddb.CachingStrategy.CachingStrategy = {
 }
 
 const ddb = new DynamoDB({
-  region: "local",
+  region: "us-east-2",
   credentials: { accessKeyId: "local", secretAccessKey: "local" },
-  endpoint: "http://127.0.0.1:8000",
+  endpoint: "http://127.0.0.1:4566",
 })
 
 export const dynamoStoreClient = Ddb.DynamoStoreClient.build(ddb, "sample_events")

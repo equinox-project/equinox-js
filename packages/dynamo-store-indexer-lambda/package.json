@@ -4,7 +4,7 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts"
+    "build": "tsup src/index.ts --format esm --dts && (cd dist && zip ../lambda.zip index.mjs) && zip -r lambda.zip node_modules"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.110",

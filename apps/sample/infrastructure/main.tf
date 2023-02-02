@@ -14,7 +14,7 @@ terraform {
 }
 
 provider "aws" {
-  region     = "local"
+  region     = "us-east-2"
   access_key = "local"
   secret_key = "local"
 
@@ -23,7 +23,9 @@ provider "aws" {
   skip_requesting_account_id  = true
 
   endpoints {
-    dynamodb = "http://localhost:8000"
+    dynamodb = "http://localhost:4566"
+    iam      = "http://localhost:4566"
+    lambda   = "http://localhost:4566"
   }
 }
 
@@ -45,4 +47,92 @@ module "index_table" {
   read_cu          = null
   write_cu         = null
   table_name       = "sample_events_index"
+}
+
+resource "aws_iam_role" "iam_for_lambda" {
+  name = "iam_for_indexer_lambda"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "lambda.amazonaws.com"
+      },
+      "Effect": "Allow",
+      "Sid": ""
+    }
+  ]
+}
+EOF
+}
+
+data "aws_iam_policy_document" "indexer_lambda_policy" {
+  version = "2012-10-17"
+  statement {
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents"
+    ]
+    resources = [
+      "arn:aws:logs:*:*:*"
+    ]
+    effect = "Allow"
+  }
+
+  statement {
+    actions = [
+      "dynamodb:BatchGetItem", "dynamodb:Query", "dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:UpdateItem",
+      "dynamodb:BatchWriteItem"
+    ]
+    resources = [module.events_table.arn]
+    effect    = "Allow"
+  }
+
+  statement {
+    actions = [
+      "dynamodb:BatchGetItem", "dynamodb:Query", "dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:UpdateItem",
+      "dynamodb:BatchWriteItem"
+    ]
+    resources = [module.index_table.arn]
+    effect    = "Allow"
+  }
+}
+
+resource "aws_iam_policy" "indexer_lambda_policy" {
+  name        = "indexer_lambda_policy"
+  path        = "/"
+  description = "IAM policy for the indexer lambda"
+  policy      = data.aws_iam_policy_document.indexer_lambda_policy.json
+}
+resource "aws_iam_policy_attachment" "indexer_lambda_policy" {
+  name       = "attach lambda policy attachment"
+  roles      = [aws_iam_role.iam_for_lambda.name]
+  policy_arn = aws_iam_policy.indexer_lambda_policy.arn
+}
+
+resource "aws_lambda_function" "indexer" {
+  function_name                  = "sample_events_indexer"
+  handler                        = "index.handler"
+  role                           = aws_iam_role.iam_for_lambda.arn
+  runtime                        = "nodejs16.x"
+  filename                       = "${path.module}/../../../packages/dynamo-store-indexer-lambda/lambda.zip"
+  source_code_hash               = filebase64sha256("${path.module}/../../../packages/dynamo-store-indexer-lambda/lambda.zip")
+  environment {
+    variables = {
+      "TABLE_NAME"       = module.events_table.table_name
+      "INDEX_TABLE_NAME" = module.index_table.table_name
+    }
+  }
+}
+
+resource "aws_lambda_event_source_mapping" "streams_invoker" {
+  event_source_arn  = module.events_table.stream_arn
+  function_name     = aws_lambda_function.indexer.arn
+  batch_size        = 500
+  starting_position = "TRIM_HORIZON"
+  enabled           = true
 }

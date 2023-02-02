@@ -6,11 +6,12 @@ import * as AppendsEpoch from "./AppendsEpoch"
 import { TimelineEvent } from "@equinox-js/core"
 import pLimit from "p-limit"
 import { StreamName } from "@equinox-js/stream-name"
+import { EncodedBody } from "@equinox-js/dynamo-store/src/lib/EncodedBody"
 
 type EventBody = Uint8Array
 type StreamEvent<Format> = [string, TimelineEvent<Format>]
 
-type Batch<Event> = { items: StreamEvent<Event>[]; checkpoint: bigint; isTail: boolean }
+type Batch<Event> = { items: StreamEvent<Event>[]; checkpoint: Checkpoint.t; isTail: boolean }
 
 namespace Impl {
   const renderPos = (pos: Checkpoint.t) => {
@@ -31,19 +32,23 @@ namespace Impl {
     return Checkpoint.positionOfEpochAndOffset(epochId, version)
   }
 
-  const mkBatch = (position: bigint, isTail: boolean, items: StreamEvent<Uint8Array>[]): Batch<Uint8Array> => ({ position, isTail, items })
+  const mkBatch = (checkpoint: Checkpoint.t, isTail: boolean, items: StreamEvent<EncodedBody>[]): Batch<EncodedBody> => ({
+    checkpoint,
+    isTail,
+    items,
+  })
 
-  const sliceBatch = (epochId: AppendsEpochId.t, offset: number, items: StreamEvent<Uint8Array>[]) =>
+  const sliceBatch = (epochId: AppendsEpochId.t, offset: number, items: StreamEvent<EncodedBody>[]) =>
     mkBatch(Checkpoint.positionOfEpochAndOffset(epochId, BigInt(offset)), false, items)
 
-  const finalBatch = (epochId: AppendsEpochId.t, version: bigint, state: AppendsEpoch.Reader.State, items: StreamEvent<Uint8Array>[]) =>
+  const finalBatch = (epochId: AppendsEpochId.t, version: bigint, state: AppendsEpoch.Reader.State, items: StreamEvent<EncodedBody>[]) =>
     mkBatch(Checkpoint.positionOfEpochClosedAndVersion(epochId, state.closed, version), !state.closed, items)
 
   // Includes optional hydrating of events with event bodies and/or metadata (controlled via hydrating/maybeLoad args)
   export async function* materializeIndexEpochAsBatchesOfStreamEvents(
     context: DynamoStoreContext,
     hydrating: boolean,
-    maybeLoad: (streamName: string, version: number, types: string[]) => (() => Promise<TimelineEvent<EventBody>[]>) | undefined,
+    maybeLoad: (streamName: string, version: number, types: string[]) => (() => Promise<TimelineEvent<EncodedBody>[]>) | undefined,
     loadDop: number,
     batchCutoff: number,
     tid: AppendsTrancheId.t,
@@ -69,7 +74,7 @@ namespace Impl {
       return [all.length, chosenEvents, totalEvents, streamEvents] as const
     })()
     const buffer: AppendsEpoch.Events.StreamSpan[] = []
-    const cache = new Map<IndexStreamId.t, TimelineEvent<EventBody>[]>()
+    const cache = new Map<IndexStreamId.t, TimelineEvent<EncodedBody>[]>()
     const materializeSpans = async () => {
       const streamsToLoad = new Set(keepMap(buffer, (span) => (!cache.has(span.p) ? span.p : undefined)))
       const loadsRequired = Array.from(streamsToLoad).map((p) => async () => {
@@ -81,7 +86,7 @@ namespace Impl {
         const limit = pLimit(loadDop)
         await Promise.all(loadsRequired.map((f) => limit(f)))
       }
-      const result: StreamEvent<Uint8Array>[] = []
+      const result: StreamEvent<EncodedBody>[] = []
       for (const span of buffer) {
         const items = cache.get(span.p)
         if (items == undefined) continue
@@ -109,7 +114,7 @@ namespace Impl {
   }
 }
 
-type LoadMode =
+export type LoadMode =
   /** Skip loading of Data/Meta for events; this is the most efficient mode as it means the Source only needs to read from the index */
   | { type: "WithoutEventBodies"; categoryFilter: (cat: string) => boolean }
   /** Populates the Data/Meta fields for events; necessitates loads of all individual streams that pass the categoryFilter before they can be handled */
@@ -131,12 +136,12 @@ namespace LoadMode {
       }
     }
   }
-  const withoutBodies = (categoryFilter: (cat: string) => boolean) => (sn: string, i: bigint, c: string[]) => {
+  const withoutBodies = (categoryFilter: (cat: string) => boolean) => (sn: string, i: number, c: string[]) => {
     const streamName = StreamName.parse(sn)
     const renderEvent = (c: string, offset: number): TimelineEvent<EventBody> => {
       return {
         type: c,
-        index: i + BigInt(offset),
+        index: BigInt(i + offset),
         id: "",
         isUnfold: false,
         size: 0,
@@ -166,14 +171,14 @@ export class DynamoStoreSourceClient {
   dop: number
   hydrating: boolean
   tryLoad: any
-  constructor(private readonly indexClient: DynamoStoreClient, loadMode: LoadMode, private readonly trancheIds: AppendsTrancheId.t[]) {
+  constructor(private readonly indexClient: DynamoStoreClient, loadMode: LoadMode, private readonly trancheIds?: AppendsTrancheId.t[]) {
     const lm = LoadMode.map(loadMode)
     this.dop = lm.degreeOfParallelism
     this.hydrating = lm.hydrating
     this.tryLoad = lm.tryLoad
   }
 
-  crawl(trancheId: AppendsTrancheId.t, position: Checkpoint.t): AsyncIterable<Batch<Uint8Array>> {
+  crawl(trancheId: AppendsTrancheId.t, position: Checkpoint.t): AsyncIterable<Batch<EncodedBody>> {
     return Impl.materializeIndexEpochAsBatchesOfStreamEvents(
       new DynamoStoreContext(this.indexClient),
       this.hydrating,

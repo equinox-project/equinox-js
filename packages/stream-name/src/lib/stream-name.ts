@@ -27,8 +27,8 @@ export const create = (category: string, streamId: string) => Internal.ofCategor
 export const compose = (category: string, streamIds: string[]) => Internal.ofCategoryAndStreamId(category, Internal.createStreamId(streamIds))
 
 export const tryParse = (streamName: string): StreamName | undefined => {
-  const split = streamName.split("-")
-  if (split.length === 2) return { category: split[0], streamId: split[1] }
+  const idx = streamName.indexOf("-")
+  return { category: streamName.slice(0, idx), streamId: streamName.slice(idx + 1) }
 }
 export const toString = (x: StreamName) => `${x.category}-${x.streamId}`
 export const parse = (streamName: string) => {
