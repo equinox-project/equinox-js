@@ -31,12 +31,10 @@ services:
       - "8001:8001"
     user: root
     environment:
-      DYNAMO_ENDPOINT: "http://dynamodb-local:8000"
-      AWS_REGION: "local"
+      DYNAMO_ENDPOINT: "http://host.docker.internal:4566"
+      AWS_REGION: "us-east-2"
       AWS_ACCESS_KEY_ID: local
       AWS_SECRET_ACCESS_KEY: local
-    depends_on:
-      - dynamodb-local
 
 
 volumes:

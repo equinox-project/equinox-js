@@ -3,7 +3,7 @@ import { Position, toVersionAndStreamBytes } from "./Position"
 
 export const create = (pos: Position | undefined): StreamToken => {
   const [v, b] = toVersionAndStreamBytes(pos)
-  return { value: { pos }, version: v, bytes: b }
+  return { value: { pos }, version: v, bytes: BigInt(b) }
 }
 export const empty = create(undefined)
 export const unpack = (token: StreamToken): Position | undefined => (token?.value as any)?.pos

@@ -23,13 +23,14 @@ export abstract class AsyncCodec<E, F, C = undefined> {
   ): AsyncCodec<E, To, C> {
     return {
       tryDecode: async (event: TimelineEvent<To>): Promise<E | undefined> => {
-        const [data, meta] = await Promise.all([decode(event.data), decode(event.meta)])
+        const [data, meta] = await Promise.all([event.data ? decode(event.data) : undefined, event.meta ? decode(event.meta) : undefined])
         return codec.tryDecode({ ...event, data, meta })
       },
       encode: async (e, ctx) => {
         const result = await codec.encode(e, ctx)
-        const [data, meta] = await Promise.all([encode(result.data), encode(result.meta)])
-        return { ...result, data, meta }
+        const data = result.data ? encode(result.data) : undefined
+        const meta = result.meta ? encode(result.meta) : undefined
+        return { ...result, data: await data, meta: await meta }
       },
     }
   }

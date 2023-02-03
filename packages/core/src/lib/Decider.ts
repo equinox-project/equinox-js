@@ -63,6 +63,12 @@ export interface ISyncContext<State> {
    */
   version: bigint
 
+  /**
+   * The Storage occupied by the Events written to the underlying stream at the present time.
+   * Specific stores may vary whether this is available, the basis and preciseness for how it is computed.
+   */
+  streamEventBytes?: bigint
+
   /** The present State of the stream within the context of this Flow */
   state: State
 
@@ -74,6 +80,7 @@ export const SyncContext = {
   map: <State>([token, state]: [StreamToken, State]): ISyncContext<State> => ({
     state,
     version: token.version,
+    streamEventBytes: token.bytes === -1n ? undefined : token.bytes,
     createMemento: () => [token, state],
   }),
 }

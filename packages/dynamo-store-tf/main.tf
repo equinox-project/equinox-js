@@ -30,7 +30,7 @@ resource "aws_dynamodb_table" "this" {
     type = "N"
   }
 
-  stream_enabled   = tobool(var.stream_view_type)
+  stream_enabled   = var.stream_view_type != null
   stream_view_type = var.stream_view_type
 
   billing_mode   = var.billing_mode
@@ -42,6 +42,10 @@ output "arn" {
   value = aws_dynamodb_table.this.arn
 }
 
+output "table_name" {
+  value = aws_dynamodb_table.this.name
+}
+
 output "stream_arn" {
-  value = aws_dynamodb_table.this.arn
+  value = aws_dynamodb_table.this.stream_arn
 }
