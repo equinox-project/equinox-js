@@ -6,9 +6,8 @@ export const Category = "$AppendsIndex"
 const streamId = () => "0"
 
 export namespace Events {
-  export type Event =
-    | { type: "Started"; data: { tranche: AppendsTrancheId.t; epoch: AppendsEpochId.t } }
-    | { type: "Snapshotted"; data: { active: Record<AppendsTrancheId.t, AppendsEpochId.t> } }
+  type Started = { tranche: AppendsTrancheId.t; epoch: AppendsEpochId.t } | { partition: AppendsTrancheId.t; epoch: AppendsEpochId.t }
+  export type Event = { type: "Started"; data: Started } | { type: "Snapshotted"; data: { active: Record<AppendsTrancheId.t, AppendsEpochId.t> } }
 
   export const codec = AsyncCodec.unsafeEmpty<Event>()
 }
@@ -21,7 +20,7 @@ export namespace Fold {
       case "Snapshotted":
         return event.data.active
       case "Started":
-        return { ...state, [event.data.tranche]: event.data.epoch }
+        return { ...state, ["tranche" in event.data ? event.data.tranche : event.data.partition]: event.data.epoch }
     }
   }
   export const fold = (state: State, events: Events.Event[]) => events.reduce(evolve, state)
@@ -34,7 +33,7 @@ export const interpret =
   (state: Fold.State): Events.Event[] => {
     const current = state[trancheId]
     if (current != null && current < epochId && epochId > AppendsEpochId.initial)
-      return [{ type: "Started", data: { tranche: trancheId, epoch: epochId } }]
+      return [{ type: "Started", data: { partition: trancheId, epoch: epochId } }]
     return []
   }
 
