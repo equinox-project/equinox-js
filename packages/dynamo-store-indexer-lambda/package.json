@@ -4,11 +4,12 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts && (cd dist && zip ../lambda.zip index.mjs) && zip -r lambda.zip node_modules"
+    "build": "ncc build ./src/index.ts --target es2022 -o dist -m -t && (cd dist && zip lambda.zip index.js)"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.110",
     "@types/node": "^18.11.18",
+    "@vercel/ncc": "^0.36.1",
     "tsconfig": "workspace:*",
     "tsup": "^6.5.0",
     "typescript": "^4.7.4",
@@ -17,7 +18,6 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.258.0",
     "@aws-sdk/client-dynamodb-streams": "^3.262.0",
-    "@aws-sdk/lib-dynamodb": "^3.258.0",
     "@aws-sdk/smithy-client": "^3.257.0",
     "@aws-sdk/types": "^3.257.0",
     "@equinox-js/core": "workspace:*",

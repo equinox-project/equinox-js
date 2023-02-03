@@ -40,6 +40,7 @@ importers:
       typescript: ^4.9.3
       vite: ^4.0.0
       vitest: ^0.25.3
+      zod: ^3.20.2
     dependencies:
       '@aws-sdk/client-dynamodb': 3.258.0
       '@aws-sdk/lib-dynamodb': 3.258.0_jhuyp7ws6ms32wqo7mxqkknssy
@@ -53,6 +54,7 @@ importers:
       '@opentelemetry/sdk-node': 0.35.0_@opentelemetry+api@1.4.0
       pg: 8.8.0
       ramda: 0.28.0
+      zod: 3.20.2
     devDependencies:
       '@aws-sdk/types': 3.257.0
       '@sveltejs/adapter-auto': 1.0.2_@sveltejs+kit@1.2.9
@@ -120,7 +122,6 @@ importers:
   packages/dynamo-store:
     specifiers:
       '@aws-sdk/client-dynamodb': ^3.258.0
-      '@aws-sdk/lib-dynamodb': ^3.258.0
       '@aws-sdk/smithy-client': ^3.257.0
       '@aws-sdk/types': ^3.257.0
       '@equinox-js/core': workspace:*
@@ -132,7 +133,6 @@ importers:
       vitest: ^0.25.3
     dependencies:
       '@aws-sdk/client-dynamodb': 3.258.0
-      '@aws-sdk/lib-dynamodb': 3.258.0_jhuyp7ws6ms32wqo7mxqkknssy
       '@aws-sdk/smithy-client': 3.257.0
       '@aws-sdk/types': 3.257.0
       '@equinox-js/core': link:../core
@@ -147,7 +147,6 @@ importers:
   packages/dynamo-store-indexer:
     specifiers:
       '@aws-sdk/client-dynamodb': ^3.258.0
-      '@aws-sdk/lib-dynamodb': ^3.258.0
       '@aws-sdk/smithy-client': ^3.257.0
       '@aws-sdk/types': ^3.257.0
       '@equinox-js/core': workspace:*
@@ -162,7 +161,6 @@ importers:
       vitest: ^0.25.3
     dependencies:
       '@aws-sdk/client-dynamodb': 3.258.0
-      '@aws-sdk/lib-dynamodb': 3.258.0_jhuyp7ws6ms32wqo7mxqkknssy
       '@aws-sdk/smithy-client': 3.257.0
       '@aws-sdk/types': 3.257.0
       '@equinox-js/core': link:../core
@@ -181,7 +179,6 @@ importers:
     specifiers:
       '@aws-sdk/client-dynamodb': ^3.258.0
       '@aws-sdk/client-dynamodb-streams': ^3.262.0
-      '@aws-sdk/lib-dynamodb': ^3.258.0
       '@aws-sdk/smithy-client': ^3.257.0
       '@aws-sdk/types': ^3.257.0
       '@equinox-js/core': workspace:*
@@ -190,6 +187,7 @@ importers:
       '@opentelemetry/api': ^1.4.0
       '@types/aws-lambda': ^8.10.110
       '@types/node': ^18.11.18
+      '@vercel/ncc': ^0.36.1
       tsconfig: workspace:*
       tsup: ^6.5.0
       typescript: ^4.7.4
@@ -197,7 +195,6 @@ importers:
     dependencies:
       '@aws-sdk/client-dynamodb': 3.258.0
       '@aws-sdk/client-dynamodb-streams': 3.262.0
-      '@aws-sdk/lib-dynamodb': 3.258.0_jhuyp7ws6ms32wqo7mxqkknssy
       '@aws-sdk/smithy-client': 3.257.0
       '@aws-sdk/types': 3.257.0
       '@equinox-js/core': link:../core
@@ -207,6 +204,7 @@ importers:
     devDependencies:
       '@types/aws-lambda': 8.10.110
       '@types/node': 18.11.18
+      '@vercel/ncc': 0.36.1
       tsconfig: link:../tsconfig
       tsup: 6.5.0_typescript@4.9.4
       typescript: 4.9.4
@@ -2941,6 +2939,11 @@ packages:
       '@types/node': 18.11.18
     dev: false
 
+  /@vercel/ncc/0.36.1:
+    resolution: {integrity: sha512-S4cL7Taa9yb5qbv+6wLgiKVZ03Qfkc4jGRuiUQMQ8HGBD5pcNRnHeYM33zBvJE4/zJGjJJ8GScB+WmTsn9mORw==}
+    hasBin: true
+    dev: true
+
   /acorn-jsx/5.3.2_acorn@8.8.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
     peerDependencies:
@@ -5135,4 +5138,8 @@ packages:
   /yocto-queue/1.0.0:
     resolution: {integrity: sha512-9bnSc/HEW2uRy67wc+T8UwauLuPJVn28jb+GtJY16iiKWyvmYJRXVT4UamsAEGQfPohgr2q4Tq0sQbQlxTfi1g==}
     engines: {node: '>=12.20'}
+    dev: false
+
+  /zod/3.20.2:
+    resolution: {integrity: sha512-1MzNQdAvO+54H+EaK5YpyEy0T+Ejo/7YLHS93G3RnYWh5gaotGHwGeN/ZO687qEDU2y4CdStQYXVHIgrUl5UVQ==}
     dev: false

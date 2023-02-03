@@ -85,20 +85,21 @@ data "aws_iam_policy_document" "indexer_lambda_policy" {
 
   statement {
     actions = [
-      "dynamodb:BatchGetItem", "dynamodb:Query", "dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:UpdateItem",
+      "dynamodb:BatchGetItem",
+      "dynamodb:GetItem",
+      "dynamodb:GetRecords",
+      "dynamodb:Scan",
+      "dynamodb:Query",
+      "dynamodb:GetShardIterator",
+      "dynamodb:DescribeStream",
+      "dynamodb:ListStreams",
       "dynamodb:BatchWriteItem"
     ]
-    resources = [module.events_table.arn]
-    effect    = "Allow"
-  }
-
-  statement {
-    actions = [
-      "dynamodb:BatchGetItem", "dynamodb:Query", "dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:UpdateItem",
-      "dynamodb:BatchWriteItem"
+    resources = [
+      module.events_table.arn, "${module.events_table.arn}/*",
+      module.index_table.arn, "${module.index_table.arn}/*"
     ]
-    resources = [module.index_table.arn]
-    effect    = "Allow"
+    effect = "Allow"
   }
 }
 
@@ -115,14 +116,16 @@ resource "aws_iam_policy_attachment" "indexer_lambda_policy" {
 }
 
 resource "aws_lambda_function" "indexer" {
-  function_name                  = "sample_events_indexer"
-  handler                        = "index.handler"
-  role                           = aws_iam_role.iam_for_lambda.arn
-  runtime                        = "nodejs16.x"
-  filename                       = "${path.module}/../../../packages/dynamo-store-indexer-lambda/lambda.zip"
-  source_code_hash               = filebase64sha256("${path.module}/../../../packages/dynamo-store-indexer-lambda/lambda.zip")
+  function_name    = "sample_events_indexer"
+  handler          = "index.handler"
+  role             = aws_iam_role.iam_for_lambda.arn
+  runtime          = "nodejs16.x"
+  filename         = "${path.module}/../../../packages/dynamo-store-indexer-lambda/dist/lambda.zip"
+  source_code_hash = filebase64sha256("${path.module}/../../../packages/dynamo-store-indexer-lambda/dist/lambda.zip")
   environment {
     variables = {
+      "AWS_REGION"       = "us-east-2"
+      "LOCAL"            = "true"
       "TABLE_NAME"       = module.events_table.table_name
       "INDEX_TABLE_NAME" = module.index_table.table_name
     }
