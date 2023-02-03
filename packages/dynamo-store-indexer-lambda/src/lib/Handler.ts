@@ -26,7 +26,8 @@ const parse = (records: DynamoDBStreamEvent["Records"]): AppendsEpoch.Events.Str
           const sn = IndexStreamId.ofString(p)
           const n = Number(updated.n.N)
           const appendedLen = Number(updated.a.N)
-          if (p.startsWith(AppendsEpoch.Category) || p.startsWith(AppendsIndex.Category)) indexStream++
+          // Is a system stream
+          if (p[0] === "$") indexStream++
           else if (appendedLen === 0) noEvents++
           else {
             const allBatchEventTypes = updated!.c.L!.map((x) => x.S!)
