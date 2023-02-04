@@ -11,25 +11,25 @@ export type Position = {
 }
 
 export const fromTip = (x: Batch.Batch): Position => ({
-  index: x.n,
+  index: x.version,
   etag: x.etag,
-  events: x.e,
-  calvedBytes: x.b ?? 0,
+  events: x.events,
+  calvedBytes: x.bytes ?? 0,
   baseBytes: Batch.bytesBase(x),
   unfoldsBytes: Batch.bytesUnfolds(x),
 })
 export const fromElements = (p: string, b: number, n: bigint, e: Event[], u: Unfold[], etag: string) =>
   fromTip({
-    p,
-    b,
-    i: -1n,
-    n,
-    e,
-    u,
+    streamName: p,
+    bytes: b,
+    index: -1n,
+    version: n,
+    events: e,
+    unfolds: u,
     etag,
   })
 
-export const tryFromBatch = (x: Batch.Batch) => (Batch.isTip(x.i) ? fromTip(x) : undefined)
+export const tryFromBatch = (x: Batch.Batch) => (Batch.isTip(x.index) ? fromTip(x) : undefined)
 export const toIndex = (x?: Position) => x?.index ?? 0n
 export const toEtag = (x?: Position) => x?.etag
 export const toVersionAndStreamBytes: (x?: Position) => [bigint, number] = (x?: Position) => (x ? [x.index, x.calvedBytes + x.baseBytes] : [0n, 0])

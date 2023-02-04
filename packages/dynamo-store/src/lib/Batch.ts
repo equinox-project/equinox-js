@@ -3,25 +3,25 @@ import { Unfold, arrayBytes as unfoldArrayBytes } from "./Unfold"
 import { sumBy } from "./Array"
 
 export type Batch = {
-  p: string // "{streamName}"
+  streamName: string // "{streamName}"
 
   /** (Tip Batch only) Number of bytes held in predecessor Batches */
-  b?: number
+  bytes?: number
 
   /** base 'i' value for the Events held herein */
-  i: bigint // tipMagicI for the Tip
+  index: bigint // tipMagicI for the Tip
 
   /** Marker on which compare-and-swap operations on Tip are predicated */
   etag?: string
 
   /** `i` value for successor batch (to facilitate identifying which Batch a given startPos is within) */
-  n: bigint
+  version: bigint
 
   /** The Domain Events (as opposed to Unfolded Events in `u`) for this page of the stream */
-  e: Event[]
+  events: Event[]
 
   /** Compaction/Snapshot/Projection quasi-events */
-  u: Unfold[]
+  unfolds: Unfold[]
 }
 
 export const tipMagicI = BigInt(-1 >>> 1)
@@ -33,10 +33,10 @@ export const isTip = (i: bigint) => i === tipMagicI
 
 const MAX_INT64 = 9223372036854775807n
 
-export const enumEvents = (minIndex = 0n, maxIndex = MAX_INT64, x: Batch) => x.e.filter((e) => minIndex <= e.i && e.i < maxIndex)
+export const enumEvents = (minIndex = 0n, maxIndex = MAX_INT64, x: Batch) => x.events.filter((e) => minIndex <= e.index && e.index < maxIndex)
 
 /// Computes base Index for the Item (`i` can bear the magic value TipI when the Item is the Tip)
-export const baseIndex = (x: Batch) => x.n - BigInt(x.e.length)
-export const bytesUnfolds = (x: Batch) => unfoldArrayBytes(x.u)
-export const bytesBase = (x: Batch) => 80 + x.p.length + (x.etag?.length || 0) + eventArrayBytes(x.e)
+export const baseIndex = (x: Batch) => x.version - BigInt(x.events.length)
+export const bytesUnfolds = (x: Batch) => unfoldArrayBytes(x.unfolds)
+export const bytesBase = (x: Batch) => 80 + x.streamName.length + (x.etag?.length || 0) + eventArrayBytes(x.events)
 export const bytesTotal = sumBy((x: Batch) => bytesBase(x) + bytesUnfolds(x))

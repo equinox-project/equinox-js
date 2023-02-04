@@ -27,7 +27,6 @@ export type TipOptions = {
   maxBytes: number
 }
 
-export type TipRet = [Position, bigint, TimelineEvent<InternalBody>[]]
 type TryDecode<E> = (e: TimelineEvent<EncodedBody>) => Promise<E | undefined> | E | undefined
 
 export class StoreClient {
@@ -50,7 +49,7 @@ export class StoreClient {
     isOrigin: (e: E) => boolean,
     minIndex?: bigint,
     maxIndex?: bigint,
-    tipRet?: TipRet
+    tipRet?: Tip.LoadedTip
   ): Promise<[StreamToken, E[]]> {
     const tip = tipRet && (await Query.scanTip(tryDecode, isOrigin, tipRet))
     maxIndex = maxIndex ?? (tip ? tipMagicI : undefined)
@@ -101,7 +100,7 @@ export class StoreClient {
       case Tip.ResType.NotModified:
         return Token.create(pos)
       case Tip.ResType.Found:
-        return Token.create(res.value[0])
+        return Token.create(res.value.position)
     }
   }
 
@@ -111,9 +110,9 @@ export class StoreClient {
     consistentRead: boolean,
     tryDecode: TryDecode<E>,
     isOrigin: (e: E) => boolean,
-    preview?: TipRet
+    preview?: Tip.LoadedTip
   ): Promise<LoadFromTokenResult<E>> {
-    const read = async (tipContent: TipRet): Promise<LoadFromTokenResult<E>> => {
+    const read = async (tipContent: Tip.LoadedTip): Promise<LoadFromTokenResult<E>> => {
       const res = await this.read(stream, consistentRead, Direction.Backward, tryDecode, isOrigin, toIndex(maybePos), undefined, tipContent)
       return { type: LFTR.Found, token: res[0], events: res[1] }
     }

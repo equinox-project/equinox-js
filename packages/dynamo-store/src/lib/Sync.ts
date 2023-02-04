@@ -227,20 +227,20 @@ export async function handle(
   const baseIndex = n_ - BigInt(streamEvents.length)
   const events = streamEvents.map(
     (e, i): Event => ({
-      i: baseIndex + BigInt(i),
-      t: new Date(),
-      c: e.type,
-      d: toInternal(e.data),
-      m: toInternal(e.meta),
+      index: baseIndex + BigInt(i),
+      timestamp: new Date(),
+      type: e.type,
+      data: toInternal(e.data),
+      meta: toInternal(e.meta),
     })
   )
   const unfolds = streamUnfolds.map(
     (x, i): Unfold => ({
-      i: baseIndex + BigInt(i),
-      t: new Date(),
-      c: x.type,
-      d: toInternal(x.data),
-      m: toInternal(x.meta),
+      index: baseIndex + BigInt(i),
+      timestamp: new Date(),
+      type: x.type,
+      data: toInternal(x.data),
+      meta: toInternal(x.meta),
     })
   )
   if (events.length === 0 && unfolds.length === 0) throw new Error("Must write either events or unfolds")

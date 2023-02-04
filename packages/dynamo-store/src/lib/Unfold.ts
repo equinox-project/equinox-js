@@ -5,34 +5,34 @@ import { TimelineEvent } from "@equinox-js/core"
 type InternalBody = InternalBody.InternalBody
 export type Unfold = {
   /// Base: Stream Position (Version) of State from which this Unfold was generated
-  i: bigint
+  index: bigint
 
   /// Generation datetime
-  t: Date
+  timestamp: Date
 
   /// The Case (Event Type) of this snapshot, used to drive deserialization
-  c: string // required
+  type: string // required
 
   /// Event body
-  d: InternalBody // required
+  data: InternalBody // required
 
   /// Optional metadata, can be Empty
-  m: InternalBody
+  meta: InternalBody
 }
 
 const NIL = "00000000-0000-0000-0000-000000000000"
 
-export const bytes = (x: Unfold) => x.c.length + InternalBody.bytes(x.d) + InternalBody.bytes(x.m) + 50
+export const bytes = (x: Unfold) => x.type.length + InternalBody.bytes(x.data) + InternalBody.bytes(x.meta) + 50
 
 export const arrayBytes = sumBy(bytes)
 
 export const unfoldToTimelineEvent = (x: Unfold): TimelineEvent<InternalBody> => ({
   id: NIL,
-  time: x.t,
-  type: x.c,
-  data: x.d,
-  meta: x.m,
-  index: x.i,
+  time: x.timestamp,
+  type: x.type,
+  data: x.data,
+  meta: x.meta,
+  index: x.index,
   isUnfold: true,
   size: bytes(x),
 })

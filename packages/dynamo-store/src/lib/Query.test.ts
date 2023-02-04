@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest"
 import * as Query from "./Query"
 import * as Position from "./Position"
 import { Batch } from "./Batch"
+import { Event } from "./Event"
 import { ofBufferAndEncoding } from "./InternalBody"
 import { randomUUID } from "crypto"
 
@@ -11,7 +12,7 @@ describe("Query.scanTip", () => {
       Query.scanTip(
         () => ({ event: true }),
         () => true,
-        [Position.null_(0n), 0n, [{ data: {}, meta: {} } as any]]
+        { position: Position.null_(0n), index: 0n, events: [{ data: {}, meta: {} } as any] }
       )
     ).resolves.toEqual({
       found: true,
@@ -26,7 +27,7 @@ describe("Query.scanTip", () => {
       Query.scanTip(
         () => ({ event: true }),
         () => false,
-        [Position.null_(0n), 0n, [{ data: {}, meta: {} } as any]]
+        { position: Position.null_(0n), index: 0n, events: [{ data: {}, meta: {} } as any] }
       )
     ).resolves.toEqual({
       found: false,
@@ -40,12 +41,12 @@ describe("Query.scanTip", () => {
 
 const encode = (x: any) => ofBufferAndEncoding(new Uint8Array(Buffer.from(JSON.stringify(x))))
 
-const mkEvent = (i: bigint) => ({
-  i,
-  c: "Type",
-  d: encode({ hello: "world" }),
-  m: encode({ some: "meta" }),
-  t: new Date("2023-01-01T00:00:00.000Z"),
+const mkEvent = (index: bigint): Event => ({
+  index,
+  type: "Type",
+  data: encode({ hello: "world" }),
+  meta: encode({ some: "meta" }),
+  timestamp: new Date("2023-01-01T00:00:00.000Z"),
 })
 
 // It's important to note that the values defined on this
@@ -53,13 +54,13 @@ const mkEvent = (i: bigint) => ({
 // because it relies on the `ScanResult<T>` coming from `Query.scanTip`
 // which is derived from the batch.
 const ExampleTip: Batch = {
-  b: 0,
-  e: [mkEvent(1n)],
+  bytes: 0,
+  events: [mkEvent(1n)],
   etag: randomUUID(),
-  n: 1n,
-  p: "Test-1234",
-  u: [],
-  i: 1n,
+  version: 1n,
+  streamName: "Test-1234",
+  unfolds: [],
+  index: 1n,
 }
 
 describe("Query.load", () => {
@@ -67,7 +68,7 @@ describe("Query.load", () => {
     const [pos, events] = await Query.load(
       0n,
       1000n,
-      { found: true, next: 1n, minIndex: 0n, maybeTipPos: Position.fromTip(ExampleTip), events: ExampleTip.e },
+      { found: true, next: 1n, minIndex: 0n, maybeTipPos: Position.fromTip(ExampleTip), events: ExampleTip.events },
       () =>
         Promise.resolve({
           found: false,
@@ -79,7 +80,7 @@ describe("Query.load", () => {
       () => Promise.resolve(undefined)
     )
     expect(pos).toEqual(Position.fromTip(ExampleTip))
-    expect(events).toEqual([ExampleTip.e[0]])
+    expect(events).toEqual([ExampleTip.events[0]])
   })
   test("When the tip is not enough", async () => {
     const [pos, events] = await Query.load(

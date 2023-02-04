@@ -9,6 +9,7 @@ import { TimelineEvent } from "@equinox-js/core"
 import { ofInternal, EncodedBody } from "./EncodedBody"
 import { InternalBody } from "./InternalBody"
 import { trace } from "@opentelemetry/api"
+import { LoadedTip } from "./Tip"
 
 export enum Direction {
   Forward,
@@ -61,11 +62,7 @@ type ScanResult<Event> = {
 }
 
 type TryDecode<E> = (e: TimelineEvent<EncodedBody>) => Promise<E | undefined> | E | undefined
-export async function scanTip<E>(
-  tryDecode: TryDecode<E>,
-  isOrigin: (ev: E) => boolean,
-  [pos, i, xs]: [Position, bigint, TimelineEvent<InternalBody>[]]
-): Promise<ScanResult<E>> {
+export async function scanTip<E>(tryDecode: TryDecode<E>, isOrigin: (ev: E) => boolean, tip: LoadedTip): Promise<ScanResult<E>> {
   const items: E[] = []
   const isOrigin_ = async (ev: TimelineEvent<InternalBody>) => {
     const x = await tryDecode(ofInternal(ev))
@@ -74,13 +71,13 @@ export async function scanTip<E>(
     return isOrigin(x)
   }
 
-  const found = await containsBackAsync(isOrigin_)(xs)
+  const found = await containsBackAsync(isOrigin_)(tip.events)
 
   return {
     found,
-    maybeTipPos: pos,
-    minIndex: i,
-    next: pos.index + 1n,
+    maybeTipPos: tip.position,
+    minIndex: tip.index,
+    next: tip.position.index + 1n,
     events: items,
   }
 }
@@ -103,20 +100,20 @@ export async function scan<E>(
     batchesBackward: AsyncIterable<[Event[], Position | undefined]>
   ): Promise<[[Event, E | undefined][], Position | undefined]> => {
     let maybeTipPos: Position | undefined = undefined
-    const decodedEvents = AsyncEnumerable.bindArrayAsync(batchesBackward, async ([events, maybePos]) => {
+    const events: [Event, E | undefined][] = []
+    for await (const [batchEvents, maybePos] of batchesBackward) {
       if (maybeTipPos == null) maybeTipPos = maybePos
       responseCount++
-      const result: [Event, E | undefined][] = []
-      for (const x of events) result.push([x, await tryDecode(ofInternal(eventToTimelineEvent(x)))])
-      return result
-    })
-    const events = await AsyncEnumerable.toArray(
-      AsyncEnumerable.takeWhileInclusive(decodedEvents, ([_, decoded]) => {
-        if (!decoded || !isOrigin(decoded)) return true
-        found = true
-        return false
-      })
-    )
+      for (const x of batchEvents) {
+        const decoded = await tryDecode(ofInternal(eventToTimelineEvent(x)))
+        events.push([x, decoded])
+        if (decoded && isOrigin(decoded)) {
+          found = true
+          break
+        }
+      }
+      if (found) break
+    }
 
     return [events, maybeTipPos]
   }
@@ -128,8 +125,8 @@ export async function scan<E>(
   const raws = events.map((x) => x[0])
   const decoded = direction === Direction.Forward ? keepMap(events, (x) => x[1]) : keepMap(events, (x) => x[1]).reverse()
   const minMax = raws.reduce((acc, x): [bigint, bigint] => {
-    if (acc == null) return [x.i, x.i]
-    return [x.i < acc[0] ? x.i : acc[0], x.i > acc[1] ? x.i : acc[1]]
+    if (acc == null) return [x.index, x.index]
+    return [x.index < acc[0] ? x.index : acc[0], x.index > acc[1] ? x.index : acc[1]]
   }, undefined as [bigint, bigint] | undefined)
   const version = maybeTipPos?.index ?? (minMax ? minMax[1] + 1n : 0n)
   if (minMax) return { found, minIndex: minMax[0], next: minMax[1] + 1n, maybeTipPos, events: decoded }

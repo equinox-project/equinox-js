@@ -1,4 +1,4 @@
-import { StreamToken } from "./Core"
+import { StreamToken, TokenAndState } from "./Core"
 import LRUCache from "lru-cache"
 
 type Expiration = { absolute: number } | { relative: number }
@@ -12,12 +12,12 @@ export class CacheEntry<State> {
       this.state = other.state
     }
   }
-  value(): [StreamToken, State] {
-    return [this.token, this.state]
+  value(): TokenAndState<State> {
+    return { token: this.token, state: this.state }
   }
 
-  static ofTokenAndState<S>([token, state]: [StreamToken, S]) {
-    return new CacheEntry(token, state)
+  static ofTokenAndState<S>(x: TokenAndState<S>) {
+    return new CacheEntry(x.token, x.state)
   }
 }
 
@@ -29,7 +29,7 @@ export interface ICache {
     entry: CacheEntry<State>
   ): Promise<void>
 
-  tryGet<State>(key: string): Promise<[StreamToken, State] | null>
+  tryGet<State>(key: string): Promise<TokenAndState<State> | null>
 }
 
 export class MemoryCache implements ICache {
@@ -41,7 +41,7 @@ export class MemoryCache implements ICache {
     })
   }
 
-  async tryGet<State>(key: string): Promise<[StreamToken, State] | null> {
+  async tryGet<State>(key: string): Promise<TokenAndState<State> | null> {
     return this.cache.get(key)?.value() ?? null
   }
 

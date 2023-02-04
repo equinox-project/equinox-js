@@ -6,7 +6,7 @@ import { eventToTimelineEvent } from "./Event"
 import { TimelineEvent } from "@equinox-js/core"
 import { InternalBody } from "./InternalBody"
 import * as Tracing from "./Tracing"
-import { context, SpanKind, trace } from "@opentelemetry/api"
+import { SpanKind } from "@opentelemetry/api"
 
 export enum ResType {
   Found,
@@ -15,19 +15,33 @@ export enum ResType {
 }
 export type Res<T> = { type: ResType.Found; value: T } | { type: ResType.NotFound } | { type: ResType.NotModified }
 
-const enumEventsAndUnfolds = (minIndex: bigint | undefined, maxIndex: bigint | undefined, x: Batch) => {
-  const events = enumEvents(minIndex, maxIndex, x).map(eventToTimelineEvent)
-  const unfolds = x.u.map(unfoldToTimelineEvent)
-  return events.concat(unfolds).sort((a, b) => {
-    if (a.index < b.index) return -1
-    if (a.index > b.index) return 1
-    if (a.isUnfold && !b.isUnfold) return 1
-    if (!a.isUnfold && b.isUnfold) return -1
-    return 0
-  })
+function compareTimelineEvents(a: TimelineEvent<unknown>, b: TimelineEvent<unknown>) {
+  if (a.index < b.index) return -1
+  if (a.index > b.index) return 1
+  if (a.isUnfold && !b.isUnfold) return 1
+  if (!a.isUnfold && b.isUnfold) return -1
+  return 0
 }
 
-export async function tryLoad(container: Container, stream: string, consistentRead: boolean, pos?: Position, maxIndex?: bigint) {
+const enumEventsAndUnfolds = (minIndex: bigint | undefined, maxIndex: bigint | undefined, x: Batch) => {
+  const events = enumEvents(minIndex, maxIndex, x).map(eventToTimelineEvent)
+  const unfolds = x.unfolds.map(unfoldToTimelineEvent)
+  return events.concat(unfolds).sort(compareTimelineEvents)
+}
+
+export type LoadedTip = {
+  position: Position
+  index: bigint
+  events: TimelineEvent<InternalBody>[]
+}
+
+export async function tryLoad(
+  container: Container,
+  stream: string,
+  consistentRead: boolean,
+  pos?: Position,
+  maxIndex?: bigint
+): Promise<Res<LoadedTip>> {
   return Tracing.withSpan(
     "Tip.tryLoad",
     {
@@ -37,7 +51,7 @@ export async function tryLoad(container: Container, stream: string, consistentRe
         "eqx.require_leader": consistentRead,
       },
     },
-    async (span): Promise<Res<[Position, bigint, TimelineEvent<InternalBody>[]]>> => {
+    async (span): Promise<Res<LoadedTip>> => {
       const tip = await container.tryGetTip(stream, consistentRead)
       if (tip == null) {
         span.setAttribute("eqx.result", "NotFound")
@@ -50,7 +64,7 @@ export async function tryLoad(container: Container, stream: string, consistentRe
       span.setAttribute("eqx.result", "Found")
       return {
         type: ResType.Found,
-        value: [fromTip(tip), baseIndex(tip), enumEventsAndUnfolds(pos?.index, maxIndex, tip)],
+        value: { position: fromTip(tip), index: baseIndex(tip), events: enumEventsAndUnfolds(pos?.index, maxIndex, tip) },
       }
     }
   )
