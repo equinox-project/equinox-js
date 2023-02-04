@@ -9,6 +9,7 @@ import { TimelineEvent } from "@equinox-js/core"
 import { ofInternal, EncodedBody } from "./EncodedBody"
 import { InternalBody } from "./InternalBody"
 import { trace } from "@opentelemetry/api"
+import { LoadedTip } from "./Tip"
 
 export enum Direction {
   Forward,
@@ -61,11 +62,7 @@ type ScanResult<Event> = {
 }
 
 type TryDecode<E> = (e: TimelineEvent<EncodedBody>) => Promise<E | undefined> | E | undefined
-export async function scanTip<E>(
-  tryDecode: TryDecode<E>,
-  isOrigin: (ev: E) => boolean,
-  [pos, i, xs]: [Position, bigint, TimelineEvent<InternalBody>[]]
-): Promise<ScanResult<E>> {
+export async function scanTip<E>(tryDecode: TryDecode<E>, isOrigin: (ev: E) => boolean, tip: LoadedTip): Promise<ScanResult<E>> {
   const items: E[] = []
   const isOrigin_ = async (ev: TimelineEvent<InternalBody>) => {
     const x = await tryDecode(ofInternal(ev))
@@ -74,13 +71,13 @@ export async function scanTip<E>(
     return isOrigin(x)
   }
 
-  const found = await containsBackAsync(isOrigin_)(xs)
+  const found = await containsBackAsync(isOrigin_)(tip.events)
 
   return {
     found,
-    maybeTipPos: pos,
-    minIndex: i,
-    next: pos.index + 1n,
+    maybeTipPos: tip.position,
+    minIndex: tip.index,
+    next: tip.position.index + 1n,
     events: items,
   }
 }

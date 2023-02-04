@@ -4,7 +4,7 @@ import * as Snapshot from "./Snapshot"
 import * as Write from "./Write"
 import * as Read from "./Read"
 import * as Caching from "./Caching"
-import type { ICache, ICategory, StateTuple, StreamToken, SyncResult, Codec, StreamEvent, TimelineEvent } from "@equinox-js/core"
+import type { ICache, ICategory, TokenAndState, StreamToken, SyncResult, Codec, StreamEvent, TimelineEvent } from "@equinox-js/core"
 import { context, trace } from "@opentelemetry/api"
 import { Format, MessageDbReader, MessageDbWriter } from "./MessageDbClient"
 import { Pool } from "pg"
@@ -122,9 +122,9 @@ class CategoryWithAccessStrategy<Event, State, Context> {
     fold: (state: State, events: Event[]) => State,
     initial: State,
     f: Promise<[StreamToken, Event[]]>
-  ): Promise<[StreamToken, State]> {
+  ): Promise<TokenAndState<State>> {
     const [token, events] = await f
-    return [token, fold(initial, events)]
+    return { token, state: fold(initial, events) }
   }
 
   async load(
@@ -162,17 +162,17 @@ class CategoryWithAccessStrategy<Event, State, Context> {
           resync: () => this.reload(fold, state, streamName, true, token),
         }
       case "Written": {
-        const state_ = fold(state, events)
+        const newState = fold(state, events)
         switch (this.access.type) {
           case "LatestKnownEvent":
           case "Unoptimized":
             break
           case "AdjacentSnapshots":
             if (Token.shouldSnapshot(this.context.batchSize, token, result.token)) {
-              await this.storeSnapshot(category, streamId, ctx, result.token, this.access.toSnapshot(state_))
+              await this.storeSnapshot(category, streamId, ctx, result.token, this.access.toSnapshot(newState))
             }
         }
-        return { type: "Written", data: [result.token, state_] }
+        return { type: "Written", data: { token: result.token, state: newState } }
       }
     }
   }
@@ -200,7 +200,7 @@ class Folder<Event, State, Context> implements ICategory<Event, State, Context> 
     trace.getSpan(context.active())?.setAttribute("eqx.cache_hit", cacheItem != null)
     if (!cacheItem) return load()
     if (allowStale) return cacheItem
-    const [token, state] = cacheItem
+    const { token, state } = cacheItem
     return this.category.reload(this.fold, state, streamName, requireLeader, token)
   }
 
@@ -222,7 +222,7 @@ export type CachingStrategy =
 export class MessageDbCategory<Event, State, Context = null> extends Equinox.Category<Event, State, Context> {
   constructor(
     resolveInner: (categoryName: string, streamId: string) => readonly [ICategory<Event, State, Context>, string],
-    empty: StateTuple<State>
+    empty: TokenAndState<State>
   ) {
     super(resolveInner, empty)
   }
@@ -262,7 +262,7 @@ export class MessageDbCategory<Event, State, Context = null> extends Equinox.Cat
     })()
 
     const resolveInner = (categoryName: string, streamId: string) => [category, `${categoryName}-${streamId}`] as const
-    const empty: StateTuple<State> = [context.tokenEmpty, initial]
+    const empty: TokenAndState<State> = { token: context.tokenEmpty, state: initial }
     return new MessageDbCategory(resolveInner, empty)
   }
 }

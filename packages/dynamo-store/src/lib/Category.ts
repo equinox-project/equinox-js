@@ -1,6 +1,6 @@
 import { StoreClient, TipRet } from "./StoreClient"
 import * as Token from "./Token"
-import { AsyncCodec, StreamEvent, StreamToken, SyncResult } from "@equinox-js/core"
+import { AsyncCodec, StreamEvent, StreamToken, SyncResult, TokenAndState } from "@equinox-js/core"
 import { ISR, LFTR, Fold, IsOrigin, MapUnfolds } from "./Internal"
 import { Position, toEtag, toIndex } from "./Position"
 import { ExpectedVersion } from "./Sync"
@@ -16,9 +16,9 @@ export class InternalCategory<E, S, C> {
     checkUnfolds: boolean,
     fold: Fold<E, S>,
     isOrigin: (e: E) => boolean
-  ): Promise<[StreamToken, S]> {
+  ): Promise<TokenAndState<S>> {
     const [token, events] = await this.store.load(stream, undefined, requireLeader, this.codec.tryDecode, isOrigin, checkUnfolds)
-    return [token, fold(initial, events)]
+    return { token, state: fold(initial, events) }
   }
 
   async reload(
@@ -29,13 +29,13 @@ export class InternalCategory<E, S, C> {
     fold: Fold<E, S>,
     isOrigin: IsOrigin<E>,
     preloaded?: TipRet
-  ): Promise<[StreamToken, S]> {
+  ): Promise<TokenAndState<S>> {
     const result = await this.store.reload(stream, Token.unpack(token), requireLeader, this.codec.tryDecode, isOrigin, preloaded)
     switch (result.type) {
       case LFTR.Unchanged:
-        return [token, state]
+        return { token, state }
       case LFTR.Found:
-        return [result.token, fold(state, result.events)]
+        return { token: result.token, state: fold(state, result.events) }
     }
   }
 
@@ -83,7 +83,7 @@ export class InternalCategory<E, S, C> {
       case ISR.ConflictUnknown:
         return { type: "Conflict", resync: () => this.reload(stream, true, token, state, fold, isOrigin) }
       case ISR.Written:
-        return { type: "Written", data: [res.token, nextState] }
+        return { type: "Written", data: { token: res.token, state: nextState } }
     }
   }
 }

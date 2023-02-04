@@ -2,8 +2,8 @@ import { Container } from "./Container"
 import * as Token from "./Token"
 import { DynamoDB } from "@aws-sdk/client-dynamodb"
 import { QueryOptions, StoreClient, TipOptions } from "./StoreClient"
-import { defaultMaxItems, defaultTipMaxBytes, Fold, IsOrigin, MapUnfolds } from "./Internal"
-import { AsyncCodec, Category, ICache, StreamToken } from "@equinox-js/core"
+import { defaultMaxItems, defaultTipMaxBytes, Fold } from "./Internal"
+import { AsyncCodec, Category, TokenAndState } from "@equinox-js/core"
 import { ICategory } from "@equinox-js/core/src"
 import { applyCacheUpdatesWithFixedTimeSpan, applyCacheUpdatesWithSlidingExpiration, CachingCategory } from "./Caching"
 import { InternalCategory } from "./Category"
@@ -82,7 +82,7 @@ export class DynamoStoreContext {
 }
 
 export class DynamoStoreCategory<E, S, C> extends Category<E, S, C> {
-  constructor(resolveInner: (categoryName: string, streamId: string) => readonly [ICategory<E, S, C>, string], empty: [StreamToken, S]) {
+  constructor(resolveInner: (categoryName: string, streamId: string) => readonly [ICategory<E, S, C>, string], empty: TokenAndState<S>) {
     super(resolveInner, empty)
   }
 
@@ -116,6 +116,6 @@ export class DynamoStoreCategory<E, S, C> extends Category<E, S, C> {
       let [container, streamName] = context.resolveContainerClientAndStreamId(categoryName, streamId)
       return [resolveCategory(categoryName, container), streamName]
     }
-    return new DynamoStoreCategory(resolveInner, [Token.empty, initial])
+    return new DynamoStoreCategory(resolveInner, { token: Token.empty, state: initial })
   }
 }

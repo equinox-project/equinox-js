@@ -1,20 +1,20 @@
-import { StateTuple, StreamToken, SyncResult, ICategory, CacheEntry, ICache } from "@equinox-js/core"
+import { TokenAndState, StreamToken, SyncResult, ICategory, CacheEntry, ICache } from "@equinox-js/core"
 
 class Decorator<Event, State, Context> implements ICategory<Event, State, Context> {
-  private readonly cache: (streamName: string, inner: Promise<[StreamToken, State]>) => Promise<[StreamToken, State]>
+  private readonly cache: (streamName: string, inner: Promise<TokenAndState<State>>) => Promise<TokenAndState<State>>
 
   constructor(
     private readonly inner: ICategory<Event, State, Context>,
-    private readonly updateCache: (key: string, value: [StreamToken, State]) => Promise<void>
+    private readonly updateCache: (key: string, value: TokenAndState<State>) => Promise<void>
   ) {
-    this.cache = async (streamName: string, inner: Promise<[StreamToken, State]>) => {
+    this.cache = async (streamName: string, inner: Promise<TokenAndState<State>>) => {
       const tokenAndState = await inner
       await updateCache(streamName, tokenAndState)
       return tokenAndState
     }
   }
 
-  load(categoryName: string, streamId: string, streamName: string, allowStale: boolean, requireLeader: boolean): Promise<StateTuple<State>> {
+  load(categoryName: string, streamId: string, streamName: string, allowStale: boolean, requireLeader: boolean): Promise<TokenAndState<State>> {
     return this.cache(streamName, this.inner.load(categoryName, streamId, streamName, allowStale, requireLeader))
   }
 
@@ -49,7 +49,7 @@ export function applyCacheUpdatesWithSlidingExpiration<E, S, C>(
   supersedes: (a: StreamToken, b: StreamToken) => boolean
 ) {
   const options = { relative: slidingExpirationInMs }
-  const addOrUpdateSlidingExpirationCacheEntry = (streamName: string, value: [StreamToken, S]) =>
+  const addOrUpdateSlidingExpirationCacheEntry = (streamName: string, value: TokenAndState<S>) =>
     cache.updateIfNewer(prefix + streamName, options, supersedes, CacheEntry.ofTokenAndState(value))
 
   return new Decorator<E, S, C>(category, addOrUpdateSlidingExpirationCacheEntry)
@@ -62,7 +62,7 @@ export function applyCacheUpdatesWithFixedTimeSpan<E, S, C>(
   category: ICategory<E, S, C>,
   supersedes: (a: StreamToken, b: StreamToken) => boolean
 ) {
-  const addOrUpdateFixedLifetimeCacheEntry = (streamName: string, value: [StreamToken, S]) => {
+  const addOrUpdateFixedLifetimeCacheEntry = (streamName: string, value: TokenAndState<S>) => {
     const expirationPoint = Date.now() + lifetimeInMs
     const options = { absolute: expirationPoint }
     return cache.updateIfNewer(prefix + streamName, options, supersedes, CacheEntry.ofTokenAndState(value))
