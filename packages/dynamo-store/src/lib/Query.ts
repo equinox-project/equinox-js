@@ -100,20 +100,20 @@ export async function scan<E>(
     batchesBackward: AsyncIterable<[Event[], Position | undefined]>
   ): Promise<[[Event, E | undefined][], Position | undefined]> => {
     let maybeTipPos: Position | undefined = undefined
-    const decodedEvents = AsyncEnumerable.bindArrayAsync(batchesBackward, async ([events, maybePos]) => {
+    const events: [Event, E | undefined][] = []
+    for await (const [batchEvents, maybePos] of batchesBackward) {
       if (maybeTipPos == null) maybeTipPos = maybePos
       responseCount++
-      const result: [Event, E | undefined][] = []
-      for (const x of events) result.push([x, await tryDecode(ofInternal(eventToTimelineEvent(x)))])
-      return result
-    })
-    const events = await AsyncEnumerable.toArray(
-      AsyncEnumerable.takeWhileInclusive(decodedEvents, ([_, decoded]) => {
-        if (!decoded || !isOrigin(decoded)) return true
-        found = true
-        return false
-      })
-    )
+      for (const x of batchEvents) {
+        const decoded = await tryDecode(ofInternal(eventToTimelineEvent(x)))
+        events.push([x, decoded])
+        if (decoded && isOrigin(decoded)) {
+          found = true
+          break
+        }
+      }
+      if (found) break
+    }
 
     return [events, maybeTipPos]
   }
