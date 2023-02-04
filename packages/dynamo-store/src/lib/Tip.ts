@@ -25,7 +25,7 @@ function compareTimelineEvents(a: TimelineEvent<unknown>, b: TimelineEvent<unkno
 
 const enumEventsAndUnfolds = (minIndex: bigint | undefined, maxIndex: bigint | undefined, x: Batch) => {
   const events = enumEvents(minIndex, maxIndex, x).map(eventToTimelineEvent)
-  const unfolds = x.u.map(unfoldToTimelineEvent)
+  const unfolds = x.unfolds.map(unfoldToTimelineEvent)
   return events.concat(unfolds).sort(compareTimelineEvents)
 }
 

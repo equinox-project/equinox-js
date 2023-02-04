@@ -15,9 +15,9 @@ export type EventSchema = {
 }
 
 export const eventToSchema = (x: Event): EventSchema => {
-  const [d, D] = InternalBody.toBufferAndEncoding(x.d)
-  const [m, M] = InternalBody.toBufferAndEncoding(x.m)
-  const result: EventSchema = { t: { S: x.t.toISOString() } }
+  const [d, D] = InternalBody.toBufferAndEncoding(x.data)
+  const [m, M] = InternalBody.toBufferAndEncoding(x.meta)
+  const result: EventSchema = { t: { S: x.timestamp.toISOString() } }
   if (d) {
     result.d = { B: d }
     if (D) result.D = { N: String(D) }
@@ -35,7 +35,7 @@ export const eventsToSchema = (events: Event[]): [{ S: string }[], { M: EventSch
   const c: { S: string }[] = new Array(events.length)
   const e: { M: EventSchema }[] = new Array(events.length)
   for (let i = 0; i < events.length; ++i) {
-    c[i] = { S: events[i].c }
+    c[i] = { S: events[i].type }
     e[i] = { M: eventToSchema(events[i]) }
   }
   return [c, e]
@@ -51,10 +51,10 @@ export type UnfoldSchema = {
 }
 
 export const unfoldToSchema = (x: Unfold): { M: UnfoldSchema } => {
-  const result: UnfoldSchema = { i: { N: String(x.i) }, t: { S: x.t.toISOString() }, c: { S: x.c } }
+  const result: UnfoldSchema = { i: { N: String(x.index) }, t: { S: x.timestamp.toISOString() }, c: { S: x.type } }
 
-  const [d, D] = InternalBody.toBufferAndEncoding(x.d)
-  const [m, M] = InternalBody.toBufferAndEncoding(x.m)
+  const [d, D] = InternalBody.toBufferAndEncoding(x.data)
+  const [m, M] = InternalBody.toBufferAndEncoding(x.meta)
   if (d) {
     result.d = { B: d }
     if (D) result.D = { N: String(D) }
@@ -69,11 +69,11 @@ export const unfoldToSchema = (x: Unfold): { M: UnfoldSchema } => {
 export const unfoldsToSchema = map(unfoldToSchema)
 
 export const unfoldOfSchema = ({ M: x }: { M: UnfoldSchema }): Unfold => ({
-  i: BigInt(x.i.N),
-  t: new Date(x.t.S),
-  c: x.c.S,
-  d: InternalBody.ofBufferAndEncoding(x.d?.B, x.D ? Number(x.D.N) : undefined),
-  m: InternalBody.ofBufferAndEncoding(x.m?.B, x.M ? Number(x.M.N) : undefined),
+  index: BigInt(x.i.N),
+  timestamp: new Date(x.t.S),
+  type: x.c.S,
+  data: InternalBody.ofBufferAndEncoding(x.d?.B, x.D ? Number(x.D.N) : undefined),
+  meta: InternalBody.ofBufferAndEncoding(x.m?.B, x.M ? Number(x.M.N) : undefined),
 })
 const unfoldsOfSchemas = map(unfoldOfSchema)
 
@@ -104,22 +104,22 @@ export const schemaToBatch = (x: Schema): Batch => {
     const data = InternalBody.ofBufferAndEncoding(e.d?.B, e.D ? Number(e.D.N) : undefined)
     const meta = InternalBody.ofBufferAndEncoding(e.m?.B, e.M ? Number(e.M.N) : undefined)
     events[i] = {
-      i: baseIndex + BigInt(i),
-      c,
-      t: new Date(e.t.S),
-      d: data,
-      m: meta,
+      index: baseIndex + BigInt(i),
+      type: c,
+      timestamp: new Date(e.t.S),
+      data: data,
+      meta: meta,
       correlationId: e.x?.S,
       causationId: e.y?.S,
     }
   }
   return {
-    p: x.p.S,
-    b: x.b ? Number(x.b.N) : undefined,
-    i: BigInt(x.i.N),
+    streamName: x.p.S,
+    bytes: x.b ? Number(x.b.N) : undefined,
+    index: BigInt(x.i.N),
     etag: x.etag?.S,
-    n: BigInt(x.n.N),
-    e: events,
-    u: unfoldsOfSchemas(x.u.L),
+    version: BigInt(x.n.N),
+    events: events,
+    unfolds: unfoldsOfSchemas(x.u.L),
   }
 }

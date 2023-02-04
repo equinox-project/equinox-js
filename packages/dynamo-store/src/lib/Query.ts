@@ -125,8 +125,8 @@ export async function scan<E>(
   const raws = events.map((x) => x[0])
   const decoded = direction === Direction.Forward ? keepMap(events, (x) => x[1]) : keepMap(events, (x) => x[1]).reverse()
   const minMax = raws.reduce((acc, x): [bigint, bigint] => {
-    if (acc == null) return [x.i, x.i]
-    return [x.i < acc[0] ? x.i : acc[0], x.i > acc[1] ? x.i : acc[1]]
+    if (acc == null) return [x.index, x.index]
+    return [x.index < acc[0] ? x.index : acc[0], x.index > acc[1] ? x.index : acc[1]]
   }, undefined as [bigint, bigint] | undefined)
   const version = maybeTipPos?.index ?? (minMax ? minMax[1] + 1n : 0n)
   if (minMax) return { found, minIndex: minMax[0], next: minMax[1] + 1n, maybeTipPos, events: decoded }
