@@ -1,10 +1,11 @@
-import { StoreClient, TipRet } from "./StoreClient"
+import { StoreClient } from "./StoreClient"
 import * as Token from "./Token"
 import { AsyncCodec, StreamEvent, StreamToken, SyncResult, TokenAndState } from "@equinox-js/core"
 import { ISR, LFTR, Fold, IsOrigin, MapUnfolds } from "./Internal"
 import { Position, toEtag, toIndex } from "./Position"
 import { ExpectedVersion } from "./Sync"
 import { EncodedBody } from "./EncodedBody"
+import { LoadedTip } from "./Tip"
 
 export class InternalCategory<E, S, C> {
   constructor(private readonly store: StoreClient, private readonly codec: AsyncCodec<E, EncodedBody, C>) {}
@@ -28,7 +29,7 @@ export class InternalCategory<E, S, C> {
     state: S,
     fold: Fold<E, S>,
     isOrigin: IsOrigin<E>,
-    preloaded?: TipRet
+    preloaded?: LoadedTip
   ): Promise<TokenAndState<S>> {
     const result = await this.store.reload(stream, Token.unpack(token), requireLeader, this.codec.tryDecode, isOrigin, preloaded)
     switch (result.type) {
