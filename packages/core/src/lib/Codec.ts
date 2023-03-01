@@ -11,6 +11,17 @@ export type Codec<E, C> = {
   encode(event: E, ctx: C): StreamEvent<Record<string, any>>
 }
 
+export const PassThroughCodec = <E extends { type: string; data?: Record<string, any> }, C>(
+  ctxToMeta: (ctx: C) => Record<string, any> | undefined = (x) => undefined
+): Codec<E, C> => ({
+  tryDecode(event: TimelineEvent<Record<string, any>>): E | undefined {
+    return event as any as E
+  },
+  encode(event: E, ctx: C): StreamEvent<Record<string, any>> {
+    return { type: event.type, data: event.data, meta: ctxToMeta(ctx) }
+  },
+})
+
 export abstract class AsyncCodec<E, F, C = undefined> {
   abstract tryDecode(event: TimelineEvent<F>): Promise<E | undefined> | E | undefined
 

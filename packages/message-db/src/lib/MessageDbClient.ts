@@ -8,6 +8,34 @@ export type Format = Record<string, any>
 
 export class MessageDbWriter {
   constructor(private readonly pool: Pool) {}
+  async writeSingleMessage(streamName: string, message: StreamEvent<Format>, expectedVersion: bigint | null)  : Promise<MdbWriteResult>{
+    const client = await this.pool.connect()
+    try {
+        const metadata = message.meta || {}
+        propagation.inject(context.active(), metadata)
+        const results = await client.query(`select message_store.write_message($1, $2, $3, $4, $5, $6)`, [
+          message.id || randomUUID(),
+          streamName,
+          message.type,
+          JSON.stringify(message.data),
+          JSON.stringify(metadata || null),
+          expectedVersion == null ? null : Number(expectedVersion++),
+        ])
+        const position = BigInt(results.rows[0].write_message)
+      return { type: "Written", position }
+    } catch (err: any) {
+      const span = trace.getActiveSpan()
+      span?.recordException(err)
+      span?.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: "ConflictUnknown",
+      })
+      await client.query('rollback')
+      return { type: "ConflictUnknown" }
+    } finally {
+      client.release()
+    }
+  }
 
   async writeMessages(streamName: string, messages: StreamEvent<Format>[], expectedVersion: bigint | null): Promise<MdbWriteResult> {
     const client = await this.pool.connect()
@@ -39,7 +67,7 @@ export class MessageDbWriter {
         code: SpanStatusCode.ERROR,
         message: "ConflictUnknown",
       })
-      console.error(err)
+      await client.query('rollback')
       return { type: "ConflictUnknown" }
     } finally {
       client.release()

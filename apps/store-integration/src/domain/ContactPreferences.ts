@@ -1,5 +1,5 @@
 import { createHash } from "crypto"
-import { AsyncCodec, Decider } from "@equinox-js/core"
+import { AsyncCodec, Decider, PassThroughCodec } from "@equinox-js/core"
 export type ClientId = string & { __brand: "ClientId" }
 import { equals } from "ramda"
 export const ClientId = {
@@ -16,7 +16,8 @@ export namespace Events {
 
   export type Event = { type: "ContactPreferencesChanged"; data: Value }
 
-  export const codec = AsyncCodec.unsafeEmpty<Event>()
+  export const asyncCodec = AsyncCodec.unsafeEmpty<Event>()
+  export const codec = PassThroughCodec<Event, undefined>()
 }
 
 export namespace Fold {

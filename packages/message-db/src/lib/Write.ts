@@ -2,7 +2,7 @@ import { Format, MessageDbWriter } from "./MessageDbClient"
 import { StreamEvent } from "@equinox-js/core"
 import { SpanKind, trace } from "@opentelemetry/api"
 
-const tracer = trace.getTracer("@birdiecare/eqx-message-db", "1.0.0")
+const tracer = trace.getTracer("@equinox-js/message-db", "1.0.0")
 
 type SyncResult = { type: "Written"; position: bigint } | { type: "ConflictUnknown" }
 

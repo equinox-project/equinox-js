@@ -2,7 +2,7 @@ import { TimelineEvent } from "@equinox-js/core"
 import { Format, MessageDbReader } from "./MessageDbClient"
 import { context, SpanKind, trace } from "@opentelemetry/api"
 
-const tracer = trace.getTracer("@birdiecare/eqx-message-db", "1.0.0")
+const tracer = trace.getTracer("@equinox-js/message-db", "1.0.0")
 
 type StreamEventsSlice = {
   messages: TimelineEvent<Format>[]

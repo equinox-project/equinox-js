@@ -50,7 +50,7 @@ namespace CartService {
 namespace ContactPreferencesService {
   const fold = ContactPreferences.Fold.fold
   const initial = ContactPreferences.Fold.initial
-  const codec = ContactPreferences.Events.codec
+  const codec = ContactPreferences.Events.asyncCodec
   const createWithLatestKnownEvent = (context: DynamoStoreContext, cachingStrategy: CachingStrategy.CachingStrategy) => {
     const category = DynamoStoreCategory.build(context, codec, fold, initial, cachingStrategy, AccessStrategy.LatestKnownEvent())
     return ContactPreferences.create((cat, streamId) => Decider.resolve(category, cat, streamId, null))

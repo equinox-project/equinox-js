@@ -18,6 +18,18 @@ jobs:
     name: Build, test, lint
     runs-on: ubuntu-latest
     services:
+      message_db:
+        image: 'postgres'
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
       dynamo:
         image: "amazon/dynamodb-local:latest"
         ports:
@@ -41,6 +53,19 @@ jobs:
 
       - name: Build
         run: pnpm dlx turbo build
+
+      - name: Set up message_db
+        env:
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          MDB_VERSION: 1.3.0
+        run: |
+          mkdir -p /tmp/mdb
+          curl -sL -o /tmp/message_db.tar.gz https://github.com/message-db/message-db/archive/refs/tags/v$MDB_VERSION.tar.gz
+          tar -xf /tmp/message_db.tar.gz --directory /tmp/mdb
+          (cd /tmp/mdb/message-db-$MDB_VERSION/database && ./install.sh)
 
       - name: Test
         run: pnpm dlx turbo test

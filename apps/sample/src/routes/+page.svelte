@@ -1,5 +1,7 @@
 <script>
   import {enhance} from "$app/forms"
+  import {fly} from 'svelte/transition'
+  import {flip} from 'svelte/animate'
 
   /** @type {import('./$types').PageData} */
   export let data
@@ -15,9 +17,9 @@
 
 <ul>
   {#each data.todos as t (t.id)}
-    <li>
+    <li transition:fly={{y: -15}} animate:flip>
       {t.title} ({t.completed ? "Complete" : "Incomplete"})
-      <form method="POST" action="?/complete">
+      <form method="POST" action="?/complete" use:enhance>
         <input type="hidden" name="todoId" value={t.id} />
         <button type="submit">✅</button>
         <button formaction="?/remove">❌</button>
