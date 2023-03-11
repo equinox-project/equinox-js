@@ -9,153 +9,154 @@ EquinoxJS is a ground-up re-implementation of the Equinox project, an F# event s
 # Quick example
 
 ```ts
-import {
-  MessageDbContext,
-  MessageDbCategory,
-  CachingStrategy as MessageDbCachingStrategy
-} from "@equinox-js/message-db"
-import {
-  DynamoCachingStrategy,
-  DynamoStoreCategory,
-  CachingStrategy as DynamoCachingStrategy
-} from "@equinox-js/dynamo-store"
-import { MemoryStoreCategory, VolatileStore } from "./index"
+import { ChargeId, GuestStayId, PaymentId } from "./types"
+import { Codec, Decider } from "@equinox-js/core"
+import * as Mdb from "@equinox-js/message-db"
+import * as Ddb from "@equinox-js/dynamo-store"
+import * as Mem from "@equinox-js/memory-store"
 
-type InvoiceRaised = { payer: string; amount: number }
-type Payment = { amount: number; reference: string }
+export const Category = "GuestStay"
+
+const streamId = (guestStayId: GuestStayId) => guestStayId as string
 
 type Event =
-  | { type: "InvoiceRaised", data: InvoiceRaised }
-  | { type: "PaymentReceived", data: Payment }
-  | { type: "InvoiceFinalized" }
+/** Notes time of checkin of the guest (does not affect whether charges can be levied against the stay) */
+  | { type: "CheckedIn"; data: { at: Date } }
+  /** Notes addition of a charge against the stay */
+  | { type: "Charged"; data: { chargeId: ChargeId; at: Date; amount: number } }
+  /** Notes a payment against this stay */
+  | { type: "Paid"; data: { paymentId: PaymentId; at: Date; amount: number } }
+  /** Notes an ordinary checkout by the Guest (requires prior payment of all outstanding charges) */
+  | { type: "CheckedOut"; data: { at: Date } }
 
-type InvoiceState = {
-  amount: number;
-  payer: string;
-  payments: Set<string>;
-  amount_paid: number;
+const codec: Codec<Event, Record<string, any>> = {
+  tryDecode(ev): Event | undefined {
+    switch (ev.type) {
+      case "CheckedIn":
+        return { type: ev.type, data: { at: new Date(ev.data.at) } }
+      case "CheckedOut":
+        return { type: ev.type, data: { at: new Date(ev.data.at) } }
+      case "Charged":
+        return { type: ev.type, data: { chargeId: ev.data.chargeId, amount: ev.data.amount, at: new Date(ev.data.at) } }
+      case "Paid":
+        return { type: ev.type, data: { paymentId: ev.data.paymentId, amount: ev.data.amount, at: new Date(ev.data.at) } }
+    }
+  },
+  encode(ev) {
+    return ev
+  },
 }
-type State =
-  | { type: "Initial" }
-  | { type: "Raised", data: InvoiceState }
-  | { type: "Finalized", data: InvoiceState }
-const initial: State = { type: "Initial" }
 
-const evolve = (state: State, event: Event): State => {
+type Balance = { balance: number; charges: Set<ChargeId>; payments: Set<PaymentId>; checkedInAt?: Date }
+type State = { type: "Active"; balance: Balance } | { type: "Closed" }
+const initial: State = { type: "Active", balance: { balance: 0, charges: new Set(), payments: new Set() } }
+
+function evolve(state: State, event: Event): State {
   switch (state.type) {
-    case "Initial":
-      if (event.type !== "InvoiceRaised") throw new Error("Unexpected event " + event.type)
-      return {
-        type: "Raised",
-        data: { amount: event.data.amount, payer: event.data.payer, payments: new Set(), amount_paid: 0 }
-      }
-    case "Raised":
+    case "Active":
       switch (event.type) {
-        case "InvoiceRaised":
-          throw new Error("Unexpected event " + event.type)
-        case "PaymentReceived":
+        case "CheckedIn":
+          return { type: "Active", balance: { ...state.balance, checkedInAt: event.data.at } }
+        case "Charged":
           return {
-            type: "Raised",
-            data: {
-              ...state.data,
-              payments: new Set([...state.data.payments, event.data.reference]),
-              amount_paid: event.data.amount + state.data.amount_paid
-            }
+            type: "Active",
+            balance: {
+              ...state.balance,
+              charges: new Set([...state.balance.charges, event.data.chargeId]),
+              balance: state.balance.balance + event.data.amount,
+            },
           }
-        case "InvoiceFinalized":
-          return { type: "Finalized", data: state.data }
+        case "Paid":
+          return {
+            type: "Active",
+            balance: {
+              ...state.balance,
+              payments: new Set([...state.balance.payments, event.data.paymentId]),
+              balance: state.balance.balance - event.data.amount,
+            },
+          }
+        case "CheckedOut":
+          return { type: "Closed" }
       }
-    case "Finalized":
-      throw new Error("Unexpected event in finalized state: " + event.type)
+      break
+    case "Closed":
+      throw new Error("No events allowed after CheckedOut")
   }
 }
 
-const raiseInvoice = (data: InvoiceRaised) => (state: State): Event[] => {
-  switch (state.type) {
-    case "Initial":
-      return [{ type: "InvoiceRaised", data }]
-    case "Raised":
-      if (state.data.amount === data.amount && state.data.payer === data.payer) return []
-      throw new Error("Invoice is already raised")
-    case "Finalized":
-      throw new Error("Invoice is finalized")
-  }
-}
+const fold = (state: State, events: Event[]) => events.reduce(evolve, state)
 
-const recordPayment = (data: Payment) => (state: State): Event[] => {
-  switch (state.type) {
-    case "Initial":
-      throw new Error("Invoice not found")
-    case "Raised":
-      if (state.data.payments.has(data.reference)) return []
-      return [{ type: "PaymentReceived", data }]
-    case "Finalized":
-      throw new Error("Invoice is finalized")
-  }
-}
+const checkIn =
+  (at: Date) =>
+    (state: State): Event[] => {
+      if (state.type === "Closed") throw new Error("Invalid checkin")
+      if (!state.balance.checkedInAt) return [{ type: "CheckedIn", data: { at } }]
+      if (+state.balance.checkedInAt === +at) return []
+      throw new Error("Invalid checkin")
+    }
 
-const finalizeInvoice = (state: State): Event[] => {
-  switch (state.type) {
-    case "Initial":
-      throw new Error("Invoice not found")
-    case "Raised":
-      return [{ type: "InvoiceFinalized" }]
-    case "Finalized":
-      return []
-  }
-}
+const charge =
+  (at: Date, chargeId: ChargeId, amount: number) =>
+    (state: State): Event[] => {
+      if (state.type === "Closed") throw new Error("Cannot record charge for Closed account")
+      if (state.balance.charges.has(chargeId)) return []
+      return [{ type: "Charged", data: { chargeId, amount, at } }]
+    }
 
-const Category = "Invoice"
-const streamId = (invoiceId: string) => invoiceId.replace(/-/g, "")
+const pay =
+  (at: Date, paymentId: PaymentId, amount: number) =>
+    (state: State): Event[] => {
+      if (state.type === "Closed") throw new Error("Cannot record payment for not opened account")
+      if (state.balance.payments.has(paymentId)) return []
+      return [{ type: "Paid", data: { paymentId, amount, at } }]
+    }
 
-class Service {
-  constructor(private readonly resolve: (invoiceId: string) => Decider<Event, State>) {
-  }
+type CheckoutResult = { type: "OK" } | { type: "AlreadyCheckedOut" } | { type: "BalanceOutstanding"; amount: number }
+const checkOut =
+  (at: Date) =>
+    (state: State): [CheckoutResult, Event[]] => {
+      if (state.type === "Closed") return [{ type: "AlreadyCheckedOut" }, []]
+      if (state.balance.balance > 0) return [{ type: "BalanceOutstanding", amount: state.balance.balance }, []]
+      return [{ type: "OK" }, [{ type: "CheckedOut", data: { at } }]]
+    }
 
-  raiseInvoice(invoiceId: string, data: InvoiceRaised) {
-    const decider = this.resolve(invoiceId)
-    return decider.transact(raiseInvoice(data))
+export class Service {
+  constructor(private readonly resolve: (stayId: GuestStayId) => Decider<Event, State>) {}
+  charge(stayId: GuestStayId, chargeId: ChargeId, amount: number) {
+    const decider = this.resolve(stayId)
+    return decider.transact(charge(new Date(), chargeId, amount))
   }
 
-  recordPayment(invoiceId: string, data: Payment) {
-    const decider = this.resolve(invoiceId)
-    return decider.transact(recordPayment(data))
+  pay(stayId: GuestStayId, paymentId: PaymentId, amount: number) {
+    const decider = this.resolve(stayId)
+    return decider.transact(pay(new Date(), paymentId, amount))
   }
 
-  finalizeInvoice(invoiceId: string) {
-    const decider = this.resolve(invoiceId)
-    return decider.transact(finalizeInvoice)
+  checkIn(stayId: GuestStayId) {
+    const decider = this.resolve(stayId)
+    return decider.transact(checkIn(new Date()))
   }
 
-  readInvoice(invoiceId: string) {
-    const decider = this.resolve(invoiceId)
-    return decider.query(state => {
-      switch (state.type) {
-        case "Initial":
-          return null
-        case "Raised":
-          return { ...state.data, status: "Raised" }
-        case "Finalized":
-          return { ...state.data, status: "Finalized" }
-      }
-    })
+  checkOut(stayId: GuestStayId) {
+    const decider = this.resolve(stayId)
+    return decider.transactResult(checkOut(new Date()))
   }
 
-  static buildMessageDb(context: MessageDbContext, cache: MessageDbCachingStrategy) {
-    const category = MessageDbCategory.build(context, identityCodec, fold, initial, cache)
-    const resolve = (invoiceId: string) => Decider.resolve(category, Category, streamId(invoiceId), null)
+  static createMessageDb(context: Mdb.MessageDbContext, caching: Mdb.CachingStrategy) {
+    const category = Mdb.MessageDbCategory.build(context, codec, fold, initial, caching)
+    const resolve = (stayId: GuestStayId) => Decider.resolve(category, Category, streamId(stayId), null)
     return new Service(resolve)
   }
 
-  static buildDynamoDb(context: DynamoStoreContext, cache: DynamoCachingStrategy) {
-    const category = DynamoStoreCategory.build(context, identityCodec, fold, initial, cache)
-    const resolve = (invoiceId: string) => Decider.resolve(category, Category, streamId(invoiceId), null)
+  static createDynamo(context: Ddb.DynamoStoreContext, caching: Ddb.CachingStrategy.CachingStrategy) {
+    const category = Ddb.DynamoStoreCategory.build(context, Codec.deflate(codec), fold, initial, caching, Ddb.AccessStrategy.Unoptimized())
+    const resolve = (stayId: GuestStayId) => Decider.resolve(category, Category, streamId(stayId), null)
     return new Service(resolve)
   }
 
-  static buildMem(store: VolatileStore) {
-    const category = MemoryStoreCategory.build(store, identityCodec, fold, initial)
-    const resolve = (invoiceId: string) => Decider.resolve(category, Category, streamId(invoiceId), null)
+  static createMem(store: Mem.VolatileStore<Record<string, any>>) {
+    const category = Mem.MemoryStoreCategory.build(store, codec, fold, initial)
+    const resolve = (stayId: GuestStayId) => Decider.resolve(category, Category, streamId(stayId), null)
     return new Service(resolve)
   }
 }
