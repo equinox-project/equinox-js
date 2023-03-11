@@ -1,4 +1,4 @@
-import { AsyncCodec, Decider } from "@equinox-js/core"
+import { Codec, Decider } from "@equinox-js/core"
 import * as Ddb from "@equinox-js/dynamo-store"
 
 export const Category = "Todo"
@@ -15,7 +15,7 @@ namespace Events {
     | { type: "Cleared" }
     | { type: "Snapshotted"; data: Snapshot }
 
-  export const codec = AsyncCodec.unsafeEmpty<Event>()
+  export const codec = Codec.deflate(Codec.empty<Event>())
 }
 
 namespace Fold {

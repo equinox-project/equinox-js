@@ -1,6 +1,6 @@
 import { StoreClient } from "./StoreClient"
 import * as Token from "./Token"
-import { AsyncCodec, StreamEvent, StreamToken, SyncResult, TokenAndState } from "@equinox-js/core"
+import { Codec, StreamEvent, StreamToken, SyncResult, TokenAndState } from "@equinox-js/core"
 import { ISR, LFTR, Fold, IsOrigin, MapUnfolds } from "./Internal"
 import { Position, toEtag, toIndex } from "./Position"
 import { ExpectedVersion } from "./Sync"
@@ -8,7 +8,7 @@ import { EncodedBody } from "./EncodedBody"
 import { LoadedTip } from "./Tip"
 
 export class InternalCategory<E, S, C> {
-  constructor(private readonly store: StoreClient, private readonly codec: AsyncCodec<E, EncodedBody, C>) {}
+  constructor(private readonly store: StoreClient, private readonly codec: Codec<E, EncodedBody, C>) {}
 
   async load(
     stream: string,

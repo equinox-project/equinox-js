@@ -1,4 +1,4 @@
-import { AsyncCodec, Codec, Decider } from "@equinox-js/core"
+import { Codec, Decider } from "@equinox-js/core"
 
 export const Category = "Cart"
 export type CartId = string & { __brand: "CartId" }
@@ -28,7 +28,7 @@ export namespace Events {
     | { type: "ItemQuantityChanged"; data: ItemQuantityChangedInfo }
     | { type: "ItemPropertiesChanged"; data: ItemPropertiesChangedInfo }
 
-  export const codec: Codec<Event, null> = {
+  export const codec: Codec<Event, Record<string, any>, null> = {
     tryDecode(event) {
       return event as any as Event
     },
@@ -36,7 +36,7 @@ export namespace Events {
       return { type: event.type, data: event.data, meta: {} }
     },
   }
-  export const asyncCodec = AsyncCodec.deflate(codec)
+  export const asyncCodec = Codec.deflate(codec)
 }
 
 export namespace Fold {

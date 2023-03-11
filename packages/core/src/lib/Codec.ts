@@ -5,33 +5,16 @@ import { promisify } from "node:util"
 const deflate = promisify(zlib.deflateRaw)
 const inflate = promisify(zlib.inflateRaw)
 
-export type Codec<E, C> = {
-  tryDecode(event: TimelineEvent<Record<string, any>>): E | undefined
-
-  encode(event: E, ctx: C): StreamEvent<Record<string, any>>
-}
-
-export const PassThroughCodec = <E extends { type: string; data?: Record<string, any> }, C>(
-  ctxToMeta: (ctx: C) => Record<string, any> | undefined = (x) => undefined
-): Codec<E, C> => ({
-  tryDecode(event: TimelineEvent<Record<string, any>>): E | undefined {
-    return event as any as E
-  },
-  encode(event: E, ctx: C): StreamEvent<Record<string, any>> {
-    return { type: event.type, data: event.data, meta: ctxToMeta(ctx) }
-  },
-})
-
-export abstract class AsyncCodec<E, F, C = undefined> {
+export abstract class Codec<E, F, C = undefined> {
   abstract tryDecode(event: TimelineEvent<F>): Promise<E | undefined> | E | undefined
 
   abstract encode(event: E, ctx: C): Promise<StreamEvent<F>> | StreamEvent<F>
 
   static map<E, From, C, To>(
-    codec: AsyncCodec<E, From, C>,
+    codec: Codec<E, From, C>,
     encode: (v: From) => To | Promise<To>,
     decode: (v: To) => From | Promise<From>
-  ): AsyncCodec<E, To, C> {
+  ): Codec<E, To, C> {
     return {
       tryDecode: async (event: TimelineEvent<To>): Promise<E | undefined> => {
         const [data, meta] = await Promise.all([event.data ? decode(event.data) : undefined, event.meta ? decode(event.meta) : undefined])
@@ -46,8 +29,8 @@ export abstract class AsyncCodec<E, F, C = undefined> {
     }
   }
 
-  static deflate<E, C>(codec: AsyncCodec<E, Record<string, any>, C>): AsyncCodec<E, [number | undefined, Uint8Array | undefined], C> {
-    return AsyncCodec.map(
+  static deflate<E, C>(codec: Codec<E, Record<string, any>, C>): Codec<E, [number | undefined, Uint8Array | undefined], C> {
+    return Codec.map(
       codec,
       async (x) => {
         if (x == null) return [undefined, undefined]
@@ -66,10 +49,23 @@ export abstract class AsyncCodec<E, F, C = undefined> {
     )
   }
 
-  static unsafeEmpty<E extends { type: string; data?: Record<string, any> }>() {
-    return AsyncCodec.deflate({
+  static empty<E extends { type: string; data?: Record<string, any> }, C = null>(): Codec<E, Record<string, any>, C> {
+    return {
       tryDecode: (e) => e as any as E,
       encode: (e) => e as any as StreamEvent<Record<string, any>>,
-    })
+    }
+  }
+
+  static passthrough<E extends { type: string; data?: Record<string, any> }, C>(
+    ctxToMeta: (ctx: C) => Record<string, any> | undefined = (x) => undefined
+  ): Codec<E, Record<string, any> | undefined, C> {
+    return {
+      tryDecode(event: TimelineEvent<Record<string, any>>): E | undefined {
+        return event as any as E
+      },
+      encode(event: E, ctx: C): StreamEvent<Record<string, any>> {
+        return { type: event.type, data: event.data, meta: ctxToMeta(ctx) }
+      },
+    }
   }
 }

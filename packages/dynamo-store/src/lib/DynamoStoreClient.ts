@@ -3,7 +3,7 @@ import * as Token from "./Token"
 import { DynamoDB } from "@aws-sdk/client-dynamodb"
 import { QueryOptions, StoreClient, TipOptions } from "./StoreClient"
 import { defaultMaxItems, defaultTipMaxBytes, Fold } from "./Internal"
-import { AsyncCodec, Category, TokenAndState } from "@equinox-js/core"
+import { Codec, Category, TokenAndState } from "@equinox-js/core"
 import { ICategory } from "@equinox-js/core/src"
 import { applyCacheUpdatesWithFixedTimeSpan, applyCacheUpdatesWithSlidingExpiration, CachingCategory } from "./Caching"
 import { InternalCategory } from "./Category"
@@ -88,7 +88,7 @@ export class DynamoStoreCategory<E, S, C> extends Category<E, S, C> {
 
   static build<E, S, C>(
     context: DynamoStoreContext,
-    codec: AsyncCodec<E, EncodedBody, C>,
+    codec: Codec<E, EncodedBody, C>,
     fold: Fold<E, S>,
     initial: S,
     caching: CachingStrategy,

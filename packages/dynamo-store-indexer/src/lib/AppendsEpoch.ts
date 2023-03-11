@@ -6,7 +6,7 @@
  * The Checkpoint per Index consists of the pair of 1. EpochId 2. Event Index within that Epoch (see `module Checkpoint` for detail)
  */
 import { AppendsEpochId, AppendsTrancheId, Checkpoint, IndexStreamId } from "./Types"
-import { AsyncCodec, Codec, Decider, TimelineEvent } from "@equinox-js/core"
+import { Codec, Decider, TimelineEvent } from "@equinox-js/core"
 import { IngestResult } from "./ExactlyOnceIngester"
 import { AccessStrategy, CachingStrategy, DynamoStoreCategory, DynamoStoreContext } from "@equinox-js/dynamo-store"
 
@@ -30,7 +30,7 @@ export namespace Events {
     // Structure mapped from DynamoStore.Batch.Schema: p: stream, i: index, c: array of event types
     { type: "Ingested"; data: Ingested } | { type: "Closed" }
 
-  export const codec = AsyncCodec.unsafeEmpty<Event>()
+  export const codec = Codec.deflate(Codec.empty<Event>())
   export const isEventTypeClosed = (et: string) => et === "Closed"
 }
 
@@ -193,7 +193,7 @@ export namespace Config {
 
 export namespace Reader {
   type Event = [bigint, Events.Event]
-  const codec: Codec<Event, unknown> = {
+  const codec: Codec<Event, Record<string, any>, unknown> = {
     encode() {
       throw new Error("This is a read only codec")
     },
@@ -201,7 +201,7 @@ export namespace Reader {
       return [event.index, { type: event.type, data: event.data } as Events.Event]
     },
   }
-  const asyncCodec = AsyncCodec.deflate(codec)
+  const asyncCodec = Codec.deflate(codec)
   export type State = { changes: [number, Events.StreamSpan[]][]; closed: boolean }
 
   const initial: State = { changes: [], closed: false }

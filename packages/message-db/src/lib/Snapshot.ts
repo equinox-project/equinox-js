@@ -14,12 +14,12 @@ const streamVersion = (evt: TimelineEvent<Format>) => {
 export const meta = (token: StreamToken): Meta => ({
   streamVersion: String(Token.streamVersion(token)),
 })
-export const decode = <V>(
-  tryDecode: (ev: TimelineEvent<Format>) => V | null | undefined,
+export async function decode<V>(
+  tryDecode: (ev: TimelineEvent<Format>) => Promise<V | null | undefined> | V | null | undefined,
   events: TimelineEvent<Format>[]
-): [StreamToken, V] | null => {
+): Promise<[StreamToken, V] | null> {
   if (events.length > 0) {
-    const decoded = tryDecode(events[0])
+    const decoded = await tryDecode(events[0])
     if (decoded != null) return [Token.create(streamVersion(events[0])), decoded]
   }
   return null

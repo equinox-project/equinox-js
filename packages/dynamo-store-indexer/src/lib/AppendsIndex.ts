@@ -1,4 +1,4 @@
-import { AsyncCodec, Decider } from "@equinox-js/core"
+import { Codec, Decider } from "@equinox-js/core"
 import { AppendsEpochId, AppendsTrancheId } from "./Types"
 import { DynamoStoreContext, DynamoStoreCategory, CachingStrategy, AccessStrategy } from "@equinox-js/dynamo-store"
 
@@ -9,7 +9,7 @@ export namespace Events {
   type Started = { tranche: AppendsTrancheId.t; epoch: AppendsEpochId.t } | { partition: AppendsTrancheId.t; epoch: AppendsEpochId.t }
   export type Event = { type: "Started"; data: Started } | { type: "Snapshotted"; data: { active: Record<AppendsTrancheId.t, AppendsEpochId.t> } }
 
-  export const codec = AsyncCodec.unsafeEmpty<Event>()
+  export const codec = Codec.deflate(Codec.empty<Event>())
 }
 
 export namespace Fold {

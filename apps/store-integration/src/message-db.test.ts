@@ -1,22 +1,15 @@
 import * as Cart from "./domain/Cart"
 import * as ContactPreferences from "./domain/ContactPreferences"
-import { Decider, ICache, MemoryCache, PassThroughCodec } from "@equinox-js/core"
+import { Decider, ICache, MemoryCache, Codec } from "@equinox-js/core"
 import { describe, test, expect, afterEach, afterAll, beforeAll } from "vitest"
 import { Pool } from "pg"
 import { randomUUID } from "crypto"
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
 import { InMemorySpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base"
 import { SpanStatusCode } from "@opentelemetry/api"
-import {
-  AccessStrategy,
-  CachingStrategy,
-  MessageDbCategory,
-  MessageDbConnection,
-  MessageDbContext
-} from "@equinox-js/message-db"
+import { AccessStrategy, CachingStrategy, MessageDbCategory, MessageDbConnection, MessageDbContext } from "@equinox-js/message-db"
 
 const Category = MessageDbCategory
-
 
 const defaultBatchSize = 500
 
@@ -33,7 +26,6 @@ namespace CartService {
     const category = Category.build(context, codec, fold, initial, noCache, AccessStrategy.Unoptimized())
     return Cart.create((cat, streamId) => Decider.resolve(category, cat, streamId, null))
   }
-
 
   export function createWithSnapshotStrategy(context: MessageDbContext) {
     const access = AccessStrategy.AdjacentSnapshots<E, S>(Cart.Fold.snapshotEventType, Cart.Fold.snapshot)
@@ -74,12 +66,11 @@ namespace ContactPreferencesService {
 
 const client = MessageDbConnection.build(new Pool({ connectionString: "postgres://message_store:@127.0.0.1:5432/message_store" }))
 
-
 const createContext = (connection: MessageDbConnection, batchSize: number) => new MessageDbContext(connection, batchSize)
 
 namespace SimplestThing {
   export type Event = { type: "StuffHappened" }
-  export const codec = PassThroughCodec<Event, undefined>()
+  export const codec = Codec.empty<Event, undefined>()
   export const evolve = (state: Event, event: Event) => event
   export const initial: Event = { type: "StuffHappened" }
   export const fold = (state: Event, events: Event[]) => events.reduce(evolve, initial)
@@ -114,7 +105,7 @@ const memoryExporter = new InMemorySpanExporter()
 const spanProcessor = new SimpleSpanProcessor(memoryExporter)
 
 const getStoreSpans = () => memoryExporter.getFinishedSpans().filter((x) => x.instrumentationLibrary.name === "@equinox-js/message-db")
-const getStoreSpanNames = () => getStoreSpans().map(x => x.name)
+const getStoreSpanNames = () => getStoreSpans().map((x) => x.name)
 
 provider.addSpanProcessor(spanProcessor)
 provider.register()
@@ -137,7 +128,7 @@ namespace CartHelpers {
       cartId,
       optimistic,
       Array.from(
-        (function* () {
+        (function* (): Iterable<Cart.Command> {
           for (let i = 1; i <= count; ++i) {
             yield { type: "SyncItem", context, skuId, quantity: i }
             if (!exceptTheLastOne || i !== count) {
@@ -147,8 +138,13 @@ namespace CartHelpers {
         })()
       )
     )
-  export const addAndThenRemoveItemsManyTimes = (context: Cart.Context, cartId: Cart.CartId, skuId: Cart.SkuId, service: Cart.Service, count: number) =>
-    addAndThenRemoveItems(false, false, context, cartId, skuId, service, count)
+  export const addAndThenRemoveItemsManyTimes = (
+    context: Cart.Context,
+    cartId: Cart.CartId,
+    skuId: Cart.SkuId,
+    service: Cart.Service,
+    count: number
+  ) => addAndThenRemoveItems(false, false, context, cartId, skuId, service, count)
 
   export const addAndThenRemoveItemsManyTimesExceptTheLastOne = (
     context: Cart.Context,
@@ -158,15 +154,13 @@ namespace CartHelpers {
     count: number
   ) => addAndThenRemoveItems(false, true, context, cartId, skuId, service, count)
 
-  export const addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne =
-    (
-      context: Cart.Context,
-      cartId: Cart.CartId,
-      skuId: Cart.SkuId,
-      service: Cart.Service,
-      count: number
-    ) =>
-      addAndThenRemoveItems(true, true, context, cartId, skuId, service, count)
+  export const addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne = (
+    context: Cart.Context,
+    cartId: Cart.CartId,
+    skuId: Cart.SkuId,
+    service: Cart.Service,
+    count: number
+  ) => addAndThenRemoveItems(true, true, context, cartId, skuId, service, count)
 }
 
 describe("Roundtrips against the store", () => {
@@ -190,7 +184,6 @@ describe("Roundtrips against the store", () => {
     const state = await service.read(cartId)
     expect(state.items).toEqual([expect.objectContaining({ quantity: addRemoveCount })])
 
-
     const expectedEventCount = 2 * addRemoveCount - 1
     const expectedBatches = Math.ceil(expectedEventCount / batchSize)
     expect(getStoreSpanNames()).toEqual(new Array(expectedBatches).fill("ReadSlice"))
@@ -205,12 +198,19 @@ describe("Roundtrips against the store", () => {
 
     const service1 = CartService.createWithoutOptimization(context)
     const act = (prepare: () => Promise<void>, service: Cart.Service, skuId: string, count: number) =>
-      service.executeManyAsync(cartId, false, [{
-        type: "SyncItem",
-        skuId,
-        quantity: count,
-        context: cartContext
-      }], prepare)
+      service.executeManyAsync(
+        cartId,
+        false,
+        [
+          {
+            type: "SyncItem",
+            skuId,
+            quantity: count,
+            context: cartContext,
+          },
+        ],
+        prepare
+      )
 
     const waiter = () => {
       let resolve: (_: unknown) => void
@@ -218,7 +218,7 @@ describe("Roundtrips against the store", () => {
         new Promise((res) => {
           resolve = res
         }),
-        () => resolve(undefined)
+        () => resolve(undefined),
       ] as const
     }
 
@@ -268,17 +268,16 @@ describe("Roundtrips against the store", () => {
       [sku11]: 11,
       [sku12]: 12,
       [sku21]: 21,
-      [sku22]: 22
+      [sku22]: 22,
     })
     const syncs = memoryExporter.getFinishedSpans().filter((x) => x.name === "TrySync")
     const conflicts = syncs.filter((x) => x.status?.code === SpanStatusCode.ERROR && x.status?.message === "ConflictUnknown")
     expect(syncs).toHaveLength(6)
     expect(conflicts).toHaveLength(2)
-
   })
 })
 
-describe('Caching', () => {
+describe("Caching", () => {
   test("avoids redundant reads", async () => {
     const cache = new MemoryCache()
     const batchSize = 10
@@ -304,7 +303,7 @@ describe('Caching', () => {
 
     expect(getStoreSpanNames()).toEqual(["ReadSlice"])
     expect(getStoreSpans()[0].attributes).toMatchObject({
-      "eqx.start_position": 9
+      "eqx.start_position": 9,
     })
     memoryExporter.reset()
 
@@ -332,7 +331,6 @@ describe('Caching', () => {
     // this time, we did something, so we see the append call
     expect(getStoreSpanNames()).toEqual(["WriteEvents"])
 
-
     // If we don't have a cache attached, we don't benefit from / pay the price for any optimism
     memoryExporter.reset()
     const skuId4 = randomUUID() as Cart.SkuId
@@ -343,15 +341,17 @@ describe('Caching', () => {
     // Conflict with cached state leads to a read forward to resync; Then we'll idempotently decide not to do any append
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(cartContext, cartId, skuId4, service2, 1)
-    expect(memoryExporter.getFinishedSpans()).toContainEqual(expect.objectContaining({
-      name: "TrySync",
-      status: expect.objectContaining({ message: "ConflictUnknown" })
-    }))
+    expect(memoryExporter.getFinishedSpans()).toContainEqual(
+      expect.objectContaining({
+        name: "TrySync",
+        status: expect.objectContaining({ message: "ConflictUnknown" }),
+      })
+    )
     expect(getStoreSpanNames()).toEqual(["WriteEvents", "ReadSlice"])
   })
 })
 
-describe('AccessStrategy.LatestKnownEvent', () => {
+describe("AccessStrategy.LatestKnownEvent", () => {
   test("Reads and updates against Store", async () => {
     const id = randomUUID() as ContactPreferences.ClientId
     const service = ContactPreferencesService.createService(client)
@@ -359,7 +359,7 @@ describe('AccessStrategy.LatestKnownEvent', () => {
       littlePromotions: Math.random() > 0.5,
       manyPromotions: Math.random() > 0.5,
       productReview: Math.random() > 0.5,
-      quickSurveys: Math.random() > 0.5
+      quickSurveys: Math.random() > 0.5,
     }
 
     // Feed some junk into the stream
@@ -378,8 +378,8 @@ describe('AccessStrategy.LatestKnownEvent', () => {
   })
 })
 
-describe('AccessStrategy.AdjacentSnapshots', () => {
-  test('Snapshots to avoid redundant reads', async () => {
+describe("AccessStrategy.AdjacentSnapshots", () => {
+  test("Snapshots to avoid redundant reads", async () => {
     const batchSize = 10
     const context = createContext(client, batchSize)
     const service = CartService.createWithSnapshotStrategy(context)
@@ -391,43 +391,43 @@ describe('AccessStrategy.AdjacentSnapshots', () => {
     // Trigger 8 events, then reload
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 4)
     await service.read(cartId)
-    expect(getStoreSpanNames()).toEqual(['ReadLast', 'ReadSlice', 'WriteEvents', 'ReadLast', 'ReadSlice'])
+    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice", "WriteEvents", "ReadLast", "ReadSlice"])
 
     // Add two more, which should push it over the threshold and hence trigger an append of a snapshot event
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 1)
-    expect(getStoreSpanNames()).toEqual(['ReadLast', 'ReadSlice', 'WriteEvents', 'WriteEvents'])
+    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice", "WriteEvents", "WriteEvents"])
 
     // We now have 10 events and should be able to read them with a single call
     memoryExporter.reset()
     await service.read(cartId)
-    expect(getStoreSpanNames()).toEqual(['ReadLast', 'ReadSlice'])
+    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice"])
 
     // Add 8 more; total of 18 should not trigger snapshotting as we snapshotted at Event Number 10
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 4)
-    expect(getStoreSpanNames()).toEqual(['ReadLast', 'ReadSlice', 'WriteEvents'])
+    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice", "WriteEvents"])
 
     // While we now have 18 events, we should be able to read them with a single call
     memoryExporter.reset()
     await service.read(cartId)
-    expect(getStoreSpanNames()).toEqual(['ReadLast', 'ReadSlice'])
+    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice"])
 
     // add two more events, triggering a snapshot, then read it in a single snapshotted read
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 1)
-    expect(getStoreSpanNames()).toEqual(['ReadLast', 'ReadSlice', 'WriteEvents', 'WriteEvents'])
+    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice", "WriteEvents", "WriteEvents"])
     // While we now have 18 events, we should be able to read them with a single call
     memoryExporter.reset()
     await service.read(cartId)
-    expect(getStoreSpanNames()).toEqual(['ReadLast', 'ReadSlice'])
+    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice"])
   })
 
-  test('Combining snapshots and caching', async () => {
+  test("Combining snapshots and caching", async () => {
     const batchSize = 10
     const context = createContext(client, batchSize)
     const service1 = CartService.createWithSnapshotStrategy(context)
-    const service2 = CartService.createWithSnapshotStrategyAndCaching(context )
+    const service2 = CartService.createWithSnapshotStrategyAndCaching(context)
 
     const cartId = randomUUID() as Cart.CartId
     const skuId = randomUUID() as Cart.SkuId
@@ -437,47 +437,49 @@ describe('AccessStrategy.AdjacentSnapshots', () => {
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 4)
     await service2.read(cartId)
 
-    expect(getStoreSpanNames()).toEqual(['ReadLast', 'ReadSlice', 'WriteEvents', 'ReadLast', 'ReadSlice'])
+    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice", "WriteEvents", "ReadLast", "ReadSlice"])
 
     // Add two more, which should push it over the threshold and hence trigger generation of a snapshot event
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 1)
-    expect(getStoreSpanNames()).toEqual(['ReadLast', 'ReadSlice', 'WriteEvents', 'WriteEvents'])
+    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice", "WriteEvents", "WriteEvents"])
 
     // We now have 10 events, we should be able to read them with a single snapshotted read
     memoryExporter.reset()
     await service1.read(cartId)
-    expect(getStoreSpanNames()).toEqual(['ReadLast', 'ReadSlice'])
+    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice"])
 
     // Add 8 more; total of 18 should not trigger snapshotting as the snapshot is at version 10
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 4)
-    expect(getStoreSpanNames()).toEqual(['ReadLast', 'ReadSlice', 'WriteEvents'])
+    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice", "WriteEvents"])
 
     // While we now have 18 events, we should be able to read them with a single snapshotted read
     memoryExporter.reset()
     await service1.read(cartId)
-    expect(getStoreSpanNames()).toEqual(['ReadLast', 'ReadSlice'])
+    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice"])
 
     // ... trigger a second snapshotting
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 1)
-    expect(getStoreSpanNames()).toEqual(['ReadLast', 'ReadSlice', 'WriteEvents', 'WriteEvents'])
+    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice", "WriteEvents", "WriteEvents"])
 
     // and we _could_ reload the 20 events with a single slice read. However we are using the cache, which last saw it with 10 events, which necessitates two reads
     memoryExporter.reset()
     await service2.read(cartId)
-    expect(getStoreSpanNames()).toEqual(['ReadSlice', 'ReadSlice'])
+    expect(getStoreSpanNames()).toEqual(["ReadSlice", "ReadSlice"])
   })
 })
 
-
-test('Version is 0-based', async () => {
+test("Version is 0-based", async () => {
   const batchSize = 3
   const context = createContext(client, batchSize)
   let id = randomUUID()
-  let toStreamId = (x : string) => x.replace(/-/g, '')
+  let toStreamId = (x: string) => x.replace(/-/g, "")
   const decider = SimplestThing.resolve(context, SimplestThing.categoryName, toStreamId(id))
-  const [before, after] = await decider.transactExMapResult(ctx => [ctx.version, [{type: 'StuffHappened'}]], (result, ctx) => [result, ctx.version])
+  const [before, after] = await decider.transactExMapResult(
+    (ctx) => [ctx.version, [{ type: "StuffHappened" }]],
+    (result, ctx) => [result, ctx.version]
+  )
   expect([before, after]).toEqual([0n, 1n])
 })
