@@ -1,6 +1,17 @@
-# Decider 
+# Decider
 
-Deciders are the fundamental unit of organisation in equinox applications. They abstract underlying storage 
+The `Decider` is the central abstraction that you interact with in your application code. It abstracts away
+the underlying Store [Category](./category), managing the retrieval and storage of events.
 
-Streams are the fundamental unit of organization of evented, service-oriented systems. They are both the storage and the
-transport of messages in message-based systems. And they are the principle storage medium of applicative entity data.
+The primary way to get your hands on a decider instance is `Decider.resolve`.
+
+```ts
+const decider = Decider.resolve(storeCategory, 'CategoryName', streamId, context)
+```
+
+Note that this will not load any events, that will only happen in response to a `transact` or a `query`.
+
+```ts
+decider.transact((state): Event[] => []); 
+const property = await decider.query(state => state.property)
+```

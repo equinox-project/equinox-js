@@ -70,7 +70,7 @@ const createContext = (connection: MessageDbConnection, batchSize: number) => ne
 
 namespace SimplestThing {
   export type Event = { type: "StuffHappened" }
-  export const codec = Codec.empty<Event, undefined>()
+  export const codec = Codec.json<Event, undefined>()
   export const evolve = (state: Event, event: Event) => event
   export const initial: Event = { type: "StuffHappened" }
   export const fold = (state: Event, events: Event[]) => events.reduce(evolve, initial)

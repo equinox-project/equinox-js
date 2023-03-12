@@ -7,7 +7,7 @@ export const snapshotCategory = (original: string) => original + ":snapshot"
 export const streamName = (category: string, streamId: string) => `${category}-${streamId}`
 export type Meta = { streamVersion: string }
 const streamVersion = (evt: TimelineEvent<Format>) => {
-  const meta = evt.meta as Meta | null
+  const meta = JSON.parse(evt.meta ?? "null") as Meta | null
   return meta ? BigInt(meta.streamVersion) : -1n
 }
 

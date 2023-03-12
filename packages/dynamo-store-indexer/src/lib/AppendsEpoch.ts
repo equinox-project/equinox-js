@@ -30,7 +30,7 @@ export namespace Events {
     // Structure mapped from DynamoStore.Batch.Schema: p: stream, i: index, c: array of event types
     { type: "Ingested"; data: Ingested } | { type: "Closed" }
 
-  export const codec = Codec.deflate(Codec.empty<Event>())
+  export const codec = Codec.deflate(Codec.json<Event>())
   export const isEventTypeClosed = (et: string) => et === "Closed"
 }
 
@@ -193,12 +193,13 @@ export namespace Config {
 
 export namespace Reader {
   type Event = [bigint, Events.Event]
-  const codec: Codec<Event, Record<string, any>, unknown> = {
+  const codec: Codec<Event, string, unknown> = {
     encode() {
       throw new Error("This is a read only codec")
     },
-    tryDecode(event: TimelineEvent<Record<string, any>>): Event | undefined {
-      return [event.index, { type: event.type, data: event.data } as Events.Event]
+    tryDecode(event: TimelineEvent<string>): Event | undefined {
+      const data = JSON.parse(event.data ?? "null")
+      return [event.index, { type: event.type, data: data } as Events.Event]
     },
   }
   const asyncCodec = Codec.deflate(codec)

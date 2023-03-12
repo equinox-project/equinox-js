@@ -19,7 +19,7 @@ export const Unoptimized = <E, S>(): AccessStrategy<E, S> => ({
  * <remarks>
  * A copy of the event is also retained in the `Tip` document in order that the state of the stream can be
  * retrieved using a single (cached, etag-checked) point read.
- * </remarks
+ * </remarks>
  */
 export const LatestKnownEvent = <E, S>(): AccessStrategy<E, S> => ({
   isOrigin: () => true,

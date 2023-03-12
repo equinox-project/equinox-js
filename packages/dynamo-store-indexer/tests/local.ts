@@ -21,7 +21,7 @@ const sourceNoBody = new DynamoStoreSourceClient(indexClient, withoutBodies)
 const source = new DynamoStoreSourceClient(indexClient, withBodies)
 
 const tranches = await source.listTranches()
-const codec = Codec.deflate(Codec.empty())
+const codec = Codec.deflate(Codec.json())
 for await (const batch of source.crawl(tranches[0], Checkpoint.initial)) {
   console.log(batch.checkpoint, batch.isTail, batch.items.length)
   for (const [stream, event] of batch.items) {

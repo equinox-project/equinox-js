@@ -189,7 +189,7 @@ class CategoryWithAccessStrategy<Event, State, Context> {
 
   async storeSnapshot(category: string, streamId: string, ctx: Context, token: StreamToken, snapshotEvent: Event) {
     const event = await this.codec.encode(snapshotEvent, ctx)
-    event.meta = Snapshot.meta(token)
+    event.meta = JSON.stringify(Snapshot.meta(token))
     await this.context.storeSnapshot(category, streamId, event)
   }
 }

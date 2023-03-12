@@ -28,14 +28,7 @@ export namespace Events {
     | { type: "ItemQuantityChanged"; data: ItemQuantityChangedInfo }
     | { type: "ItemPropertiesChanged"; data: ItemPropertiesChangedInfo }
 
-  export const codec: Codec<Event, Record<string, any>, null> = {
-    tryDecode(event) {
-      return event as any as Event
-    },
-    encode(event: Event) {
-      return { type: event.type, data: event.data, meta: {} }
-    },
-  }
+  export const codec = Codec.json<Event>()
   export const asyncCodec = Codec.deflate(codec)
 }
 
@@ -67,7 +60,7 @@ export namespace Fold {
 }
 
 export type Context = { time: Date; requestId: string }
-type Command = { type: "SyncItem"; context: Context; skuId: SkuId; quantity?: number; waived?: boolean }
+export type Command = { type: "SyncItem"; context: Context; skuId: SkuId; quantity?: number; waived?: boolean }
 
 export const interpret =
   (command: Command) =>

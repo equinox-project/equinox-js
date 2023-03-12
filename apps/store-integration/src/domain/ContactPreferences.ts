@@ -15,7 +15,7 @@ export namespace Events {
   export type Value = { email: string; preferences: Preferences }
 
   export type Event = { type: "ContactPreferencesChanged"; data: Value }
-  export const codec = Codec.deflate(Codec.empty<Event>())
+  export const codec = Codec.json<Event>()
 }
 
 export namespace Fold {

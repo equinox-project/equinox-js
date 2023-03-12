@@ -15,7 +15,7 @@ namespace Events {
     | { type: "Cleared" }
     | { type: "Snapshotted"; data: Snapshot }
 
-  export const codec = Codec.deflate(Codec.empty<Event>())
+  export const codec = Codec.deflate(Codec.json<Event>())
 }
 
 namespace Fold {

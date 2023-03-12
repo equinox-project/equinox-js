@@ -16,56 +16,52 @@ export abstract class Codec<E, F, C = undefined> {
     decode: (v: To) => From | Promise<From>
   ): Codec<E, To, C> {
     return {
-      tryDecode: async (event: TimelineEvent<To>): Promise<E | undefined> => {
-        const [data, meta] = await Promise.all([event.data ? decode(event.data) : undefined, event.meta ? decode(event.meta) : undefined])
-        return codec.tryDecode({ ...event, data, meta })
+      async tryDecode(event: TimelineEvent<To>): Promise<E | undefined> {
+        const data = event.data ? decode(event.data) : undefined
+        const meta = event.meta ? decode(event.meta) : undefined
+        const from: TimelineEvent<From> = { ...event, data: await data, meta: await meta }
+        return codec.tryDecode(from)
       },
-      encode: async (e, ctx) => {
-        const result = await codec.encode(e, ctx)
+      async encode(event: E, ctx: C): Promise<StreamEvent<To>> {
+        const result = await codec.encode(event, ctx)
         const data = result.data ? encode(result.data) : undefined
         const meta = result.meta ? encode(result.meta) : undefined
-        return { ...result, data: await data, meta: await meta }
+        const encoded: StreamEvent<To> = { ...result, data: await data, meta: await meta }
+        return encoded
       },
     }
   }
 
-  static deflate<E, C>(codec: Codec<E, Record<string, any>, C>): Codec<E, [number | undefined, Uint8Array | undefined], C> {
-    return Codec.map(
+  static deflate<E, C>(codec: Codec<E, string, C>): Codec<E, [number | undefined, Uint8Array | undefined], C> {
+    return Codec.map<E, string, C, [number | undefined, Uint8Array | undefined]>(
       codec,
       async (x) => {
         if (x == null) return [undefined, undefined]
-        const raw = Buffer.from(JSON.stringify(x))
+        const raw = Buffer.from(x)
         const deflated = await deflate(raw)
         if (deflated.length < raw.length) return [1, deflated]
         return [0, raw]
       },
       async ([encoding, b]) => {
-        if (b == null || b.length === 0) return null
+        if (b == null || b.length === 0) return "{}"
         const buf = Buffer.from(b)
-        if (encoding === 0) return JSON.parse(buf.toString())
+        if (encoding === 0) return buf.toString()
         const inflated = await inflate(buf, { finishFlush: zlib.constants.Z_SYNC_FLUSH })
-        return JSON.parse(inflated.toString())
+        return inflated.toString()
       }
     )
   }
 
-  static empty<E extends { type: string; data?: Record<string, any> }, C = null>(): Codec<E, Record<string, any>, C> {
+  static json<E extends { type: string; data?: Record<string, any> }, C = null>(
+    ctxToMeta: (ctx: C) => Record<string, any> | undefined = () => undefined
+  ): Codec<E, string, C> {
     return {
-      tryDecode: (e) => e as any as E,
-      encode: (e) => e as any as StreamEvent<Record<string, any>>,
-    }
-  }
-
-  static passthrough<E extends { type: string; data?: Record<string, any> }, C>(
-    ctxToMeta: (ctx: C) => Record<string, any> | undefined = (x) => undefined
-  ): Codec<E, Record<string, any> | undefined, C> {
-    return {
-      tryDecode(event: TimelineEvent<Record<string, any>>): E | undefined {
-        return event as any as E
-      },
-      encode(event: E, ctx: C): StreamEvent<Record<string, any>> {
-        return { type: event.type, data: event.data, meta: ctxToMeta(ctx) }
-      },
+      tryDecode: (e) => ({ type: e.type, data: e.data ? JSON.parse(e.data) : undefined } as E),
+      encode: (e, ctx) => ({
+        type: e.type,
+        data: "data" in e && e.data ? JSON.stringify(e.data) : undefined,
+        meta: JSON.stringify(ctxToMeta(ctx)),
+      }),
     }
   }
 }

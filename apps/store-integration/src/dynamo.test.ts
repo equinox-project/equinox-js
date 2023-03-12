@@ -1,7 +1,7 @@
 import { AccessStrategy, CachingStrategy, DynamoStoreCategory, DynamoStoreClient, DynamoStoreContext } from "@equinox-js/dynamo-store"
 import * as Cart from "./domain/Cart"
 import * as ContactPreferences from "./domain/ContactPreferences"
-import { Decider, ICache, MemoryCache } from "@equinox-js/core"
+import { Codec, Decider, ICache, MemoryCache } from "@equinox-js/core"
 import { describe, test, expect, afterEach, afterAll, beforeAll } from "vitest"
 import { DynamoDB } from "@aws-sdk/client-dynamodb"
 import { randomUUID } from "crypto"
@@ -50,7 +50,7 @@ namespace CartService {
 namespace ContactPreferencesService {
   const fold = ContactPreferences.Fold.fold
   const initial = ContactPreferences.Fold.initial
-  const codec = ContactPreferences.Events.asyncCodec
+  const codec = Codec.deflate(ContactPreferences.Events.codec)
   const createWithLatestKnownEvent = (context: DynamoStoreContext, cachingStrategy: CachingStrategy.CachingStrategy) => {
     const category = DynamoStoreCategory.build(context, codec, fold, initial, cachingStrategy, AccessStrategy.LatestKnownEvent())
     return ContactPreferences.create((cat, streamId) => Decider.resolve(category, cat, streamId, null))
