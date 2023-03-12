@@ -17,31 +17,30 @@ type Event =
   | { type: "PaymentReceived"; data: Payment }
   | { type: "InvoiceFinalized" }
 
-namespace Codec {
-  const RaisedSchema = z.object({
-    invoice_number: z.number().int(),
-    payer_id: z.string().transform((s) => s as PayerId),
-    amount: z.number(),
-  })
-  const PaymentSchema = z.object({ amount: z.number() })
-  const EmailReceiptSchema = z.object({ idempotency_key: z.string(), recipient: z.string().email(), sent_at: z.date() })
-  export const codec: Codec<Event, string> = {
-    tryDecode(ev): Event | undefined {
-      switch (ev.type) {
-        case "InvoiceRaised":
-          return { type: "InvoiceRaised", data: RaisedSchema.parse(JSON.parse(ev.data)) }
-        case "InvoiceEmailed":
-          return { type: ev.type, data: EmailReceiptSchema.parse(JSON.parse(ev.data)) }
-        case "PaymentReceived":
-          return { type: ev.type, data: PaymentSchema.parse(JSON.parse(ev.data)) }
-        case "InvoiceFinalized":
-          return { type: ev.type }
-      }
-    },
-    encode(ev) {
-      return { type: ev.type, data: "data" in ev ? JSON.stringify(ev.data) : undefined }
-    },
-  }
+const RaisedSchema = z.object({
+  invoice_number: z.number().int(),
+  payer_id: z.string().transform((s) => s as PayerId),
+  amount: z.number(),
+})
+const PaymentSchema = z.object({ reference: z.string(), amount: z.number() })
+const EmailReceiptSchema = z.object({ idempotency_key: z.string(), recipient: z.string().email(), sent_at: z.date() })
+
+export const codec: Codec<Event, string> = {
+  tryDecode(ev): Event | undefined {
+    switch (ev.type) {
+      case "InvoiceRaised":
+        return { type: "InvoiceRaised", data: RaisedSchema.parse(JSON.parse(ev.data!)) }
+      case "InvoiceEmailed":
+        return { type: ev.type, data: EmailReceiptSchema.parse(JSON.parse(ev.data!)) }
+      case "PaymentReceived":
+        return { type: ev.type, data: PaymentSchema.parse(JSON.parse(ev.data!)) }
+      case "InvoiceFinalized":
+        return { type: ev.type }
+    }
+  },
+  encode(ev) {
+    return { type: ev.type, data: "data" in ev ? JSON.stringify(ev.data) : undefined }
+  },
 }
 
 namespace Fold {
@@ -221,26 +220,19 @@ export class Service {
   }
 
   static createMessageDb(context: Mdb.MessageDbContext, caching: Mdb.CachingStrategy) {
-    const category = Mdb.MessageDbCategory.build(context, Codec.codec, Fold.fold, Fold.initial, caching)
+    const category = Mdb.MessageDbCategory.build(context, codec, Fold.fold, Fold.initial, caching)
     const resolve = (invoiceId: InvoiceId) => Decider.resolve(category, Category, streamId(invoiceId), null)
     return new Service(resolve)
   }
 
   static createDynamo(context: Ddb.DynamoStoreContext, caching: Ddb.CachingStrategy.CachingStrategy) {
-    const category = Ddb.DynamoStoreCategory.build(
-      context,
-      Codec.deflate(Codec.codec),
-      Fold.fold,
-      Fold.initial,
-      caching,
-      Ddb.AccessStrategy.Unoptimized()
-    )
+    const category = Ddb.DynamoStoreCategory.build(context, Codec.deflate(codec), Fold.fold, Fold.initial, caching, Ddb.AccessStrategy.Unoptimized())
     const resolve = (invoiceId: InvoiceId) => Decider.resolve(category, Category, streamId(invoiceId), null)
     return new Service(resolve)
   }
 
   static createMem(store: Mem.VolatileStore<string>) {
-    const category = Mem.MemoryStoreCategory.build(store, Codec.codec, Fold.fold, Fold.initial)
+    const category = Mem.MemoryStoreCategory.build(store, codec, Fold.fold, Fold.initial)
     const resolve = (invoiceId: InvoiceId) => Decider.resolve(category, Category, streamId(invoiceId), null)
     return new Service(resolve)
   }
