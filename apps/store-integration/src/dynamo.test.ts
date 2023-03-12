@@ -1,7 +1,7 @@
 import { AccessStrategy, CachingStrategy, DynamoStoreCategory, DynamoStoreClient, DynamoStoreContext } from "@equinox-js/dynamo-store"
 import * as Cart from "./domain/Cart"
 import * as ContactPreferences from "./domain/ContactPreferences"
-import { Codec, Decider, ICache, MemoryCache } from "@equinox-js/core"
+import { Codec, ICache, MemoryCache } from "@equinox-js/core"
 import { describe, test, expect, afterEach, afterAll, beforeAll } from "vitest"
 import { DynamoDB } from "@aws-sdk/client-dynamodb"
 import { randomUUID } from "crypto"
@@ -19,41 +19,41 @@ namespace CartService {
   const noCache = CachingStrategy.NoCaching()
   export function createWithoutOptimization(context: DynamoStoreContext) {
     const category = DynamoStoreCategory.build(context, codec, fold, initial, noCache, AccessStrategy.Unoptimized())
-    return Cart.create((cat, streamId) => Decider.resolve(category, cat, streamId, null))
+    return Cart.Service.create(category)
   }
 
   export function createWithEmptyUnfolds(context: DynamoStoreContext) {
     const access = AccessStrategy.MultiSnapshot<E, S>(Cart.Fold.isOrigin, () => [])
     const category = DynamoStoreCategory.build(context, codec, fold, initial, noCache, access)
-    return Cart.create((cat, streamId) => Decider.resolve(category, cat, streamId, null))
+    return Cart.Service.create(category)
   }
 
   export function createWithSnapshotStrategy(context: DynamoStoreContext) {
     const access = AccessStrategy.Snapshot<E, S>(Cart.Fold.isOrigin, Cart.Fold.snapshot)
     const category = DynamoStoreCategory.build(context, codec, fold, initial, noCache, access)
-    return Cart.create((cat, streamId) => Decider.resolve(category, cat, streamId, null))
+    return Cart.Service.create(category)
   }
 
   const sliding20m = CachingStrategy.SlidingWindow(cache, 20 * 60 * 1000)
   export function createWithSnapshotStrategyAndCaching(context: DynamoStoreContext) {
     const access = AccessStrategy.Snapshot<E, S>(Cart.Fold.isOrigin, Cart.Fold.snapshot)
     const category = DynamoStoreCategory.build(context, codec, fold, initial, sliding20m, access)
-    return Cart.create((cat, streamId) => Decider.resolve(category, cat, streamId, null))
+    return Cart.Service.create(category)
   }
   export function createWithRollingState(context: DynamoStoreContext) {
     const access = AccessStrategy.RollingState(Cart.Fold.snapshot)
     const category = DynamoStoreCategory.build(context, codec, fold, initial, noCache, access)
-    return Cart.create((cat, streamId) => Decider.resolve(category, cat, streamId, null))
+    return Cart.Service.create(category)
   }
 }
 
 namespace ContactPreferencesService {
-  const fold = ContactPreferences.Fold.fold
-  const initial = ContactPreferences.Fold.initial
-  const codec = Codec.deflate(ContactPreferences.Events.codec)
+  const fold = ContactPreferences.fold
+  const initial = ContactPreferences.initial
+  const codec = Codec.deflate(ContactPreferences.codec)
   const createWithLatestKnownEvent = (context: DynamoStoreContext, cachingStrategy: CachingStrategy.CachingStrategy) => {
     const category = DynamoStoreCategory.build(context, codec, fold, initial, cachingStrategy, AccessStrategy.LatestKnownEvent())
-    return ContactPreferences.create((cat, streamId) => Decider.resolve(category, cat, streamId, null))
+    return ContactPreferences.Service.create(category)
   }
 
   export const createWithoutCaching = (context: DynamoStoreContext) => createWithLatestKnownEvent(context, CachingStrategy.NoCaching())

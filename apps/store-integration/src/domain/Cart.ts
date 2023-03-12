@@ -1,4 +1,5 @@
 import { Codec, Decider } from "@equinox-js/core"
+import * as Equinox from "@equinox-js/core"
 
 export const Category = "Cart"
 export type CartId = string & { __brand: "CartId" }
@@ -138,8 +139,8 @@ export class Service {
     const decider = this.resolve(cartId)
     return decider.query((x) => x, "AllowStale")
   }
-}
 
-export const create = (resolve: (cat: string, streamId: string) => Decider<Events.Event, Fold.State>) => {
-  return new Service((id) => resolve(Category, streamId(id)))
+  static create(category: Equinox.Category<Events.Event, Fold.State>) {
+    return new Service((id) => Decider.resolve(category, Category, streamId(id), null))
+  }
 }

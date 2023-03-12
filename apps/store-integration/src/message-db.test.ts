@@ -1,7 +1,7 @@
 import * as Cart from "./domain/Cart"
 import * as ContactPreferences from "./domain/ContactPreferences"
 import { Decider, ICache, MemoryCache, Codec } from "@equinox-js/core"
-import { describe, test, expect, afterEach, afterAll, beforeAll } from "vitest"
+import { describe, test, expect, afterEach, afterAll } from "vitest"
 import { Pool } from "pg"
 import { randomUUID } from "crypto"
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
@@ -24,37 +24,37 @@ namespace CartService {
 
   export function createWithoutOptimization(context: MessageDbContext) {
     const category = Category.build(context, codec, fold, initial, noCache, AccessStrategy.Unoptimized())
-    return Cart.create((cat, streamId) => Decider.resolve(category, cat, streamId, null))
+    return Cart.Service.create(category)
   }
 
   export function createWithSnapshotStrategy(context: MessageDbContext) {
     const access = AccessStrategy.AdjacentSnapshots<E, S>(Cart.Fold.snapshotEventType, Cart.Fold.snapshot)
     const category = Category.build(context, codec, fold, initial, noCache, access)
-    return Cart.create((cat, streamId) => Decider.resolve(category, cat, streamId, null))
+    return Cart.Service.create(category)
   }
 
   const sliding20m = CachingStrategy.SlidingWindow(cache, 20 * 60 * 1000)
 
   export function createWithCaching(context: MessageDbContext) {
     const category = Category.build(context, codec, fold, initial, sliding20m)
-    return Cart.create((cat, streamId) => Decider.resolve(category, cat, streamId, null))
+    return Cart.Service.create(category)
   }
 
   export function createWithSnapshotStrategyAndCaching(context: MessageDbContext) {
     const access = AccessStrategy.AdjacentSnapshots<E, S>(Cart.Fold.snapshotEventType, Cart.Fold.snapshot)
     const category = Category.build(context, codec, fold, initial, sliding20m, access)
-    return Cart.create((cat, streamId) => Decider.resolve(category, cat, streamId, null))
+    return Cart.Service.create(category)
   }
 }
 
 namespace ContactPreferencesService {
-  const fold = ContactPreferences.Fold.fold
-  const initial = ContactPreferences.Fold.initial
-  const codec = ContactPreferences.Events.codec
+  const fold = ContactPreferences.fold
+  const initial = ContactPreferences.initial
+  const codec = ContactPreferences.codec
 
   const createWithLatestKnownEvent = (context: MessageDbContext, cachingStrategy: CachingStrategy) => {
     const category = Category.build(context, codec, fold, initial, cachingStrategy, AccessStrategy.LatestKnownEvent())
-    return ContactPreferences.create((cat, streamId) => Decider.resolve(category, cat, streamId, null))
+    return ContactPreferences.Service.create(category)
   }
 
   export const createWithoutCaching = (context: MessageDbContext) => createWithLatestKnownEvent(context, CachingStrategy.NoCaching())
@@ -82,21 +82,18 @@ namespace SimplestThing {
 }
 
 namespace ContactPreferencesService {
-  const { fold, initial } = ContactPreferences.Fold
-  const codec = ContactPreferences.Events.codec
+  const { fold, initial, codec } = ContactPreferences
 
   export const createUnoptimized = (client: MessageDbConnection) => {
     const context = createContext(client, defaultBatchSize)
     const category = Category.build(context, codec, fold, initial)
-    const resolve = (categoryName: string, streamId: string) => Decider.resolve(category, categoryName, streamId, undefined)
-    return ContactPreferences.create(resolve)
+    return ContactPreferences.Service.create(category)
   }
 
   export const createService = (client: MessageDbConnection) => {
     const context = createContext(client, defaultBatchSize)
     const category = Category.build(context, codec, fold, initial, undefined, AccessStrategy.LatestKnownEvent())
-    const resolve = (categoryName: string, streamId: string) => Decider.resolve(category, categoryName, streamId, undefined)
-    return ContactPreferences.create(resolve)
+    return ContactPreferences.Service.create(category)
   }
 }
 
@@ -355,7 +352,7 @@ describe("AccessStrategy.LatestKnownEvent", () => {
   test("Reads and updates against Store", async () => {
     const id = randomUUID() as ContactPreferences.ClientId
     const service = ContactPreferencesService.createService(client)
-    const value: ContactPreferences.Events.Preferences = {
+    const value: ContactPreferences.Preferences = {
       littlePromotions: Math.random() > 0.5,
       manyPromotions: Math.random() > 0.5,
       productReview: Math.random() > 0.5,
