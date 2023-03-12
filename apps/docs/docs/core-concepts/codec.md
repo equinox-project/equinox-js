@@ -1,3 +1,7 @@
+---
+sidebar_position: 4
+---
+
 # Codec
 
 It is common in TypeScript applications to use `JSON.stringify` and `JSON.parse` indiscriminately. In the context of

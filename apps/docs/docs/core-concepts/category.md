@@ -1,14 +1,13 @@
+---
+sidebar_position: 1
+---
 # Category
 
 In event sourcing, a category is a grouping of related streams that share events of the same schema with consistent
 semantic meaning. Categories are analogous to classes in object-oriented systems, and play an important role
-in organizing data in any event sourced system. However, in Equinox, categories play an outsized role as the primary
-means by which you interact with concrete stores when wiring up your services. In Equinox, you interact with a concrete
-store through its category implementation.
+in organizing data in any event sourced system.
 
-By making categories the primary means of interacting with concrete stores, Equinox provides a consistent abstraction
-layer that simplifies the development and maintenance of event sourced systems. This approach enables developers to
-focus less on infrastructural concerns like low-level details of how events are stored and retrieved from storage, and
-more on the inherent complexity of their domain. Additionally, by providing a consistent way of interacting with
-stores, Equinox makes it easier to swap out different implementations of the data store as the needs of the system
-evolve over time.
+Equinox builds on this conceptual foundation. In addition to sharing event schema and meaning, a category in Equinox
+shares a consistent way to `fold` events into state, and therefore a consistent `state`. The Category abstracts the
+details of how events are loaded from and written to a concrete store. By buying into the equinox programming model
+you make it easier to swap out different storage implementations as the needs of your system evolve over time.
