@@ -1,6 +1,6 @@
 import { DynamoDB } from "@aws-sdk/client-dynamodb"
 import { DynamoStoreClient, DynamoStoreContext } from "@equinox-js/dynamo-store"
-import { DynamoStoreSourceClient, LoadMode } from "../src/lib/DynamoStoreSource"
+import { DynamoStoreSourceClient } from "../src/lib/DynamoStoreSource"
 import { Checkpoint } from "../src"
 import { Codec } from "@equinox-js/core"
 
@@ -15,9 +15,7 @@ const indexTableName = process.env.INDEX_TABLE_NAME || "sample_events_index"
 
 const client = DynamoStoreClient.build(ddb, tableName)
 const indexClient = DynamoStoreClient.build(ddb, indexTableName)
-const withoutBodies: LoadMode = { type: "WithoutEventBodies", categoryFilter: () => true }
-const withBodies: LoadMode = { type: "Hydrated", categoryFilter: () => true, degreeOfParallelism: 5, context: new DynamoStoreContext(client) }
-const sourceNoBody = new DynamoStoreSourceClient(indexClient, withoutBodies)
+const withBodies = { type: "Hydrated", categoryFilter: () => true, degreeOfParallelism: 5, context: new DynamoStoreContext(client) }
 const source = new DynamoStoreSourceClient(indexClient, withBodies)
 
 const tranches = await source.listTranches()
