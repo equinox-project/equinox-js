@@ -107,8 +107,10 @@ test("Withdrawing with funds", () => {
 Or you can test it through the `Service` using the included memory store.
 
 ```ts
+import { VolatileStore } from '@equinox-js/memory-store'
+
 const createService = () => {
-  const store = new VolatileStore<any>()
+  const store = new VolatileStore<Record<string, any>>()
   return Service.createMem(store)
 }
 
