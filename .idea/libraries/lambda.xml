@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="lambda">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/packages/dynamo-store/dynamo-store-indexer-lambda/dist/lambda.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
