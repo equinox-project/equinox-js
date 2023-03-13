@@ -1,6 +1,6 @@
 import { createHash } from "crypto"
 import { equals } from "ramda"
-import { Codec, Decider } from "@equinox-js/core"
+import { Codec, Decider, LoadOption } from "@equinox-js/core"
 import * as Equinox from "@equinox-js/core"
 
 export type ClientId = string & { __brand: "ClientId" }
@@ -54,7 +54,7 @@ export class Service {
 
   readStale(email: ClientId) {
     const decider = this.resolve(email)
-    return decider.query((x) => x, "AllowStale")
+    return decider.query((x) => x, LoadOption.AllowStale)
   }
 
   static create(category: Equinox.Category<Event, State>) {

@@ -1,4 +1,4 @@
-import { Codec, Decider } from "@equinox-js/core"
+import { Codec, Decider, LoadOption } from "@equinox-js/core"
 import * as Equinox from "@equinox-js/core"
 
 export const Category = "Cart"
@@ -118,7 +118,7 @@ export class Service {
       if (prepare) await prepare()
       return interpretMany(Fold.fold, commands.map(interpret))(state)
     }
-    const opt = optimistic ? "AllowStale" : "RequireLoad"
+    const opt = optimistic ? LoadOption.AllowStale : LoadOption.RequireLoad
     return decider.transactResultAsync(interpretCommands, opt)
   }
 
@@ -137,7 +137,7 @@ export class Service {
 
   readStale(cartId: CartId) {
     const decider = this.resolve(cartId)
-    return decider.query((x) => x, "AllowStale")
+    return decider.query((x) => x, LoadOption.AllowStale)
   }
 
   static create(category: Equinox.Category<Events.Event, Fold.State>) {

@@ -1,38 +1,54 @@
 import { IStream, queryAsync, TokenAndState, transactAsync } from "./Core"
 import { Category } from "./Category"
 
-type LoadOption<State> =
+enum LoadOptionType {
+  RequireLoad,
+  RequireLeader,
+  AllowStale,
+  AssumeEmpty,
+  Memento,
+}
+
+type LoadOptionValue<State> =
+  | LoadOptionType.RequireLoad
+  | LoadOptionType.RequireLeader
+  | LoadOptionType.AllowStale
+  | LoadOptionType.AssumeEmpty
+  | { type: LoadOptionType.Memento; memento: TokenAndState<State> }
+
+export namespace LoadOption {
   /** Default policy; Obtain the latest state from store based on consistency level configured */
-  | "RequireLoad"
+  export const RequireLoad = LoadOptionType.RequireLoad
   /** Request that data be read with a quorum read / from a Leader connection */
-  | "RequireLeader"
+  export const RequireLeader = LoadOptionType.RequireLeader
   /**
    * If the Cache holds any state, use that without checking the backing store for updates, implying:
    * - maximizing how much we lean on Optimistic Concurrency Control when doing a `Transact` (you're still guaranteed a consistent outcome)
    * - enabling stale reads [in the face of multiple writers (either in this process or in other processes)] when doing a `Query`
    */
-  | "AllowStale"
+  export const AllowStale = LoadOptionType.AllowStale
   /** Inhibit load from database based on the fact that the stream is likely not to have been initialized yet, and we will be generating events */
-  | "AssumeEmpty"
+  export const AssumeEmpty = LoadOptionType.AssumeEmpty
   /** Instead of loading from database, seed the loading process with the supplied memento, obtained via ISyncContext.CreateMemento() */
-  | { type: "Memento"; memento: TokenAndState<State> }
+  export const Memento = <State>(memento: TokenAndState<State>): LoadOptionValue<State> => ({ type: LoadOptionType.Memento, memento })
+}
 
-export const LoadPolicy = {
-  fetch<State, Event>(x?: LoadOption<State>): (stream: IStream<Event, State>) => Promise<TokenAndState<State>> {
+const LoadPolicy = {
+  fetch<State, Event>(x?: LoadOptionValue<State>): (stream: IStream<Event, State>) => Promise<TokenAndState<State>> {
     switch (x) {
-      case "RequireLoad":
+      case LoadOptionType.RequireLoad:
       case undefined:
       case null:
         return (stream) => stream.load(false, false)
-      case "RequireLeader":
+      case LoadOptionType.RequireLeader:
         return (stream) => stream.load(false, true)
-      case "AllowStale":
+      case LoadOptionType.AllowStale:
         return (stream) => stream.load(true, false)
-      case "AssumeEmpty":
+      case LoadOptionType.AssumeEmpty:
         return (stream) => Promise.resolve(stream.loadEmpty())
     }
     switch (x.type) {
-      case "Memento":
+      case LoadOptionType.Memento:
         return (_stream) => Promise.resolve(x.memento)
     }
   },
@@ -93,7 +109,7 @@ export class Decider<Event, State> {
    * 2. (if events yielded) Attempt to sync the yielded events to the stream.
    *    (Restarts up to `maxAttempts` times with updated state per attempt, throwing `MaxResyncsExhaustedException` on failure of final attempt.)
    */
-  transact(interpret: (state: State) => Event[], load?: LoadOption<State>, attempts?: number) {
+  transact(interpret: (state: State) => Event[], load?: LoadOptionValue<State>, attempts?: number) {
     const decide = ({ state }: TokenAndState<State>): Promise<[null, Event[]]> => Promise.resolve([null, interpret(state)])
     const mapRes = () => null
     return transactAsync(this.stream, LoadPolicy.fetch(load), decide, AttemptsPolicy.validate(attempts), mapRes)
@@ -105,7 +121,7 @@ export class Decider<Event, State> {
    *    (Restarts up to `maxAttempts` times with updated state per attempt, throwing `MaxResyncsExhaustedException` on failure of final attempt.)
    * 3. Uses `render` to generate a 'view from the persisted final state
    */
-  transactProject<View>(interpret: (state: State) => Event[], render: (state: State) => View, load?: LoadOption<State>, attempts?: number) {
+  transactProject<View>(interpret: (state: State) => Event[], render: (state: State) => View, load?: LoadOptionValue<State>, attempts?: number) {
     const decide = ({ state }: TokenAndState<State>): Promise<[null, Event[]]> => Promise.resolve([null, interpret(state)])
     const mapRes = (_result: null, { state }: TokenAndState<State>) => render(state)
     return transactAsync(this.stream, LoadPolicy.fetch(load), decide, AttemptsPolicy.validate(attempts), mapRes)
@@ -117,7 +133,7 @@ export class Decider<Event, State> {
    *    (Restarts up to `maxAttempts` times with updated state per attempt, throwing `MaxResyncsExhaustedException` on failure of final attempt.)
    * 3. Yield result
    */
-  transactResult<Result>(interpret: (state: State) => [Result, Event[]], load?: LoadOption<State>, attempts?: number) {
+  transactResult<Result>(interpret: (state: State) => [Result, Event[]], load?: LoadOptionValue<State>, attempts?: number) {
     const decide = ({ state }: TokenAndState<State>): Promise<[Result, Event[]]> => Promise.resolve(interpret(state))
     const mapRes = (result: Result) => result
     return transactAsync(this.stream, LoadPolicy.fetch(load), decide, AttemptsPolicy.validate(attempts), mapRes)
@@ -132,7 +148,7 @@ export class Decider<Event, State> {
   transactMapResult<Result, View>(
     interpret: (state: State) => [Result, Event[]],
     mapResult: (result: Result, state: State) => View,
-    load?: LoadOption<State>,
+    load?: LoadOptionValue<State>,
     attempts?: number
   ) {
     const decide = ({ state }: TokenAndState<State>): Promise<[Result, Event[]]> => Promise.resolve(interpret(state))
@@ -146,7 +162,7 @@ export class Decider<Event, State> {
    *   (Restarts up to `maxAttempts` times with updated state per attempt, throwing `MaxResyncsExhaustedException` on failure of final attempt.)
    * 3. Yields `result`
    */
-  transactEx<Result>(decide: (state: ISyncContext<State>) => [Result, Event[]], load?: LoadOption<State>, attempts?: number) {
+  transactEx<Result>(decide: (state: ISyncContext<State>) => [Result, Event[]], load?: LoadOptionValue<State>, attempts?: number) {
     const decide_ = (t: TokenAndState<State>) => Promise.resolve(decide(SyncContext.map(t)))
     const mapRes = (res: Result) => res
     return transactAsync(this.stream, LoadPolicy.fetch(load), decide_, AttemptsPolicy.validate(attempts), mapRes)
@@ -161,7 +177,7 @@ export class Decider<Event, State> {
   transactExMapResult<Result, View>(
     decide: (state: ISyncContext<State>) => [Result, Event[]],
     mapResult: (result: Result, ctx: ISyncContext<State>) => View,
-    load?: LoadOption<State>,
+    load?: LoadOptionValue<State>,
     attempts?: number
   ) {
     const decide_ = (t: TokenAndState<State>) => Promise.resolve(decide(SyncContext.map(t)))
@@ -170,12 +186,12 @@ export class Decider<Event, State> {
   }
 
   /** Project from the folded `'state`, but without executing a decision flow as `Transact` does */
-  query<View>(render: (state: State) => View, load?: LoadOption<State>) {
+  query<View>(render: (state: State) => View, load?: LoadOptionValue<State>) {
     return queryAsync(this.stream, LoadPolicy.fetch(load), ({ state }) => render(state))
   }
 
   /** Project from the stream's complete context, but without executing a decision flow as `TransactEx` does */
-  queryEx<View>(render: (ctx: ISyncContext<State>) => View, load?: LoadOption<State>) {
+  queryEx<View>(render: (ctx: ISyncContext<State>) => View, load?: LoadOptionValue<State>) {
     return queryAsync(this.stream, LoadPolicy.fetch(load), (t) => render(SyncContext.map(t)))
   }
 
@@ -185,7 +201,7 @@ export class Decider<Event, State> {
    *   (Restarts up to `maxAttempts` times with updated state per attempt, throwing `MaxResyncsExhaustedException` on failure of final attempt.)
    * 3. Uses `render` to generate a 'view from the persisted final state
    */
-  transactAsync(interpret: (state: State) => Promise<Event[]>, load?: LoadOption<State>, attempts?: number) {
+  transactAsync(interpret: (state: State) => Promise<Event[]>, load?: LoadOptionValue<State>, attempts?: number) {
     const mapRes = () => null
     return transactAsync(
       this.stream,
@@ -202,7 +218,7 @@ export class Decider<Event, State> {
    *   (Restarts up to `maxAttempts` times with updated state per attempt, throwing `MaxResyncsExhaustedException` on failure of final attempt.)
    * 3. Yield result
    */
-  transactResultAsync<Result>(decide: (state: State) => Promise<[Result, Event[]]>, load?: LoadOption<State>, attempts?: number) {
+  transactResultAsync<Result>(decide: (state: State) => Promise<[Result, Event[]]>, load?: LoadOptionValue<State>, attempts?: number) {
     const mapRes = (res: Result) => res
     return transactAsync(this.stream, LoadPolicy.fetch(load), ({ state }) => decide(state), AttemptsPolicy.validate(attempts), mapRes)
   }
@@ -213,7 +229,7 @@ export class Decider<Event, State> {
    *   (Restarts up to `maxAttempts` times with updated state per attempt, throwing `MaxResyncsExhaustedException` on failure of final attempt.)
    * 3. Yield result
    */
-  transactExAsync<Result>(decide: (state: ISyncContext<State>) => Promise<[Result, Event[]]>, load?: LoadOption<State>, attempts?: number) {
+  transactExAsync<Result>(decide: (state: ISyncContext<State>) => Promise<[Result, Event[]]>, load?: LoadOptionValue<State>, attempts?: number) {
     const mapRes = (res: Result) => res
     return transactAsync(this.stream, LoadPolicy.fetch(load), (x) => decide(SyncContext.map(x)), AttemptsPolicy.validate(attempts), mapRes)
   }
@@ -227,7 +243,7 @@ export class Decider<Event, State> {
   transactExMapResultAsync<Result, View>(
     decide: (state: ISyncContext<State>) => Promise<[Result, Event[]]>,
     mapResult: (result: Result, ctx: ISyncContext<State>) => View,
-    load?: LoadOption<State>,
+    load?: LoadOptionValue<State>,
     attempts?: number
   ) {
     const mapRes = (res: Result, x: TokenAndState<State>) => mapResult(res, SyncContext.map(x))

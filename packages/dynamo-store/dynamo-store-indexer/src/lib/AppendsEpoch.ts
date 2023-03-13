@@ -6,7 +6,7 @@
  * The Checkpoint per Index consists of the pair of 1. EpochId 2. Event Index within that Epoch (see `module Checkpoint` for detail)
  */
 import { AppendsEpochId, AppendsTrancheId, Checkpoint, IndexStreamId } from "./Types"
-import { Codec, Decider, TimelineEvent } from "@equinox-js/core"
+import { Codec, Decider, LoadOption, TimelineEvent } from "@equinox-js/core"
 import { IngestResult } from "./ExactlyOnceIngester"
 import { AccessStrategy, CachingStrategy, DynamoStoreCategory, DynamoStoreContext } from "@equinox-js/dynamo-store"
 
@@ -166,7 +166,7 @@ export class Service {
     if (spans.some((x) => isSelf(x.p))) throw new Error("Writes to indices should be filtered prior to indexing")
     return decider.transactEx(
       (c) => Ingest.decide((n) => this.shouldClose(c.streamEventBytes, c.version, n), spans, c.state),
-      assumeEmpty ? "AssumeEmpty" : "AllowStale"
+      assumeEmpty ? LoadOption.AssumeEmpty : LoadOption.AllowStale
     )
   }
 }

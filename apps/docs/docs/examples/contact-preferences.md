@@ -7,7 +7,7 @@ import * as Mdb from "@equinox-js/message-db"
 import * as Ddb from "@equinox-js/dynamo-store"
 import * as Mem from "@equinox-js/memory-store"
 import { createHash } from "crypto"
-import { Codec, Decider } from "@equinox-js/core"
+import { Codec, Decider, LoadOption } from "@equinox-js/core"
 import { equals } from "ramda"
 
 
@@ -64,7 +64,7 @@ export class Service {
 
   readStale(email: ClientId) {
     const decider = this.resolve(email)
-    return decider.query((x) => x, "AllowStale")
+    return decider.query((x) => x, LoadOption.AllowStale)
   }
 
   static createMessageDb(context: Mdb.MessageDbContext, caching: Mdb.CachingStrategy) {

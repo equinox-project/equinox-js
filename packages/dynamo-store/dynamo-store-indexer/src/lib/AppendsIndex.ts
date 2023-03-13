@@ -1,4 +1,4 @@
-import { Codec, Decider } from "@equinox-js/core"
+import { Codec, Decider, LoadOption } from "@equinox-js/core"
 import { AppendsEpochId, AppendsTrancheId } from "./Types"
 import { DynamoStoreContext, DynamoStoreCategory, CachingStrategy, AccessStrategy } from "@equinox-js/dynamo-store"
 
@@ -43,7 +43,7 @@ export class Service {
   /** Determines the current active epoch for the specified Tranche */
   readIngestionEpochId(trancheId: AppendsTrancheId.t): Promise<AppendsEpochId.t> {
     const decider = this.resolve()
-    return decider.query((state) => state[trancheId] ?? AppendsEpochId.initial, "AllowStale")
+    return decider.query((state) => state[trancheId] ?? AppendsEpochId.initial, LoadOption.AllowStale)
   }
 
   /**
@@ -52,7 +52,7 @@ export class Service {
    */
   markIngestionEpoch(trancheId: AppendsTrancheId.t, epochId: AppendsEpochId.t): Promise<null> {
     const decider = this.resolve()
-    return decider.transact(interpret(trancheId, epochId), "AllowStale")
+    return decider.transact(interpret(trancheId, epochId), LoadOption.AllowStale)
   }
 }
 
