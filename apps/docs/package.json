@@ -14,6 +14,7 @@
     "write-heading-ids": "docusaurus write-heading-ids"
   },
   "dependencies": {
+    "@algolia/client-search": "^4.15.0",
     "@docusaurus/core": "2.3.1",
     "@docusaurus/preset-classic": "2.3.1",
     "@mdx-js/react": "^1.6.22",
@@ -29,7 +30,8 @@
     "@equinox-js/dynamo-store": "workspace:*",
     "@equinox-js/memory-store": "workspace:*",
     "@equinox-js/message-db": "workspace:*",
-    "tsconfig": "workspace:*"
+    "tsconfig": "workspace:*",
+    "typescript": "^4.9.5"
   },
   "browserslist": {
     "production": [
