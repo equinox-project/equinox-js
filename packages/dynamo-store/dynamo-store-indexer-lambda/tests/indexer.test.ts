@@ -1,2 +1,2 @@
-import {describe} from 'vitest'
-describe('')
+import { describe } from "vitest"
+describe("")

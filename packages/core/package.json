@@ -8,7 +8,9 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts"
   },
-  "files": ["./dist"],
+  "files": [
+    "./dist"
+  ],
   "devDependencies": {
     "@types/node": "^18.11.18",
     "lru-cache": "^7.14.1",
