@@ -13,3 +13,47 @@ shares a consistent way to [`fold`](https://en.wikipedia.org/wiki/Fold_%28higher
 and therefore a consistent `state`. The Category abstracts the details of how events are loaded from and written to a
 concrete store. By buying into the equinox programming model you make it easier to swap out different storage
 implementations as the needs of your system evolve over time.
+
+# Folds and State
+
+It's been said that, in event sourcing, current state is a left fold of previous history, but what does this mean?
+We've found the most straight forward way to explain this concept is by drawing a parallel with redux. In redux
+you "dispatch" actions to a store. This action is handled by multiple "reducers" to update the state of the store.
+
+```ts
+type Action = { type: "Increment" } | { type: "Decrement" }
+type State = { count: number }
+
+export function reducer(state: State = { count: 0 }, action: Action): State {
+  switch (action.type) {
+    case "Increment":
+      return { ...state, count: state.count + 1 }
+    case "Decrement":
+      return { ...state, count: state.count - 1 }
+  }
+  return state
+}
+```
+
+One way you can exercise a `redux` reducer is to use `Array#reduce`
+
+```ts
+[{ type: 'Increment' }, { type: 'Increment' }].reduce(reducer, { count: 0 }) // { count: 2 }
+```
+
+In functional languages like OCaml, and F# this concept is not called `reduce`. It's called `fold`. We could
+implement fold in javascript like so:
+
+```ts
+const fold = <Acc, T>(folder: (acc: Acc, value: T) => Acc) => (initial: T, items: T[]) => {
+  let result = initial
+  for (let i = 0; i < items.length; ++i) {
+    result = folder(result, items[i])
+  }
+  return result
+}
+```
+
+Notice the type of the `folder` function `Acc -> T -> Acc`, this is exactly the same signature as the reducer function
+above. Therefore, current state being a left fold of previous history means that we can construct the current state of
+an aggregate by "folding" its events, starting from the beginning (left).
