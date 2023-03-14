@@ -1,5 +1,5 @@
-import { IStream, queryAsync, TokenAndState, transactAsync } from "./Core"
-import { Category } from "./Category"
+import { IStream, queryAsync, TokenAndState, transactAsync } from "./Core.js"
+import { Category } from "./Category.js"
 
 enum LoadOptionType {
   RequireLoad,

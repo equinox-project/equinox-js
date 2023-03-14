@@ -1,6 +1,6 @@
-import { Event, arrayBytes as eventArrayBytes } from "./Event"
-import { Unfold, arrayBytes as unfoldArrayBytes } from "./Unfold"
-import { sumBy } from "./Array"
+import { Event, arrayBytes as eventArrayBytes } from "./Event.js"
+import { Unfold, arrayBytes as unfoldArrayBytes } from "./Unfold.js"
+import { sumBy } from "./Array.js"
 
 export type Batch = {
   streamName: string // "{streamName}"

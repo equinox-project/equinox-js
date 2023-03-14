@@ -1,7 +1,7 @@
 import { StreamToken, SyncResult, ICategory, CacheEntry, ICache, TokenAndState } from "@equinox-js/core"
-import { Fold, IsOrigin, MapUnfolds } from "./Internal"
-import { InternalCategory } from "./Category"
-import * as Token from "./Token"
+import { Fold, IsOrigin, MapUnfolds } from "./Internal.js"
+import { InternalCategory } from "./Category.js"
+import * as Token from "./Token.js"
 
 export class CachingCategory<E, S, C> implements ICategory<E, S, C> {
   private readonly cache: (streamName: string, inner: Promise<TokenAndState<S>>) => Promise<TokenAndState<S>>

@@ -1,9 +1,9 @@
 import { CachingStrategy, DynamoStoreContext } from "@equinox-js/dynamo-store"
 import { MemoryCache } from "@equinox-js/core"
-import * as AppendsEpoch from "./AppendsEpoch"
-import * as AppendsIndex from "./AppendsIndex"
-import * as ExactlyOnceIngester from "./ExactlyOnceIngester"
-import { AppendsEpochId, AppendsTrancheId, IndexStreamId } from "./Types"
+import * as AppendsEpoch from "./AppendsEpoch.js"
+import * as AppendsIndex from "./AppendsIndex.js"
+import * as ExactlyOnceIngester from "./ExactlyOnceIngester.js"
+import { AppendsEpochId, AppendsTrancheId, IndexStreamId } from "./Types.js"
 
 type Ingester = ExactlyOnceIngester.Service<AppendsEpochId.t, AppendsEpoch.Events.StreamSpan, IndexStreamId.t, IndexStreamId.t>
 export class DynamoStoreIndexer {

@@ -1,5 +1,5 @@
-import * as InternalBody from "./InternalBody"
-import { sumBy } from "./Array"
+import * as InternalBody from "./InternalBody.js"
+import { sumBy } from "./Array.js"
 import { TimelineEvent } from "@equinox-js/core"
 
 export type Event = {

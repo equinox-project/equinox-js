@@ -1,6 +1,6 @@
 import { Pool } from "pg"
 import { randomUUID } from "crypto"
-import { trace, context, SpanStatusCode } from "@opentelemetry/api"
+import { trace, SpanStatusCode } from "@opentelemetry/api"
 import { StreamEvent, TimelineEvent } from "@equinox-js/core"
 
 type MdbWriteResult = { type: "Written"; position: bigint } | { type: "ConflictUnknown" }

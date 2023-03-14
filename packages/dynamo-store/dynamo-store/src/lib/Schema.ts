@@ -1,8 +1,8 @@
-import { Event } from "./Event"
-import * as InternalBody from "./InternalBody"
-import { Unfold } from "./Unfold"
-import { Batch } from "./Batch"
-import { map } from "./Array"
+import { Event } from "./Event.js"
+import * as InternalBody from "./InternalBody.js"
+import { Unfold } from "./Unfold.js"
+import { Batch } from "./Batch.js"
+import { map } from "./Array.js"
 
 export type EventSchema = {
   t: { S: string } // NOTE there has to be a single non-`option` field per record, or a trailing insert will be stripped

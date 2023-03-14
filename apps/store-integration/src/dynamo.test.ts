@@ -1,6 +1,6 @@
 import { AccessStrategy, CachingStrategy, DynamoStoreCategory, DynamoStoreClient, DynamoStoreContext } from "@equinox-js/dynamo-store"
-import * as Cart from "./domain/Cart"
-import * as ContactPreferences from "./domain/ContactPreferences"
+import * as Cart from "./domain/Cart.js"
+import * as ContactPreferences from "./domain/ContactPreferences.js"
 import { Codec, ICache, MemoryCache } from "@equinox-js/core"
 import { describe, test, expect, afterEach, afterAll, beforeAll } from "vitest"
 import { DynamoDB } from "@aws-sdk/client-dynamodb"
@@ -66,7 +66,7 @@ namespace ContactPreferencesService {
 const ddb = new DynamoDB({
   region: "local",
   credentials: { accessKeyId: "local", secretAccessKey: "local" },
-  endpoint: "http://localhost:8000",
+  endpoint: "http://127.0.0.1:8000",
 })
 
 beforeAll(async () => {

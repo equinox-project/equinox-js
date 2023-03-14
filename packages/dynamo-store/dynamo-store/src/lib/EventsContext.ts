@@ -1,10 +1,10 @@
-import { DynamoStoreContext } from "./DynamoStoreClient"
-import { Direction } from "./Query"
-import { StoreClient } from "./StoreClient"
-import * as Position from "./Position"
-import * as Token from "./Token"
+import { DynamoStoreContext } from "./DynamoStoreClient.js"
+import { Direction } from "./Query.js"
+import { StoreClient } from "./StoreClient.js"
+import * as Position from "./Position.js"
+import * as Token from "./Token.js"
 import { StreamToken, TimelineEvent } from "@equinox-js/core"
-import { EncodedBody } from "./EncodedBody"
+import { EncodedBody } from "./EncodedBody.js"
 
 export class EventsContext {
   private readonly storeClient: StoreClient

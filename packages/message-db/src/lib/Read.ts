@@ -1,5 +1,5 @@
 import { TimelineEvent } from "@equinox-js/core"
-import { Format, MessageDbReader } from "./MessageDbClient"
+import { Format, MessageDbReader } from "./MessageDbClient.js"
 import { context, SpanKind, trace } from "@opentelemetry/api"
 
 const tracer = trace.getTracer("@equinox-js/message-db", "1.0.0")

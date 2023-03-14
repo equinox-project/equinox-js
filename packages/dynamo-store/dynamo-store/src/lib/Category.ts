@@ -1,11 +1,11 @@
-import { StoreClient } from "./StoreClient"
-import * as Token from "./Token"
+import { StoreClient } from "./StoreClient.js"
+import * as Token from "./Token.js"
 import { Codec, StreamEvent, StreamToken, SyncResult, TokenAndState } from "@equinox-js/core"
-import { ISR, LFTR, Fold, IsOrigin, MapUnfolds } from "./Internal"
-import { Position, toEtag, toIndex } from "./Position"
-import { ExpectedVersion } from "./Sync"
-import { EncodedBody } from "./EncodedBody"
-import { LoadedTip } from "./Tip"
+import { ISR, LFTR, Fold, IsOrigin, MapUnfolds } from "./Internal.js"
+import { Position, toEtag, toIndex } from "./Position.js"
+import { ExpectedVersion } from "./Sync.js"
+import { EncodedBody } from "./EncodedBody.js"
+import { LoadedTip } from "./Tip.js"
 
 export class InternalCategory<E, S, C> {
   constructor(private readonly store: StoreClient, private readonly codec: Codec<E, EncodedBody, C>) {}

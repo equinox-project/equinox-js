@@ -1,12 +1,11 @@
 {
   "name": "@equinox-js/memory-store",
-  "main": "./dist/index.mjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "version": "1.0.0-alpha.2",
+  "type": "module",
+  "exports": "./dist/index.js",
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts"
   },
+  "version": "1.0.0-alpha.2",
   "devDependencies": {
     "@types/node": "^18.11.18",
     "tsconfig": "workspace:*",

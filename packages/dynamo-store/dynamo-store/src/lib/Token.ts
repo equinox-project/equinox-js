@@ -1,5 +1,5 @@
 import { StreamToken } from "@equinox-js/core"
-import { Position, toVersionAndStreamBytes } from "./Position"
+import { Position, toVersionAndStreamBytes } from "./Position.js"
 
 export const create = (pos: Position | undefined): StreamToken => {
   const [v, b] = toVersionAndStreamBytes(pos)

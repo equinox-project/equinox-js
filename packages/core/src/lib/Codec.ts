@@ -1,4 +1,4 @@
-import { StreamEvent, TimelineEvent } from "./Types"
+import { StreamEvent, TimelineEvent } from "./Types.js"
 import * as zlib from "node:zlib"
 import { promisify } from "node:util"
 

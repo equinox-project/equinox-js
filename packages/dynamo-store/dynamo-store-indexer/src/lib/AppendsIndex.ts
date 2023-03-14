@@ -1,5 +1,5 @@
 import { Codec, Decider, LoadOption } from "@equinox-js/core"
-import { AppendsEpochId, AppendsTrancheId } from "./Types"
+import { AppendsEpochId, AppendsTrancheId } from "./Types.js"
 import { DynamoStoreContext, DynamoStoreCategory, CachingStrategy, AccessStrategy } from "@equinox-js/dynamo-store"
 
 export const Category = "$AppendsIndex"

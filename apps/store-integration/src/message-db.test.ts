@@ -1,5 +1,5 @@
-import * as Cart from "./domain/Cart"
-import * as ContactPreferences from "./domain/ContactPreferences"
+import * as Cart from "./domain/Cart.js"
+import * as ContactPreferences from "./domain/ContactPreferences.js"
 import { Decider, ICache, MemoryCache, Codec } from "@equinox-js/core"
 import { describe, test, expect, afterEach, afterAll } from "vitest"
 import { Pool } from "pg"

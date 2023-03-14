@@ -1,13 +1,12 @@
 {
   "name": "@equinox-js/core",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "type": "module",
-  "version": "1.0.0-alpha.2",
+  "exports": "./dist/index.js",
+  "types": "./dist/index.js",
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts"
+    "build": "tsup src/index.ts --format esm --dts"
   },
+  "version": "1.0.0-alpha.2",
   "files": [
     "./dist"
   ],

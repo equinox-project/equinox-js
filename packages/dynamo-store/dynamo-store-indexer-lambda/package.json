@@ -1,10 +1,9 @@
 {
   "name": "@equinox-js/dynamo-store-indexer-lambda",
-  "main": "./dist/index.mjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "type": "module",
+  "exports": "./dist/index.js",
   "scripts": {
-    "build": "ncc build ./src/index.ts --target es2022 -o dist -m -t && (cd dist && zip lambda.zip index.js)"
+    "build": "tsup src/index.ts --format esm --dts"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.110",
@@ -12,8 +11,7 @@
     "@vercel/ncc": "^0.36.1",
     "tsconfig": "workspace:*",
     "tsup": "^6.5.0",
-    "typescript": "^4.7.4",
-    "vitest": "^0.25.3"
+    "typescript": "^4.7.4"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.258.0",

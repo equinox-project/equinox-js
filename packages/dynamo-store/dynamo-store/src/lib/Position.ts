@@ -1,6 +1,6 @@
-import { Event } from "./Event"
-import * as Batch from "./Batch"
-import { Unfold } from "./Unfold"
+import { Event } from "./Event.js"
+import * as Batch from "./Batch.js"
+import { Unfold } from "./Unfold.js"
 export type Position = {
   index: bigint
   etag?: string

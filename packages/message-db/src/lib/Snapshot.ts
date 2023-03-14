@@ -1,6 +1,6 @@
 import { StreamToken, TimelineEvent } from "@equinox-js/core"
-import * as Token from "./Token"
-import { Format } from "./MessageDbClient"
+import * as Token from "./Token.js"
+import { Format } from "./MessageDbClient.js"
 
 export const snapshotCategory = (original: string) => original + ":snapshot"
 

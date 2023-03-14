@@ -5,9 +5,9 @@
  * The Reader module reads Ingested events forward from a given Index on the Epoch's stream
  * The Checkpoint per Index consists of the pair of 1. EpochId 2. Event Index within that Epoch (see `module Checkpoint` for detail)
  */
-import { AppendsEpochId, AppendsTrancheId, Checkpoint, IndexStreamId } from "./Types"
+import { AppendsEpochId, AppendsTrancheId, Checkpoint, IndexStreamId } from "./Types.js"
 import { Codec, Decider, LoadOption, TimelineEvent } from "@equinox-js/core"
-import { IngestResult } from "./ExactlyOnceIngester"
+import { IngestResult } from "./ExactlyOnceIngester.js"
 import { AccessStrategy, CachingStrategy, DynamoStoreCategory, DynamoStoreContext } from "@equinox-js/dynamo-store"
 
 export const maxItemsPerEpoch = Checkpoint.MAX_ITEMS_PER_EPOCH

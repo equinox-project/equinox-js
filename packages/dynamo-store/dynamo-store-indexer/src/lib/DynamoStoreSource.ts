@@ -1,12 +1,11 @@
-import { AppendsEpochId, AppendsTrancheId, Checkpoint, IndexStreamId } from "./Types"
-import { DynamoStoreClient, DynamoStoreContext, EventsContext } from "@equinox-js/dynamo-store"
-import * as AppendsIndex from "./AppendsIndex"
-import { keepMap } from "./Array"
-import * as AppendsEpoch from "./AppendsEpoch"
+import { AppendsEpochId, AppendsTrancheId, Checkpoint, IndexStreamId } from "./Types.js"
+import { DynamoStoreClient, DynamoStoreContext, EncodedBody, EventsContext } from "@equinox-js/dynamo-store"
+import * as AppendsIndex from "./AppendsIndex.js"
+import { keepMap } from "./Array.js"
+import * as AppendsEpoch from "./AppendsEpoch.js"
 import { TimelineEvent } from "@equinox-js/core"
 import pLimit from "p-limit"
 import { StreamName } from "@equinox-js/stream-name"
-import { EncodedBody } from "@equinox-js/dynamo-store/src/lib/EncodedBody"
 
 type EventBody = Uint8Array
 type StreamEvent<Format> = [string, TimelineEvent<Format>]

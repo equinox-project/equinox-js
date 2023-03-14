@@ -1,12 +1,12 @@
 import type { Codec, ICache, ICategory, StreamEvent, StreamToken, SyncResult, TimelineEvent, TokenAndState } from "@equinox-js/core"
 import * as Equinox from "@equinox-js/core"
-import * as Token from "./Token"
-import * as Snapshot from "./Snapshot"
-import * as Write from "./Write"
-import * as Read from "./Read"
-import * as Caching from "./Caching"
+import * as Token from "./Token.js"
+import * as Snapshot from "./Snapshot.js"
+import * as Write from "./Write.js"
+import * as Read from "./Read.js"
+import * as Caching from "./Caching.js"
 import { context, SpanStatusCode, trace } from "@opentelemetry/api"
-import { Format, MessageDbReader, MessageDbWriter } from "./MessageDbClient"
+import { Format, MessageDbReader, MessageDbWriter } from "./MessageDbClient.js"
 import { Pool } from "pg"
 
 async function keepMapAsync<T, V>(arr: T[], fn: (v: T) => Promise<V | null | undefined> | V | null | undefined): Promise<V[]> {

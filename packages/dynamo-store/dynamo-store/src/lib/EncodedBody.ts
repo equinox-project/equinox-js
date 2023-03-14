@@ -1,4 +1,4 @@
-import { InternalBody } from "./InternalBody"
+import { InternalBody } from "./InternalBody.js"
 import { TimelineEvent } from "@equinox-js/core"
 
 export type EncodedBody = [number | undefined, Uint8Array | undefined]

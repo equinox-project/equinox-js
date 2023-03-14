@@ -2,7 +2,7 @@ import { DynamoDBStreamHandler } from "aws-lambda"
 import { DynamoStoreClient, DynamoStoreContext } from "@equinox-js/dynamo-store"
 import { DynamoDB } from "@aws-sdk/client-dynamodb"
 import { DynamoStoreIngester } from "@equinox-js/dynamo-store-indexer"
-import * as Handler from "./lib/Handler"
+import * as Handler from "./lib/Handler.js"
 
 const itemCutoffKiB = 48
 const ddbClient =

@@ -1,4 +1,4 @@
-import { Format, MessageDbWriter } from "./MessageDbClient"
+import { Format, MessageDbWriter } from "./MessageDbClient.js"
 import { StreamEvent } from "@equinox-js/core"
 import { SpanKind, trace } from "@opentelemetry/api"
 

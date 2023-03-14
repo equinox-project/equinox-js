@@ -1,4 +1,4 @@
-import { IsOrigin, MapUnfolds } from "./Internal"
+import { IsOrigin, MapUnfolds } from "./Internal.js"
 
 export type AccessStrategy<E, S> = { isOrigin: IsOrigin<E>; mapUnfolds: MapUnfolds<E, S>; checkUnfolds: boolean }
 

@@ -1,8 +1,7 @@
 {
   "name": "@equinox-js/dynamo-store-indexer",
-  "main": "./dist/index.mjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "type": "module",
+  "exports": "./dist/index.js",
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts"
   },

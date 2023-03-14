@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest"
-import * as Query from "./Query"
-import * as Position from "./Position"
-import { Batch } from "./Batch"
-import { Event } from "./Event"
-import { ofBufferAndEncoding } from "./InternalBody"
+import * as Query from "./Query.js"
+import * as Position from "./Position.js"
+import { Batch } from "./Batch.js"
+import { Event } from "./Event.js"
+import { ofBufferAndEncoding } from "./InternalBody.js"
 import { randomUUID } from "crypto"
 
 describe("Query.scanTip", () => {

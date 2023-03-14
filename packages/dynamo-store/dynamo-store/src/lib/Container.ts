@@ -1,8 +1,8 @@
-import { Batch, isTip, tableKeyForStreamTip } from "./Batch"
+import { Batch, isTip, tableKeyForStreamTip } from "./Batch.js"
 import { AttributeValue, ConsumedCapacity, DynamoDB, ReturnConsumedCapacity, ReturnValue } from "@aws-sdk/client-dynamodb"
-import { schemaToBatch } from "./Schema"
+import { schemaToBatch } from "./Schema.js"
 import { metrics, SpanKind, trace } from "@opentelemetry/api"
-import * as Tracing from "./Tracing"
+import * as Tracing from "./Tracing.js"
 
 const counter = metrics.getMeter("@equinox-js/dynamo-store").createCounter("consumed_capacity")
 

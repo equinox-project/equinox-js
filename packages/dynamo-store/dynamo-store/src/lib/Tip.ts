@@ -1,11 +1,11 @@
-import { baseIndex, Batch, enumEvents } from "./Batch"
-import { Container } from "./Container"
-import { fromTip, Position, toEtag } from "./Position"
-import { unfoldToTimelineEvent } from "./Unfold"
-import { eventToTimelineEvent } from "./Event"
+import { baseIndex, Batch, enumEvents } from "./Batch.js"
+import { Container } from "./Container.js"
+import { fromTip, Position, toEtag } from "./Position.js"
+import { unfoldToTimelineEvent } from "./Unfold.js"
+import { eventToTimelineEvent } from "./Event.js"
 import { TimelineEvent } from "@equinox-js/core"
-import { InternalBody } from "./InternalBody"
-import * as Tracing from "./Tracing"
+import { InternalBody } from "./InternalBody.js"
+import * as Tracing from "./Tracing.js"
 import { SpanKind } from "@opentelemetry/api"
 
 export enum ResType {
