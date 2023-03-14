@@ -19,7 +19,9 @@ export const Category = "Account"
 export type Event =
   | { type: 'Deposited', data: { amount: number } }
   | { type: 'Withdrawn', data: { amount: number } }
+
 export type State = number
+
 export const initial: State = 0
 export const evolve = (state: State, event: Event): State => {
   switch (event.type) {
