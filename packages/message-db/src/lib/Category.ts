@@ -1,4 +1,4 @@
-import type { Codec, ICache, ICategory, StreamEvent, StreamToken, SyncResult, TimelineEvent, TokenAndState } from "@equinox-js/core"
+import type { Codec, ICache, ICategory, IEventData, StreamToken, SyncResult, ITimelineEvent, TokenAndState } from "@equinox-js/core"
 import * as Equinox from "@equinox-js/core"
 import * as Token from "./Token.js"
 import * as Snapshot from "./Snapshot.js"
@@ -20,7 +20,7 @@ async function keepMapAsync<T, V>(arr: T[], fn: (v: T) => Promise<V | null | und
 
 type GatewaySyncResult = { type: "Written"; token: StreamToken } | { type: "ConflictUnknown" }
 
-type TryDecode<E> = (v: TimelineEvent<Format>) => Promise<E | null | undefined> | E | null | undefined
+type TryDecode<E> = (v: ITimelineEvent<Format>) => Promise<E | null | undefined> | E | null | undefined
 
 export class MessageDbConnection {
   constructor(public read: MessageDbReader, public write: MessageDbWriter) {}
@@ -63,7 +63,7 @@ export class MessageDbContext {
     streamId: string,
     streamName: string,
     token: StreamToken,
-    encodedEvents: StreamEvent<Format>[]
+    encodedEvents: IEventData<Format>[]
   ): Promise<GatewaySyncResult> {
     const streamVersion = Token.streamVersion(token)
     const result = await Write.writeEvents(this.conn.write, category, streamId, streamName, streamVersion, encodedEvents)
@@ -79,7 +79,7 @@ export class MessageDbContext {
     }
   }
 
-  async storeSnapshot(categoryName: string, streamId: string, event: StreamEvent<Format>) {
+  async storeSnapshot(categoryName: string, streamId: string, event: IEventData<Format>) {
     const snapshotStream = Snapshot.streamName(categoryName, streamId)
     const category = Snapshot.snapshotCategory(categoryName)
     return Write.writeEvents(this.conn.write, category, streamId, snapshotStream, null, [event])

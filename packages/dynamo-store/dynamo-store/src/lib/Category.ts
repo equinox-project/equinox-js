@@ -1,6 +1,6 @@
 import { StoreClient } from "./StoreClient.js"
 import * as Token from "./Token.js"
-import { Codec, StreamEvent, StreamToken, SyncResult, TokenAndState } from "@equinox-js/core"
+import { Codec, IEventData, StreamToken, SyncResult, TokenAndState } from "@equinox-js/core"
 import { ISR, LFTR, Fold, IsOrigin, MapUnfolds } from "./Internal.js"
 import { Position, toEtag, toIndex } from "./Position.js"
 import { ExpectedVersion } from "./Sync.js"
@@ -53,13 +53,13 @@ export class InternalCategory<E, S, C> {
     const nextState = fold(state, events)
     const pos = Token.unpack(token)
     const encode = async (es: E[]) => {
-      const result: StreamEvent<EncodedBody>[] = []
+      const result: IEventData<EncodedBody>[] = []
       for (const e of es) result.push(await this.codec.encode(e, context))
       return result
     }
     let exp: (pos?: Position) => ExpectedVersion
-    let eventsEncoded: StreamEvent<EncodedBody>[]
-    let unfoldsEncoded: StreamEvent<EncodedBody>[] = []
+    let eventsEncoded: IEventData<EncodedBody>[]
+    let unfoldsEncoded: IEventData<EncodedBody>[] = []
     switch (mapUnfolds.type) {
       case "None":
         exp = toIndex

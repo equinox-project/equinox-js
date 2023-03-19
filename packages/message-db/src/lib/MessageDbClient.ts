@@ -1,14 +1,14 @@
 import { Pool } from "pg"
 import { randomUUID } from "crypto"
 import { trace, SpanStatusCode } from "@opentelemetry/api"
-import { StreamEvent, TimelineEvent } from "@equinox-js/core"
+import { IEventData, ITimelineEvent } from "@equinox-js/core"
 
 type MdbWriteResult = { type: "Written"; position: bigint } | { type: "ConflictUnknown" }
 export type Format = string
 
 export class MessageDbWriter {
   constructor(private readonly pool: Pool) {}
-  async writeSingleMessage(streamName: string, message: StreamEvent<Format>, expectedVersion: bigint | null): Promise<MdbWriteResult> {
+  async writeSingleMessage(streamName: string, message: IEventData<Format>, expectedVersion: bigint | null): Promise<MdbWriteResult> {
     const client = await this.pool.connect()
     try {
       const results = await client.query(`select message_store.write_message($1, $2, $3, $4, $5, $6)`, [
@@ -35,7 +35,7 @@ export class MessageDbWriter {
     }
   }
 
-  async writeMessages(streamName: string, messages: StreamEvent<Format>[], expectedVersion: bigint | null): Promise<MdbWriteResult> {
+  async writeMessages(streamName: string, messages: IEventData<Format>[], expectedVersion: bigint | null): Promise<MdbWriteResult> {
     const client = await this.pool.connect()
     let position = -1n
     try {
@@ -90,7 +90,7 @@ export class MessageDbReader {
     }
   }
 
-  async readStream(streamName: string, fromPosition: bigint, batchSize: number, requiresLeader: boolean): Promise<TimelineEvent<Format>[]> {
+  async readStream(streamName: string, fromPosition: bigint, batchSize: number, requiresLeader: boolean): Promise<ITimelineEvent<Format>[]> {
     const client = await this.connect(requiresLeader)
     try {
       const result = await client.query(
@@ -109,7 +109,7 @@ export class MessageDbReader {
   }
 }
 
-function fromDb(row: any): TimelineEvent<Format> {
+function fromDb(row: any): ITimelineEvent<Format> {
   return {
     size: -1,
     id: row.id,

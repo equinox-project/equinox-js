@@ -1,4 +1,4 @@
-import { StreamEvent, TimelineEvent } from "./Types.js"
+import { IEventData, ITimelineEvent } from "./Types.js"
 import * as zlib from "node:zlib"
 import { promisify } from "node:util"
 
@@ -6,9 +6,9 @@ const deflate = promisify(zlib.deflateRaw)
 const inflate = promisify(zlib.inflateRaw)
 
 export abstract class Codec<E, F, C = undefined> {
-  abstract tryDecode(event: TimelineEvent<F>): Promise<E | undefined> | E | undefined
+  abstract tryDecode(event: ITimelineEvent<F>): Promise<E | undefined> | E | undefined
 
-  abstract encode(event: E, ctx: C): Promise<StreamEvent<F>> | StreamEvent<F>
+  abstract encode(event: E, ctx: C): Promise<IEventData<F>> | IEventData<F>
 
   static map<E, From, C, To>(
     codec: Codec<E, From, C>,
@@ -16,17 +16,17 @@ export abstract class Codec<E, F, C = undefined> {
     decode: (v: To) => From | Promise<From>
   ): Codec<E, To, C> {
     return {
-      async tryDecode(event: TimelineEvent<To>): Promise<E | undefined> {
+      async tryDecode(event: ITimelineEvent<To>): Promise<E | undefined> {
         const data = event.data ? decode(event.data) : undefined
         const meta = event.meta ? decode(event.meta) : undefined
-        const from: TimelineEvent<From> = { ...event, data: await data, meta: await meta }
+        const from: ITimelineEvent<From> = { ...event, data: await data, meta: await meta }
         return codec.tryDecode(from)
       },
-      async encode(event: E, ctx: C): Promise<StreamEvent<To>> {
+      async encode(event: E, ctx: C): Promise<IEventData<To>> {
         const result = await codec.encode(event, ctx)
         const data = result.data ? encode(result.data) : undefined
         const meta = result.meta ? encode(result.meta) : undefined
-        const encoded: StreamEvent<To> = { ...result, data: await data, meta: await meta }
+        const encoded: IEventData<To> = { ...result, data: await data, meta: await meta }
         return encoded
       },
     }

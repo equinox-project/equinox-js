@@ -6,7 +6,7 @@
  * The Checkpoint per Index consists of the pair of 1. EpochId 2. Event Index within that Epoch (see `module Checkpoint` for detail)
  */
 import { AppendsEpochId, AppendsTrancheId, Checkpoint, IndexStreamId } from "./Types.js"
-import { Codec, Decider, LoadOption, TimelineEvent } from "@equinox-js/core"
+import { Codec, Decider, LoadOption, ITimelineEvent } from "@equinox-js/core"
 import { IngestResult } from "./ExactlyOnceIngester.js"
 import { AccessStrategy, CachingStrategy, DynamoStoreCategory, DynamoStoreContext } from "@equinox-js/dynamo-store"
 
@@ -197,7 +197,7 @@ export namespace Reader {
     encode() {
       throw new Error("This is a read only codec")
     },
-    tryDecode(event: TimelineEvent<string>): Event | undefined {
+    tryDecode(event: ITimelineEvent<string>): Event | undefined {
       const data = JSON.parse(event.data ?? "null")
       return [event.index, { type: event.type, data: data } as Events.Event]
     },

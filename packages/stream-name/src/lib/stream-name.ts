@@ -43,7 +43,7 @@ export const parse = (streamName: string) => {
   return tryParse(streamName) as StreamName
 }
 
-export const gen = <T>(fa: (value: T) => string) => (a: T) => fa(a)
+export const gen = <A>(fa: (value: A) => string) => (a: A) => fa(a)
 export const gen2 =
   <A, B>(fa: (value: A) => string, fb: (value: B) => string) =>
     (a: A, b: B) =>

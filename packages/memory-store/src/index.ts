@@ -1,19 +1,22 @@
-import { Codec, ICategory, StreamToken, SyncResult, TimelineEvent, TokenAndState } from "@equinox-js/core"
+import { Codec, ICategory, StreamToken, SyncResult, ITimelineEvent, TokenAndState } from "@equinox-js/core"
 import * as Equinox from "@equinox-js/core"
 import { randomUUID } from "crypto"
+import { Subject } from "rxjs"
 
 export class VolatileStore<Format> {
-  private readonly streams: Map<string, TimelineEvent<Format>[]> = new Map()
+  private readonly streams: Map<string, ITimelineEvent<Format>[]> = new Map()
+  private readonly $all = new Subject<{ category: string; streamId: string; events: ITimelineEvent<Format>[] }>()
 
   load(streamName: string) {
     return this.streams.get(streamName) ?? []
   }
 
-  trySync(streamName: string, categoryName: string, streamId: string, expectedCount: number, events: TimelineEvent<Format>[]) {
+  trySync(streamName: string, categoryName: string, streamId: string, expectedCount: number, events: ITimelineEvent<Format>[]) {
     const currentValue = this.streams.get(streamName) ?? []
     if (currentValue.length !== expectedCount) return { success: false, events: currentValue }
     const newValue = [...currentValue, ...events]
     this.streams.set(streamName, newValue)
+    this.$all.next({ category: categoryName, streamId, events })
     return { success: true, events: events }
   }
 }
@@ -47,7 +50,7 @@ class Category<Event, State, Context, Format> implements ICategory<Event, State,
     return { token, state: this.fold(this.initial, events) }
   }
 
-  private async decodeEvents(encoded: TimelineEvent<Format>[]) {
+  private async decodeEvents(encoded: ITimelineEvent<Format>[]) {
     const events: Event[] = []
     for (const ev of encoded) {
       const decoded = await this.codec.tryDecode(ev)
@@ -56,7 +59,7 @@ class Category<Event, State, Context, Format> implements ICategory<Event, State,
     return events
   }
   private async encodeEvents(eventCount: number, ctx: Context, events: Event[]) {
-    const encoded: TimelineEvent<Format>[] = []
+    const encoded: ITimelineEvent<Format>[] = []
     for (let i = 0; i < events.length; ++i) {
       const streamEvent = await this.codec.encode(events[i], ctx)
       encoded.push({

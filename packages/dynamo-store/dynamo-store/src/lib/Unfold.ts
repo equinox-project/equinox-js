@@ -1,6 +1,6 @@
 import * as InternalBody from "./InternalBody.js"
 import { sumBy } from "./Array.js"
-import { TimelineEvent } from "@equinox-js/core"
+import { ITimelineEvent } from "@equinox-js/core"
 
 type InternalBody = InternalBody.InternalBody
 export type Unfold = {
@@ -26,7 +26,7 @@ export const bytes = (x: Unfold) => x.type.length + InternalBody.bytes(x.data) +
 
 export const arrayBytes = sumBy(bytes)
 
-export const unfoldToTimelineEvent = (x: Unfold): TimelineEvent<InternalBody> => ({
+export const unfoldToTimelineEvent = (x: Unfold): ITimelineEvent<InternalBody> => ({
   id: NIL,
   time: x.timestamp,
   type: x.type,

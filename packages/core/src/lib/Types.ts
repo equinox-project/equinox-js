@@ -1,4 +1,4 @@
-export type StreamEvent<Format> = {
+export type IEventData<Format> = {
   /** optional id for the event */
   id?: string
   /** The event type */
@@ -9,7 +9,7 @@ export type StreamEvent<Format> = {
   meta?: Format
 }
 
-export type TimelineEvent<Format> = {
+export type ITimelineEvent<Format> = {
   /** The ID of the event */
   id: string
   /**

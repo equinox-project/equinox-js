@@ -174,7 +174,6 @@ importers:
       tsconfig: workspace:*
       tsup: ^6.5.0
       typescript: ^4.7.4
-      vitest: ^0.25.3
     dependencies:
       '@aws-sdk/client-dynamodb': 3.258.0
       '@aws-sdk/client-dynamodb-streams': 3.262.0
@@ -191,18 +190,19 @@ importers:
       tsconfig: link:../../tsconfig
       tsup: 6.5.0_typescript@4.9.5
       typescript: 4.9.5
-      vitest: 0.25.8
 
   packages/memory-store:
     specifiers:
       '@equinox-js/core': workspace:*
       '@types/node': ^18.11.18
+      rxjs: ^7.8.0
       tsconfig: workspace:*
       tsup: ^6.5.0
       typescript: ^4.7.4
       vitest: ^0.25.3
     dependencies:
       '@equinox-js/core': link:../core
+      rxjs: 7.8.0
     devDependencies:
       '@types/node': 18.11.18
       tsconfig: link:../tsconfig
@@ -230,6 +230,31 @@ importers:
       tsconfig: link:../tsconfig
       tsup: 6.5.0_typescript@4.9.4
       typescript: 4.9.4
+
+  packages/propulsion:
+    specifiers:
+      '@equinox-js/core': workspace:*
+      '@equinox-js/memory-store': workspace:*
+      '@opentelemetry/api': ^1.4.0
+      '@types/node': ^18.11.18
+      '@types/pg': ^8.6.6
+      pg: ^8.8.0
+      tsconfig: workspace:*
+      tsup: ^6.5.0
+      typescript: ^4.7.4
+      vitest: ^0.25.3
+    dependencies:
+      '@equinox-js/core': link:../core
+      '@equinox-js/memory-store': link:../memory-store
+      '@opentelemetry/api': 1.4.0
+      pg: 8.8.0
+    devDependencies:
+      '@types/node': 18.11.18
+      '@types/pg': 8.6.6
+      tsconfig: link:../tsconfig
+      tsup: 6.5.0_typescript@4.9.5
+      typescript: 4.9.5
+      vitest: 0.25.8
 
   packages/stream-name:
     specifiers:

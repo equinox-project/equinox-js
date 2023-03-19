@@ -3,7 +3,7 @@ import { Container } from "./Container.js"
 import { fromTip, Position, toEtag } from "./Position.js"
 import { unfoldToTimelineEvent } from "./Unfold.js"
 import { eventToTimelineEvent } from "./Event.js"
-import { TimelineEvent } from "@equinox-js/core"
+import { ITimelineEvent } from "@equinox-js/core"
 import { InternalBody } from "./InternalBody.js"
 import * as Tracing from "./Tracing.js"
 import { SpanKind } from "@opentelemetry/api"
@@ -15,7 +15,7 @@ export enum ResType {
 }
 export type Res<T> = { type: ResType.Found; value: T } | { type: ResType.NotFound } | { type: ResType.NotModified }
 
-function compareTimelineEvents(a: TimelineEvent<unknown>, b: TimelineEvent<unknown>) {
+function compareITimelineEvents(a: ITimelineEvent<unknown>, b: ITimelineEvent<unknown>) {
   if (a.index < b.index) return -1
   if (a.index > b.index) return 1
   if (a.isUnfold && !b.isUnfold) return 1
@@ -26,13 +26,13 @@ function compareTimelineEvents(a: TimelineEvent<unknown>, b: TimelineEvent<unkno
 const enumEventsAndUnfolds = (minIndex: bigint | undefined, maxIndex: bigint | undefined, x: Batch) => {
   const events = enumEvents(minIndex, maxIndex, x).map(eventToTimelineEvent)
   const unfolds = x.unfolds.map(unfoldToTimelineEvent)
-  return events.concat(unfolds).sort(compareTimelineEvents)
+  return events.concat(unfolds).sort(compareITimelineEvents)
 }
 
 export type LoadedTip = {
   position: Position
   index: bigint
-  events: TimelineEvent<InternalBody>[]
+  events: ITimelineEvent<InternalBody>[]
 }
 
 export async function tryLoad(

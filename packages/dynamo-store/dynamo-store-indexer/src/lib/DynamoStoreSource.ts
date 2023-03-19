@@ -3,12 +3,12 @@ import { DynamoStoreClient, DynamoStoreContext, EncodedBody, EventsContext } fro
 import * as AppendsIndex from "./AppendsIndex.js"
 import { keepMap } from "./Array.js"
 import * as AppendsEpoch from "./AppendsEpoch.js"
-import { TimelineEvent } from "@equinox-js/core"
+import { ITimelineEvent } from "@equinox-js/core"
 import pLimit from "p-limit"
 import { StreamName } from "@equinox-js/stream-name"
 
 type EventBody = Uint8Array
-type StreamEvent<Format> = [string, TimelineEvent<Format>]
+type StreamEvent<Format> = [string, ITimelineEvent<Format>]
 
 type Batch<Event> = { items: StreamEvent<Event>[]; checkpoint: Checkpoint.t; isTail: boolean }
 
@@ -47,7 +47,7 @@ namespace Impl {
   export async function* materializeIndexEpochAsBatchesOfStreamEvents(
     context: DynamoStoreContext,
     hydrating: boolean,
-    maybeLoad: (streamName: string, version: number, types: string[]) => (() => Promise<TimelineEvent<EncodedBody>[]>) | undefined,
+    maybeLoad: (streamName: string, version: number, types: string[]) => (() => Promise<ITimelineEvent<EncodedBody>[]>) | undefined,
     loadDop: number,
     batchCutoff: number,
     tid: AppendsTrancheId.t,
@@ -73,7 +73,7 @@ namespace Impl {
       return [all.length, chosenEvents, totalEvents, streamEvents] as const
     })()
     const buffer: AppendsEpoch.Events.StreamSpan[] = []
-    const cache = new Map<IndexStreamId.t, TimelineEvent<EncodedBody>[]>()
+    const cache = new Map<IndexStreamId.t, ITimelineEvent<EncodedBody>[]>()
     const materializeSpans = async () => {
       const streamsToLoad = new Set(keepMap(buffer, (span) => (!cache.has(span.p) ? span.p : undefined)))
       const loadsRequired = Array.from(streamsToLoad).map((p) => async () => {
@@ -137,7 +137,7 @@ namespace LoadMode {
   }
   const withoutBodies = (categoryFilter: (cat: string) => boolean) => (sn: string, i: number, c: string[]) => {
     const streamName = StreamName.parse(sn)
-    const renderEvent = (c: string, offset: number): TimelineEvent<EventBody> => {
+    const renderEvent = (c: string, offset: number): ITimelineEvent<EventBody> => {
       return {
         type: c,
         index: BigInt(i + offset),

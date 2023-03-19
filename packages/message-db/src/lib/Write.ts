@@ -1,5 +1,5 @@
 import { Format, MessageDbWriter } from "./MessageDbClient.js"
-import { StreamEvent } from "@equinox-js/core"
+import { IEventData } from "@equinox-js/core"
 import { SpanKind, trace } from "@opentelemetry/api"
 
 const tracer = trace.getTracer("@equinox-js/message-db", "1.0.0")
@@ -12,7 +12,7 @@ export function writeEvents(
   streamId: string,
   streamName: string,
   version: bigint | null,
-  events: StreamEvent<Format>[]
+  events: IEventData<Format>[]
 ): Promise<SyncResult> {
   return tracer.startActiveSpan(
     "WriteEvents",

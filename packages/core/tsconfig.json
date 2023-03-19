@@ -1,4 +1,7 @@
 {
   "extends": "tsconfig/base.json",
+  "compilerOptions": {
+    "declarationMap": true
+  },
   "exclude": ["node_modules"]
 }

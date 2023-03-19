@@ -1,16 +1,16 @@
-import { TimelineEvent } from "@equinox-js/core"
+import { ITimelineEvent } from "@equinox-js/core"
 import { Format, MessageDbReader } from "./MessageDbClient.js"
 import { context, SpanKind, trace } from "@opentelemetry/api"
 
 const tracer = trace.getTracer("@equinox-js/message-db", "1.0.0")
 
 type StreamEventsSlice = {
-  messages: TimelineEvent<Format>[]
+  messages: ITimelineEvent<Format>[]
   isEnd: boolean
   lastVersion: bigint
 }
 
-const toSlice = (events: TimelineEvent<Format>[], isLast: boolean): StreamEventsSlice => {
+const toSlice = (events: ITimelineEvent<Format>[], isLast: boolean): StreamEventsSlice => {
   const lastVersion = events.length === 0 ? -1n : events[events.length - 1].index
   return { messages: events, isEnd: isLast, lastVersion }
 }
@@ -68,7 +68,7 @@ function readBatches(
   maxPermittedReads: number | undefined,
   startPosition: bigint
 ) {
-  async function* loop(batchCount: number, pos: bigint): AsyncIterable<[bigint, TimelineEvent<any>[]]> {
+  async function* loop(batchCount: number, pos: bigint): AsyncIterable<[bigint, ITimelineEvent<any>[]]> {
     if (maxPermittedReads && batchCount >= maxPermittedReads) throw new Error("Batch limit exceeded")
     const slice = await readSlice(pos, batchCount)
     yield [slice.lastVersion, slice.messages]
@@ -87,7 +87,7 @@ export function loadForwardsFrom(
   startPosition: bigint,
   requiresLeader: boolean
 ) {
-  const mergeBatches = async (batches: AsyncIterable<[bigint, TimelineEvent<any>[]]>) => {
+  const mergeBatches = async (batches: AsyncIterable<[bigint, ITimelineEvent<any>[]]>) => {
     let versionFromStream = -1n
     const events = []
     for await (const [version, messages] of batches) {

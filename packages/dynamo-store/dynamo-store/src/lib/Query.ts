@@ -5,7 +5,7 @@ import { Position, tryFromBatch } from "./Position.js"
 import * as AsyncEnumerable from "./AsyncEnumerable.js"
 import { keepMap } from "./Array.js"
 import { containsBackAsync, tryPick } from "./Array.js"
-import { TimelineEvent } from "@equinox-js/core"
+import { ITimelineEvent } from "@equinox-js/core"
 import { ofInternal, EncodedBody } from "./EncodedBody.js"
 import { InternalBody } from "./InternalBody.js"
 import { trace } from "@opentelemetry/api"
@@ -61,10 +61,10 @@ type ScanResult<Event> = {
   events: Event[]
 }
 
-type TryDecode<E> = (e: TimelineEvent<EncodedBody>) => Promise<E | undefined> | E | undefined
+type TryDecode<E> = (e: ITimelineEvent<EncodedBody>) => Promise<E | undefined> | E | undefined
 export async function scanTip<E>(tryDecode: TryDecode<E>, isOrigin: (ev: E) => boolean, tip: LoadedTip): Promise<ScanResult<E>> {
   const items: E[] = []
-  const isOrigin_ = async (ev: TimelineEvent<InternalBody>) => {
+  const isOrigin_ = async (ev: ITimelineEvent<InternalBody>) => {
     const x = await tryDecode(ofInternal(ev))
     if (x == undefined) return false
     items.unshift(x)

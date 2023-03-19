@@ -3,7 +3,7 @@ import { Container } from "./Container.js"
 import * as Tip from "./Tip.js"
 import * as Token from "./Token.js"
 import { fromElements, Position, toIndex } from "./Position.js"
-import { StreamEvent, StreamToken, TimelineEvent } from "@equinox-js/core"
+import { IEventData, StreamToken, ITimelineEvent } from "@equinox-js/core"
 import * as Query from "./Query.js"
 import { Direction } from "./Query.js"
 import { tipMagicI } from "./Batch.js"
@@ -26,7 +26,7 @@ export type TipOptions = {
   maxBytes: number
 }
 
-type TryDecode<E> = (e: TimelineEvent<EncodedBody>) => Promise<E | undefined> | E | undefined
+type TryDecode<E> = (e: ITimelineEvent<EncodedBody>) => Promise<E | undefined> | E | undefined
 
 export class StoreClient {
   constructor(
@@ -132,8 +132,8 @@ export class StoreClient {
     pos: Position | undefined,
     exp: (p?: Position) => Sync.ExpectedVersion,
     n_: bigint,
-    eventsEncoded: StreamEvent<EncodedBody>[],
-    unfoldsEncoded: StreamEvent<EncodedBody>[]
+    eventsEncoded: IEventData<EncodedBody>[],
+    unfoldsEncoded: IEventData<EncodedBody>[]
   ): Promise<InternalSyncResult> {
     const res = await Sync.handle(this.tip.maxEvents, this.tip.maxBytes, this.container, stream, pos, exp, n_, eventsEncoded, unfoldsEncoded)
     switch (res.type) {

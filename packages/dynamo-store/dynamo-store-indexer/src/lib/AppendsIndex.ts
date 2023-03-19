@@ -50,7 +50,7 @@ export class Service {
    * Mark specified `epochId` as live for the purposes of ingesting commits for the specified Tranche
    * Writers are expected to react to having writes to an epoch denied (due to it being Closed) by anointing the successor via this
    */
-  markIngestionEpoch(trancheId: AppendsTrancheId.t, epochId: AppendsEpochId.t): Promise<null> {
+  markIngestionEpoch(trancheId: AppendsTrancheId.t, epochId: AppendsEpochId.t): Promise<void> {
     const decider = this.resolve()
     return decider.transact(interpret(trancheId, epochId), LoadOption.AllowStale)
   }

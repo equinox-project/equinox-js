@@ -3,7 +3,7 @@ import { Direction } from "./Query.js"
 import { StoreClient } from "./StoreClient.js"
 import * as Position from "./Position.js"
 import * as Token from "./Token.js"
-import { StreamToken, TimelineEvent } from "@equinox-js/core"
+import { StreamToken, ITimelineEvent } from "@equinox-js/core"
 import { EncodedBody } from "./EncodedBody.js"
 
 export class EventsContext {
@@ -22,7 +22,7 @@ export class EventsContext {
     maxIndex: bigint | undefined,
     maxCount: number | undefined,
     direction = Direction.Forward
-  ): Promise<[StreamToken, TimelineEvent<EncodedBody>[]]> {
+  ): Promise<[StreamToken, ITimelineEvent<EncodedBody>[]]> {
     if (maxCount === 0) {
       const startPosIndex = direction === Direction.Forward ? minIndex : maxIndex
       const startPos = startPosIndex != null ? Position.null_(startPosIndex) : undefined
@@ -40,7 +40,7 @@ export class EventsContext {
     maxIndex: bigint | undefined,
     maxCount: number | undefined,
     direction: Direction | undefined
-  ): Promise<[Position.Position, TimelineEvent<EncodedBody>[]]> {
+  ): Promise<[Position.Position, ITimelineEvent<EncodedBody>[]]> {
     const [token, events] = await this._getInternal(stream, minIndex, maxIndex, maxCount, direction)
     const p = Token.unpack(token)
     return [Position.flatten(p), events]

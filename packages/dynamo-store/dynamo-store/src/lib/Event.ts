@@ -1,6 +1,6 @@
 import * as InternalBody from "./InternalBody.js"
 import { sumBy } from "./Array.js"
-import { TimelineEvent } from "@equinox-js/core"
+import { ITimelineEvent } from "@equinox-js/core"
 
 export type Event = {
   /** Index number within stream, not persisted (computed from Batch's `n` and the index within `e`) */
@@ -34,7 +34,7 @@ export const bytes = (x: Event) => {
 export const arrayBytes = sumBy(bytes)
 
 const NIL = "00000000-0000-0000-0000-000000000000"
-export const eventToTimelineEvent = (x: Event): TimelineEvent<InternalBody.InternalBody> => ({
+export const eventToTimelineEvent = (x: Event): ITimelineEvent<InternalBody.InternalBody> => ({
   id: NIL,
   time: x.timestamp,
   type: x.type,

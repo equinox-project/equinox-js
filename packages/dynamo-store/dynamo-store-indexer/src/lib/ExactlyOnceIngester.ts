@@ -8,7 +8,7 @@ namespace Internal {
 export class Service<EpochId extends number, Req, Res, Out> {
   constructor(
     private readonly readActiveEpoch: () => Promise<EpochId>,
-    private readonly markActiveEpoch: (n: EpochId) => Promise<null>,
+    private readonly markActiveEpoch: (n: EpochId) => Promise<void>,
     private readonly ingest: (epoch: EpochId, reqs: Req[]) => Promise<IngestResult<Req, Res>>,
     private readonly mapResults: (res: Res[]) => Out[]
   ) {}
@@ -64,7 +64,7 @@ export class Service<EpochId extends number, Req, Res, Out> {
 
 export const create = <EpochId extends number, Req, Res, Out>(
   readIngestionEpoch: () => Promise<EpochId>,
-  markIngestionEpoch: (n: EpochId) => Promise<null>,
+  markIngestionEpoch: (n: EpochId) => Promise<void>,
   ingest: (epoch: EpochId, reqs: Req[]) => Promise<IngestResult<Req, Res>>,
   mapResult: (res: Res[]) => Out[]
 ) => {

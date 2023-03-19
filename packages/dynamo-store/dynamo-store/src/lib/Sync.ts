@@ -7,7 +7,7 @@ import { Container, reportRU, reportRUs } from "./Container.js"
 import { randomUUID } from "crypto"
 import { AttributeValue, ReturnConsumedCapacity, TransactWriteItemsInput } from "@aws-sdk/client-dynamodb"
 import { flatten, Position } from "./Position.js"
-import { StreamEvent } from "@equinox-js/core"
+import { IEventData } from "@equinox-js/core"
 import { EncodedBody, toInternal } from "./EncodedBody.js"
 import { SpanStatusCode, trace } from "@opentelemetry/api"
 
@@ -221,8 +221,8 @@ export async function handle(
   pos: Position | undefined,
   exp: (p?: Position) => ExpectedVersion,
   n_: bigint,
-  streamEvents: StreamEvent<EncodedBody>[],
-  streamUnfolds: StreamEvent<EncodedBody>[]
+  streamEvents: IEventData<EncodedBody>[],
+  streamUnfolds: IEventData<EncodedBody>[]
 ): Promise<Result> {
   const baseIndex = n_ - BigInt(streamEvents.length)
   const events = streamEvents.map(
