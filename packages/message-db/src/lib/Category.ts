@@ -1,12 +1,11 @@
 import type {
-  Codec,
-  ICache,
   ICategory,
   IEventData,
   StreamToken,
   SyncResult,
   ITimelineEvent,
   TokenAndState,
+  ICodec,
 } from "@equinox-js/core"
 import * as Equinox from "@equinox-js/core"
 import * as Token from "./Token.js"
@@ -23,13 +22,10 @@ import {
   IReloadableCategory,
 } from "@equinox-js/core"
 
-async function keepMapAsync<T, V>(
-  arr: T[],
-  fn: (v: T) => Promise<V | null | undefined> | V | null | undefined
-): Promise<V[]> {
+function keepMap<T, V>(arr: T[], fn: (v: T) => V | undefined): V[] {
   const result: V[] = []
   for (let i = 0; i < arr.length; ++i) {
-    const value = await fn(arr[i])
+    const value = fn(arr[i])
     if (value != null) result.push(value)
   }
   return result
@@ -37,9 +33,7 @@ async function keepMapAsync<T, V>(
 
 type GatewaySyncResult = { type: "Written"; token: StreamToken } | { type: "ConflictUnknown" }
 
-type TryDecode<E> = (
-  v: ITimelineEvent<Format>
-) => Promise<E | null | undefined> | E | null | undefined
+type TryDecode<E> = (v: ITimelineEvent<Format>) => E | undefined
 
 export class MessageDbConnection {
   constructor(public read: MessageDbReader, public write: MessageDbWriter) {}
@@ -74,7 +68,7 @@ export class MessageDbContext {
       0n,
       requireLeader
     )
-    return [Token.create(version), await keepMapAsync(events, tryDecode)]
+    return [Token.create(version), keepMap(events, tryDecode)]
   }
 
   async loadLast<Event>(
@@ -83,7 +77,7 @@ export class MessageDbContext {
     tryDecode: TryDecode<Event>
   ): Promise<[StreamToken, Event[]]> {
     const [version, events] = await Read.loadLastEvent(this.conn.read, requireLeader, streamName)
-    return [Token.create(version), await keepMapAsync(events, tryDecode)]
+    return [Token.create(version), keepMap(events, tryDecode)]
   }
 
   async loadSnapshot<Event>(
@@ -121,7 +115,7 @@ export class MessageDbContext {
     )
     return [
       Token.create(streamVersion > version ? streamVersion : version),
-      await keepMapAsync(events, tryDecode),
+      keepMap(events, tryDecode),
     ]
   }
 
@@ -187,7 +181,7 @@ class InternalCategory<Event, State, Context>
 {
   constructor(
     private readonly context: MessageDbContext,
-    private readonly codec: Codec<Event, Format, Context>,
+    private readonly codec: ICodec<Event, Format, Context>,
     private readonly fold: (state: State, events: Event[]) => State,
     private readonly initial: State,
     private readonly access: AccessStrategy<Event, State> = AccessStrategy.Unoptimized()
@@ -313,7 +307,7 @@ export class MessageDbCategory<Event, State, Context = null> extends Equinox.Cat
 
   static build<Event, State, Context = null>(
     context: MessageDbContext,
-    codec: Codec<Event, Format, Context>,
+    codec: ICodec<Event, Format, Context>,
     fold: (state: State, events: Event[]) => State,
     initial: State,
     caching: ICachingStrategy = CachingStrategy.noCache(),

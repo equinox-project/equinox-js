@@ -30,7 +30,6 @@ export namespace Events {
     | { type: "ItemPropertiesChanged"; data: ItemPropertiesChangedInfo }
 
   export const codec = Codec.json<Event>()
-  export const asyncCodec = Codec.deflate(codec)
 }
 
 export namespace Fold {
@@ -41,7 +40,10 @@ export namespace Fold {
   export const initial = { items: [] }
   export const snapshotEventType = "Snapshotted"
   export const evolve = (state: State, event: Events.Event): State => {
-    const updateItems = (f: (items: ItemInfo[]) => ItemInfo[]) => ({ ...state, items: f(state.items) })
+    const updateItems = (f: (items: ItemInfo[]) => ItemInfo[]) => ({
+      ...state,
+      items: f(state.items),
+    })
     switch (event.type) {
       case "Snapshotted":
         return ofSnapshot(event.data)
@@ -50,9 +52,17 @@ export namespace Fold {
       case "ItemRemoved":
         return updateItems((items) => items.filter((x) => x.skuId !== event.data.skuId))
       case "ItemQuantityChanged":
-        return updateItems((items) => items.map((x) => (x.skuId === event.data.skuId ? { ...x, quantity: event.data.quantity } : x)))
+        return updateItems((items) =>
+          items.map((x) =>
+            x.skuId === event.data.skuId ? { ...x, quantity: event.data.quantity } : x
+          )
+        )
       case "ItemPropertiesChanged":
-        return updateItems((items) => items.map((x) => (x.skuId === event.data.skuId ? { ...x, returnsWaived: event.data.waived } : x)))
+        return updateItems((items) =>
+          items.map((x) =>
+            x.skuId === event.data.skuId ? { ...x, returnsWaived: event.data.waived } : x
+          )
+        )
     }
   }
   export const fold = (state: State, events: Events.Event[]) => events.reduce(evolve, state)
@@ -61,25 +71,41 @@ export namespace Fold {
 }
 
 export type Context = { time: Date; requestId: string }
-export type Command = { type: "SyncItem"; context: Context; skuId: SkuId; quantity?: number; waived?: boolean }
+export type Command = {
+  type: "SyncItem"
+  context: Context
+  skuId: SkuId
+  quantity?: number
+  waived?: boolean
+}
 
 export const interpret =
   (command: Command) =>
   (state: Fold.State): Events.Event[] => {
     const itemExists = (f: (x: Fold.ItemInfo) => boolean) => state.items.some(f)
-    const itemExistsWithDifferentWaiveStatus = (skuId: SkuId, waive: boolean) => itemExists((x) => x.skuId === skuId && x.returnsWaived !== waive)
-    const itemExistsWithDifferentQuantity = (skuId: SkuId, quantity: number) => itemExists((x) => x.skuId === skuId && x.quantity !== quantity)
+    const itemExistsWithDifferentWaiveStatus = (skuId: SkuId, waive: boolean) =>
+      itemExists((x) => x.skuId === skuId && x.returnsWaived !== waive)
+    const itemExistsWithDifferentQuantity = (skuId: SkuId, quantity: number) =>
+      itemExists((x) => x.skuId === skuId && x.quantity !== quantity)
     const itemExistsWithSkuId = (skuId: SkuId) => itemExists((x) => x.skuId === skuId)
     const toEventContext = (reqContext: Context): Events.ContextInfo => ({
       time: reqContext.time.toISOString(),
       requestId: reqContext.requestId,
     })
-    const maybePropChanges = (context: Events.ContextInfo, skuId: SkuId, waived?: boolean): Events.Event[] => {
+    const maybePropChanges = (
+      context: Events.ContextInfo,
+      skuId: SkuId,
+      waived?: boolean
+    ): Events.Event[] => {
       if (waived == null) return []
       if (!itemExistsWithDifferentWaiveStatus(skuId, waived)) return []
       return [{ type: "ItemPropertiesChanged", data: { context, skuId, waived } }]
     }
-    const maybeQuantityChanges = (context: Events.ContextInfo, skuId: SkuId, quantity: number): Events.Event[] => {
+    const maybeQuantityChanges = (
+      context: Events.ContextInfo,
+      skuId: SkuId,
+      quantity: number
+    ): Events.Event[] => {
       if (!itemExistsWithDifferentQuantity(skuId, quantity)) return []
       return [{ type: "ItemQuantityChanged", data: { context, skuId, quantity } }]
     }
@@ -88,10 +114,15 @@ export const interpret =
       case "SyncItem": {
         const context = toEventContext(command.context)
         const { skuId, waived, quantity } = command
-        if (quantity === 0 && itemExistsWithSkuId(skuId)) return [{ type: "ItemRemoved", data: { context, skuId } }]
+        if (quantity === 0 && itemExistsWithSkuId(skuId))
+          return [{ type: "ItemRemoved", data: { context, skuId } }]
         if (quantity != null && itemExistsWithSkuId(skuId))
-          return [...maybeQuantityChanges(context, skuId, quantity), ...maybePropChanges(context, skuId, waived)]
-        if (quantity != null) return [{ type: "ItemAdded", data: { context, skuId, quantity, waived } }]
+          return [
+            ...maybeQuantityChanges(context, skuId, quantity),
+            ...maybePropChanges(context, skuId, waived),
+          ]
+        if (quantity != null)
+          return [{ type: "ItemAdded", data: { context, skuId, quantity, waived } }]
         return maybePropChanges(context, skuId, waived)
       }
     }
@@ -122,7 +153,12 @@ export class Service {
     return decider.transactResultAsync(interpretCommands, opt)
   }
 
-  executeManyAsync(cartId: CartId, optimistic: boolean, commands: Command[], prepare?: () => Promise<void>): Promise<void> {
+  executeManyAsync(
+    cartId: CartId,
+    optimistic: boolean,
+    commands: Command[],
+    prepare?: () => Promise<void>
+  ): Promise<void> {
     return this.run(cartId, optimistic, commands, prepare).then(() => undefined)
   }
 

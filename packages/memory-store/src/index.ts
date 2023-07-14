@@ -1,11 +1,11 @@
 import {
-  Codec,
   ICategory,
   StreamToken,
   SyncResult,
   ITimelineEvent,
   TokenAndState,
   IReloadableCategory,
+  ICodec,
 } from "@equinox-js/core"
 import * as Equinox from "@equinox-js/core"
 import { randomUUID } from "crypto"
@@ -59,7 +59,7 @@ class Category<Event, State, Context, Format>
 {
   constructor(
     private readonly store: VolatileStore<Format>,
-    private readonly codec: Codec<Event, Format, Context>,
+    private readonly codec: ICodec<Event, Format, Context>,
     private readonly fold: (state: State, events: Event[]) => State,
     private readonly initial: State
   ) {}
@@ -161,7 +161,7 @@ export class MemoryStoreCategory<Event, State, Context, Format> extends Equinox.
 
   static build<Event, State, Format, Context = null>(
     store: VolatileStore<Format>,
-    codec: Codec<Event, Format, Context>,
+    codec: ICodec<Event, Format, Context>,
     fold: (state: State, events: Event[]) => State,
     initial: State
   ) {
