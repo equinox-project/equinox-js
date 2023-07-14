@@ -35,7 +35,7 @@ namespace CartService {
   const noCache = CachingStrategy.noCache()
 
   export function createWithoutOptimization(context: MessageDbContext) {
-    const category = Category.build(
+    const category = Category.create(
       context,
       codec,
       fold,
@@ -51,14 +51,14 @@ namespace CartService {
       Cart.Fold.snapshotEventType,
       Cart.Fold.snapshot
     )
-    const category = Category.build(context, codec, fold, initial, noCache, access)
+    const category = Category.create(context, codec, fold, initial, noCache, access)
     return Cart.Service.create(category)
   }
 
   const sliding20m = CachingStrategy.slidingWindow(cache, 20 * 60 * 1000)
 
   export function createWithCaching(context: MessageDbContext) {
-    const category = Category.build(context, codec, fold, initial, sliding20m)
+    const category = Category.create(context, codec, fold, initial, sliding20m)
     return Cart.Service.create(category)
   }
 
@@ -67,7 +67,7 @@ namespace CartService {
       Cart.Fold.snapshotEventType,
       Cart.Fold.snapshot
     )
-    const category = Category.build(context, codec, fold, initial, sliding20m, access)
+    const category = Category.create(context, codec, fold, initial, sliding20m, access)
     return Cart.Service.create(category)
   }
 }
@@ -81,7 +81,7 @@ namespace ContactPreferencesService {
     context: MessageDbContext,
     cachingStrategy: ICachingStrategy
   ) => {
-    const category = Category.build(
+    const category = Category.create(
       context,
       codec,
       fold,
@@ -100,7 +100,7 @@ namespace ContactPreferencesService {
   }
 }
 
-const client = MessageDbConnection.build(
+const client = MessageDbConnection.create(
   new Pool({ connectionString: "postgres://message_store:@127.0.0.1:5432/message_store" })
 )
 
@@ -114,7 +114,7 @@ namespace SimplestThing {
   export const initial: Event = { type: "StuffHappened" }
   export const fold = (state: Event, events: Event[]) => events.reduce(evolve, initial)
   export const resolve = (context: MessageDbContext, categoryName: string, streamId: string) => {
-    const category = Category.build(context, codec, fold, initial)
+    const category = Category.create(context, codec, fold, initial)
     return Decider.resolve(category, categoryName, streamId, undefined)
   }
   export const categoryName = "SimplestThing"
@@ -125,13 +125,13 @@ namespace ContactPreferencesService {
 
   export const createUnoptimized = (client: MessageDbConnection) => {
     const context = createContext(client, defaultBatchSize)
-    const category = Category.build(context, codec, fold, initial)
+    const category = Category.create(context, codec, fold, initial)
     return ContactPreferences.Service.create(category)
   }
 
   export const createService = (client: MessageDbConnection) => {
     const context = createContext(client, defaultBatchSize)
-    const category = Category.build(
+    const category = Category.create(
       context,
       codec,
       fold,
@@ -245,7 +245,7 @@ describe("Roundtrips against the store", () => {
     const context = createContext(client, batchSize)
 
     const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
-    const cartId = Cart.CartId.ofString(randomUUID())
+    const cartId = Cart.CartId.create()
     const [sku11, sku12, sku21, sku22] = new Array(4).map(() => randomUUID())
 
     const service1 = CartService.createWithoutOptimization(context)
@@ -338,7 +338,6 @@ describe("Roundtrips against the store", () => {
 
 describe("Caching", () => {
   test("avoids redundant reads", async () => {
-    const cache = new MemoryCache()
     const batchSize = 10
     const context = createContext(client, batchSize)
     const createServiceCached = () => CartService.createWithCaching(context)
@@ -582,8 +581,7 @@ test("Version is 0-based", async () => {
   const batchSize = 3
   const context = createContext(client, batchSize)
   let id = randomUUID()
-  let toStreamId = (x: string) => x.replace(/-/g, "")
-  const decider = SimplestThing.resolve(context, SimplestThing.categoryName, toStreamId(id))
+  const decider = SimplestThing.resolve(context, SimplestThing.categoryName, id)
   const [before, after] = await decider.transactExMapResult(
     (ctx) => [ctx.version, [{ type: "StuffHappened" }]],
     (result, ctx) => [result, ctx.version]

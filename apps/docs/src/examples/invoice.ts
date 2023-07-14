@@ -2,10 +2,10 @@ import { PayerId, InvoiceId } from "./types"
 import * as Mdb from "@equinox-js/message-db"
 import * as Mem from "@equinox-js/memory-store"
 import z from "zod"
-import { ICodec, Decider, ICachingStrategy } from "@equinox-js/core"
+import { ICodec, Decider, ICachingStrategy, StreamId } from "@equinox-js/core"
 
 export const Category = "Invoice"
-export const streamId = (invoiceId: InvoiceId) => invoiceId.toString()
+export const streamId = StreamId.gen(InvoiceId.toString)
 type InvoiceRaised = { payer_id: PayerId; amount: number }
 type Payment = { amount: number; reference: string }
 type EmailReceipt = { idempotency_key: string; recipient: string; sent_at: Date }
@@ -234,14 +234,14 @@ export class Service {
   }
 
   static createMessageDb(context: Mdb.MessageDbContext, caching: ICachingStrategy) {
-    const category = Mdb.MessageDbCategory.build(context, codec, Fold.fold, Fold.initial, caching)
+    const category = Mdb.MessageDbCategory.create(context, codec, Fold.fold, Fold.initial, caching)
     const resolve = (invoiceId: InvoiceId) =>
       Decider.resolve(category, Category, streamId(invoiceId), null)
     return new Service(resolve)
   }
 
   static createMem(store: Mem.VolatileStore<string>) {
-    const category = Mem.MemoryStoreCategory.build(store, codec, Fold.fold, Fold.initial)
+    const category = Mem.MemoryStoreCategory.create(store, codec, Fold.fold, Fold.initial)
     const resolve = (invoiceId: InvoiceId) =>
       Decider.resolve(category, Category, streamId(invoiceId), null)
     return new Service(resolve)

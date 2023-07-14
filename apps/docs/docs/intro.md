@@ -64,19 +64,19 @@ export class Service {
   }
 
   static createMessageDb(context: Mdb.MessageDbContext, caching: Mdb.CachingStrategy) {
-    const category = Mdb.MessageDbCategory.build(context, codec, fold, initial, caching)
+    const category = Mdb.MessageDbCategory.create(context, codec, fold, initial, caching)
     const resolve = (stayId: GuestStayId) => Decider.resolve(category, Category, streamId(stayId), null)
     return new Service(resolve)
   }
 
   static createDynamo(context: Ddb.DynamoStoreContext, caching: Ddb.CachingStrategy.CachingStrategy) {
-    const category = Ddb.DynamoStoreCategory.build(context, Codec.deflate(codec), fold, initial, caching, Ddb.AccessStrategy.Unoptimized())
+    const category = Ddb.DynamoStoreCategory.create(context, Codec.deflate(codec), fold, initial, caching, Ddb.AccessStrategy.Unoptimized())
     const resolve = (stayId: GuestStayId) => Decider.resolve(category, Category, streamId(stayId), null)
     return new Service(resolve)
   }
 
   static createMem(store: Mem.VolatileStore<Record<string, any>>) {
-    const category = Mem.MemoryStoreCategory.build(store, codec, fold, initial)
+    const category = Mem.MemoryStoreCategory.create(store, codec, fold, initial)
     const resolve = (stayId: GuestStayId) => Decider.resolve(category, Category, streamId(stayId), null)
     return new Service(resolve)
   }

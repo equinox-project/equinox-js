@@ -38,12 +38,19 @@ type TryDecode<E> = (v: ITimelineEvent<Format>) => E | undefined
 export class MessageDbConnection {
   constructor(public read: MessageDbReader, public write: MessageDbWriter) {}
 
-  static build(pool: Pool, followerPool = pool) {
+  static create(pool: Pool, followerPool = pool) {
     return new MessageDbConnection(
       new MessageDbReader(followerPool, pool),
       new MessageDbWriter(pool)
     )
   }
+}
+
+type ContextConfig = {
+  pool: Pool
+  followerPool?: Pool
+  batchSize: number
+  maxBatches?: number
 }
 
 export class MessageDbContext {
@@ -151,6 +158,11 @@ export class MessageDbContext {
     const snapshotStream = Snapshot.streamName(categoryName, streamId)
     const category = Snapshot.snapshotCategory(categoryName)
     return Write.writeEvents(this.conn.write, category, streamId, snapshotStream, null, [event])
+  }
+
+  static create({ pool, followerPool, batchSize, maxBatches}: ContextConfig) {
+    const connection =  MessageDbConnection.create( pool, followerPool)
+    return new MessageDbContext(connection, batchSize, maxBatches)
   }
 }
 
@@ -284,7 +296,7 @@ class InternalCategory<Event, State, Context>
     token: StreamToken,
     snapshotEvent: Event
   ) {
-    const event = await this.codec.encode(snapshotEvent, ctx)
+    const event = this.codec.encode(snapshotEvent, ctx)
     event.meta = JSON.stringify(Snapshot.meta(token))
     await this.context.storeSnapshot(category, streamId, event)
   }
@@ -305,7 +317,7 @@ export class MessageDbCategory<Event, State, Context = null> extends Equinox.Cat
     super(resolveInner, empty)
   }
 
-  static build<Event, State, Context = null>(
+  static create<Event, State, Context = null>(
     context: MessageDbContext,
     codec: ICodec<Event, Format, Context>,
     fold: (state: State, events: Event[]) => State,

@@ -1,14 +1,12 @@
-import { Codec, Decider, LoadOption } from "@equinox-js/core"
+import { Codec, Decider, LoadOption, StreamId, Uuid } from "@equinox-js/core"
 import * as Equinox from "@equinox-js/core"
 
 export const Category = "Cart"
-export type CartId = string & { __brand: "CartId" }
+export type CartId = Uuid.Uuid<"CartId">
 export type SkuId = string
-export const CartId = {
-  ofString: (x: string) => x as CartId,
-  toString: (x: CartId) => x.replace(/-/g, ""), // (equivalent to dotnet's "N" guid format)
-}
-const streamId = (cartId: CartId) => CartId.toString(cartId) as string
+
+export const CartId = Uuid.create<"CartId">()
+const streamId = StreamId.gen(CartId.toString)
 
 export namespace Events {
   export type ContextInfo = { time: string; requestId: string }

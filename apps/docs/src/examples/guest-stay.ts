@@ -1,11 +1,11 @@
 import { ChargeId, GuestStayId, PaymentId } from "./types"
-import { Decider, ICachingStrategy, ICodec } from "@equinox-js/core"
+import { Decider, ICachingStrategy, ICodec, StreamId } from "@equinox-js/core"
 import * as Mdb from "@equinox-js/message-db"
 import * as Mem from "@equinox-js/memory-store"
 
 export const Category = "GuestStay"
 
-const streamId = (guestStayId: GuestStayId) => guestStayId as string
+const streamId = StreamId.gen(GuestStayId.toString)
 
 type Event =
   /** Notes time of checkin of the guest (does not affect whether charges can be levied against the stay) */
@@ -150,14 +150,14 @@ export class Service {
   }
 
   static createMessageDb(context: Mdb.MessageDbContext, caching: ICachingStrategy) {
-    const category = Mdb.MessageDbCategory.build(context, codec, fold, initial, caching)
+    const category = Mdb.MessageDbCategory.create(context, codec, fold, initial, caching)
     const resolve = (stayId: GuestStayId) =>
       Decider.resolve(category, Category, streamId(stayId), null)
     return new Service(resolve)
   }
 
   static createMem(store: Mem.VolatileStore<string>) {
-    const category = Mem.MemoryStoreCategory.build(store, codec, fold, initial)
+    const category = Mem.MemoryStoreCategory.create(store, codec, fold, initial)
     const resolve = (stayId: GuestStayId) =>
       Decider.resolve(category, Category, streamId(stayId), null)
     return new Service(resolve)

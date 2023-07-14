@@ -1,25 +1,35 @@
 import { createHash } from "crypto"
 import { equals } from "ramda"
-import { Codec, Decider, LoadOption } from "@equinox-js/core"
+import { Codec, Decider, LoadOption, StreamId } from "@equinox-js/core"
 import * as Equinox from "@equinox-js/core"
 
 export type ClientId = string & { __brand: "ClientId" }
 export const ClientId = {
-  ofString: (x: string) => x as ClientId,
-  toString: (x: ClientId) => x as string,
+  parse: (x: string) => x as ClientId,
+  toStreamId: (x: ClientId) => createHash("sha256").update(x).digest("hex"),
 }
 
 export const Category = "ContactPreferences"
-const streamId = (id: ClientId) => createHash("sha256").update(ClientId.toString(id)).digest("hex")
+const streamId = StreamId.gen(ClientId.toStreamId)
 
-export type Preferences = { manyPromotions: boolean; littlePromotions: boolean; productReview: boolean; quickSurveys: boolean }
+export type Preferences = {
+  manyPromotions: boolean
+  littlePromotions: boolean
+  productReview: boolean
+  quickSurveys: boolean
+}
 export type Value = { email: string; preferences: Preferences }
 
 export type Event = { type: "ContactPreferencesChanged"; data: Value }
 export const codec = Codec.json<Event>()
 
 export type State = Preferences
-export const initial: State = { manyPromotions: false, littlePromotions: false, productReview: false, quickSurveys: false }
+export const initial: State = {
+  manyPromotions: false,
+  littlePromotions: false,
+  productReview: false,
+  quickSurveys: false,
+}
 const evolve = (_s: State, e: Event) => {
   switch (e.type) {
     case "ContactPreferencesChanged":
@@ -58,7 +68,8 @@ export class Service {
   }
 
   static create(category: Equinox.Category<Event, State>) {
-    const resolve = (clientId: ClientId) => Decider.resolve(category, Category, streamId(clientId), null)
+    const resolve = (clientId: ClientId) =>
+      Decider.resolve(category, Category, streamId(clientId), null)
     return new Service(resolve)
   }
 }

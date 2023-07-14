@@ -67,23 +67,23 @@ class Category<Event, State, Context, Format>
   supersedes = Token.supersedes
 
   async load(
-    categoryName: string,
-    streamId: string,
+    _categoryName: string,
+    _streamId: string,
     streamName: string,
-    allowStale: boolean,
-    requireLeader: boolean
+    _allowStale: boolean,
+    _requireLeader: boolean
   ): Promise<TokenAndState<State>> {
     const result = this.store.load(streamName)
     const token = Token.ofValue(result)
-    const events = await this.decodeEvents(result)
+    const events = this.decodeEvents(result)
 
     return { token, state: this.fold(this.initial, events) }
   }
 
-  private async decodeEvents(encoded: ITimelineEvent<Format>[]) {
+  private decodeEvents(encoded: ITimelineEvent<Format>[]) {
     const events: Event[] = []
     for (const ev of encoded) {
-      const decoded = await this.codec.tryDecode(ev)
+      const decoded = this.codec.tryDecode(ev)
       if (decoded != null) events.push(decoded)
     }
     return events
@@ -91,7 +91,7 @@ class Category<Event, State, Context, Format>
   private async encodeEvents(eventCount: number, ctx: Context, events: Event[]) {
     const encoded: ITimelineEvent<Format>[] = []
     for (let i = 0; i < events.length; ++i) {
-      const streamEvent = await this.codec.encode(events[i], ctx)
+      const streamEvent = this.codec.encode(events[i], ctx)
       encoded.push({
         ...streamEvent,
         id: streamEvent.id ?? randomUUID(),
@@ -125,7 +125,7 @@ class Category<Event, State, Context, Format>
     const conflictingEvents = res.events
     const resync = async (): Promise<TokenAndState<State>> => {
       const token = Token.ofValue(conflictingEvents)
-      const events = await this.decodeEvents(conflictingEvents)
+      const events = this.decodeEvents(conflictingEvents)
       return { token, state: this.fold(originState, events.slice(eventCount)) }
     }
     return { type: "Conflict", resync }
@@ -133,18 +133,18 @@ class Category<Event, State, Context, Format>
 
   async reload(
     streamName: string,
-    requireLeader: boolean,
-    t: TokenAndState<State>
+    _requireLeader: boolean,
+    _t: TokenAndState<State>
   ): Promise<TokenAndState<State>> {
     const result = this.store.load(streamName)
     const token = Token.ofValue(result)
-    const events = await this.decodeEvents(result)
+    const events = this.decodeEvents(result)
 
     return { token, state: this.fold(this.initial, events) }
   }
 }
 
-export class MemoryStoreCategory<Event, State, Context, Format> extends Equinox.Category<
+export class MemoryStoreCategory<Event, State, Context> extends Equinox.Category<
   Event,
   State,
   Context
@@ -159,7 +159,7 @@ export class MemoryStoreCategory<Event, State, Context, Format> extends Equinox.
     super(resolveInner, empty)
   }
 
-  static build<Event, State, Format, Context = null>(
+  static create<Event, State, Format, Context = null>(
     store: VolatileStore<Format>,
     codec: ICodec<Event, Format, Context>,
     fold: (state: State, events: Event[]) => State,

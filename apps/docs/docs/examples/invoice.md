@@ -239,14 +239,14 @@ export class Service {
   }
 
   static createMessageDb(context: Mdb.MessageDbContext, caching: ICachingStrategy) {
-    const category = Mdb.MessageDbCategory.build(context, codec, Fold.fold, Fold.initial, caching)
+    const category = Mdb.MessageDbCategory.create(context, codec, Fold.fold, Fold.initial, caching)
     const resolve = (invoiceId: InvoiceId) =>
       Decider.resolve(category, Category, streamId(invoiceId), null)
     return new Service(resolve)
   }
 
   static createMem(store: Mem.VolatileStore<string>) {
-    const category = Mem.MemoryStoreCategory.build(store, codec, Fold.fold, Fold.initial)
+    const category = Mem.MemoryStoreCategory.create(store, codec, Fold.fold, Fold.initial)
     const resolve = (invoiceId: InvoiceId) =>
       Decider.resolve(category, Category, streamId(invoiceId), null)
     return new Service(resolve)
