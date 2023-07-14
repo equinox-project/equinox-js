@@ -33,7 +33,7 @@ export const tryParse = (streamName: string): StreamName | undefined => {
   const idx = streamName.indexOf("-")
   return {
     category: streamName.slice(0, idx),
-    streamId: streamName.slice(idx + 1)
+    streamId: streamName.slice(idx + 1),
   }
 }
 export const toString = (x: StreamName) => `${x.category}-${x.streamId}`
@@ -43,12 +43,15 @@ export const parse = (streamName: string) => {
   return tryParse(streamName) as StreamName
 }
 
-export const gen = <A>(fa: (value: A) => string) => (a: A) => fa(a)
+export const gen =
+  <A>(fa: (value: A) => string) =>
+  (a: A) =>
+    fa(a)
 export const gen2 =
   <A, B>(fa: (value: A) => string, fb: (value: B) => string) =>
-    (a: A, b: B) =>
-      Internal.createStreamId([fa(a), fb(b)])
+  (a: A, b: B) =>
+    Internal.createStreamId([fa(a), fb(b)])
 export const gen3 =
   <A, B, C>(fa: (value: A) => string, fb: (value: B) => string, fc: (value: C) => string) =>
-    (a: A, b: B, c: C) =>
-      Internal.createStreamId([fa(a), fb(b), fc(c)])
+  (a: A, b: B, c: C) =>
+    Internal.createStreamId([fa(a), fb(b), fc(c)])

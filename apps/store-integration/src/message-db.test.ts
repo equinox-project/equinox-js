@@ -1,13 +1,25 @@
 import * as Cart from "./domain/Cart.js"
 import * as ContactPreferences from "./domain/ContactPreferences.js"
-import { Decider, ICache, MemoryCache, Codec } from "@equinox-js/core"
+import {
+  Decider,
+  ICache,
+  MemoryCache,
+  Codec,
+  CachingStrategy,
+  ICachingStrategy,
+} from "@equinox-js/core"
 import { describe, test, expect, afterEach, afterAll } from "vitest"
 import { Pool } from "pg"
 import { randomUUID } from "crypto"
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
 import { InMemorySpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base"
 import { SpanStatusCode } from "@opentelemetry/api"
-import { AccessStrategy, CachingStrategy, MessageDbCategory, MessageDbConnection, MessageDbContext } from "@equinox-js/message-db"
+import {
+  AccessStrategy,
+  MessageDbCategory,
+  MessageDbConnection,
+  MessageDbContext,
+} from "@equinox-js/message-db"
 
 const Category = MessageDbCategory
 
@@ -20,20 +32,30 @@ namespace CartService {
   const fold = Cart.Fold.fold
   const initial = Cart.Fold.initial
   const cache = new MemoryCache()
-  const noCache = CachingStrategy.NoCaching()
+  const noCache = CachingStrategy.noCache()
 
   export function createWithoutOptimization(context: MessageDbContext) {
-    const category = Category.build(context, codec, fold, initial, noCache, AccessStrategy.Unoptimized())
+    const category = Category.build(
+      context,
+      codec,
+      fold,
+      initial,
+      noCache,
+      AccessStrategy.Unoptimized()
+    )
     return Cart.Service.create(category)
   }
 
   export function createWithSnapshotStrategy(context: MessageDbContext) {
-    const access = AccessStrategy.AdjacentSnapshots<E, S>(Cart.Fold.snapshotEventType, Cart.Fold.snapshot)
+    const access = AccessStrategy.AdjacentSnapshots<E, S>(
+      Cart.Fold.snapshotEventType,
+      Cart.Fold.snapshot
+    )
     const category = Category.build(context, codec, fold, initial, noCache, access)
     return Cart.Service.create(category)
   }
 
-  const sliding20m = CachingStrategy.SlidingWindow(cache, 20 * 60 * 1000)
+  const sliding20m = CachingStrategy.slidingWindow(cache, 20 * 60 * 1000)
 
   export function createWithCaching(context: MessageDbContext) {
     const category = Category.build(context, codec, fold, initial, sliding20m)
@@ -41,7 +63,10 @@ namespace CartService {
   }
 
   export function createWithSnapshotStrategyAndCaching(context: MessageDbContext) {
-    const access = AccessStrategy.AdjacentSnapshots<E, S>(Cart.Fold.snapshotEventType, Cart.Fold.snapshot)
+    const access = AccessStrategy.AdjacentSnapshots<E, S>(
+      Cart.Fold.snapshotEventType,
+      Cart.Fold.snapshot
+    )
     const category = Category.build(context, codec, fold, initial, sliding20m, access)
     return Cart.Service.create(category)
   }
@@ -52,21 +77,35 @@ namespace ContactPreferencesService {
   const initial = ContactPreferences.initial
   const codec = ContactPreferences.codec
 
-  const createWithLatestKnownEvent = (context: MessageDbContext, cachingStrategy: CachingStrategy) => {
-    const category = Category.build(context, codec, fold, initial, cachingStrategy, AccessStrategy.LatestKnownEvent())
+  const createWithLatestKnownEvent = (
+    context: MessageDbContext,
+    cachingStrategy: ICachingStrategy
+  ) => {
+    const category = Category.build(
+      context,
+      codec,
+      fold,
+      initial,
+      cachingStrategy,
+      AccessStrategy.LatestKnownEvent()
+    )
     return ContactPreferences.Service.create(category)
   }
 
-  export const createWithoutCaching = (context: MessageDbContext) => createWithLatestKnownEvent(context, CachingStrategy.NoCaching())
+  export const createWithoutCaching = (context: MessageDbContext) =>
+    createWithLatestKnownEvent(context, CachingStrategy.noCache())
   export const createWithCaching = (context: MessageDbContext, cache: ICache) => {
-    const sliding20m = CachingStrategy.SlidingWindow(cache, 20 * 60 * 1000)
+    const sliding20m = CachingStrategy.slidingWindow(cache, 20 * 60 * 1000)
     return createWithLatestKnownEvent(context, sliding20m)
   }
 }
 
-const client = MessageDbConnection.build(new Pool({ connectionString: "postgres://message_store:@127.0.0.1:5432/message_store" }))
+const client = MessageDbConnection.build(
+  new Pool({ connectionString: "postgres://message_store:@127.0.0.1:5432/message_store" })
+)
 
-const createContext = (connection: MessageDbConnection, batchSize: number) => new MessageDbContext(connection, batchSize)
+const createContext = (connection: MessageDbConnection, batchSize: number) =>
+  new MessageDbContext(connection, batchSize)
 
 namespace SimplestThing {
   export type Event = { type: "StuffHappened" }
@@ -92,7 +131,14 @@ namespace ContactPreferencesService {
 
   export const createService = (client: MessageDbConnection) => {
     const context = createContext(client, defaultBatchSize)
-    const category = Category.build(context, codec, fold, initial, undefined, AccessStrategy.LatestKnownEvent())
+    const category = Category.build(
+      context,
+      codec,
+      fold,
+      initial,
+      undefined,
+      AccessStrategy.LatestKnownEvent()
+    )
     return ContactPreferences.Service.create(category)
   }
 }
@@ -101,7 +147,10 @@ const provider = new NodeTracerProvider()
 const memoryExporter = new InMemorySpanExporter()
 const spanProcessor = new SimpleSpanProcessor(memoryExporter)
 
-const getStoreSpans = () => memoryExporter.getFinishedSpans().filter((x) => x.instrumentationLibrary.name === "@equinox-js/message-db")
+const getStoreSpans = () =>
+  memoryExporter
+    .getFinishedSpans()
+    .filter((x) => x.instrumentationLibrary.name === "@equinox-js/message-db")
 const getStoreSpanNames = () => getStoreSpans().map((x) => x.name)
 
 provider.addSpanProcessor(spanProcessor)
@@ -173,7 +222,13 @@ describe("Roundtrips against the store", () => {
 
     const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
 
-    await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(cartContext, cartId, skuId, service, addRemoveCount)
+    await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(
+      cartContext,
+      cartId,
+      skuId,
+      service,
+      addRemoveCount
+    )
 
     expect(getStoreSpanNames()).toEqual(["ReadSlice", "WriteEvents"])
     memoryExporter.reset()
@@ -194,7 +249,12 @@ describe("Roundtrips against the store", () => {
     const [sku11, sku12, sku21, sku22] = new Array(4).map(() => randomUUID())
 
     const service1 = CartService.createWithoutOptimization(context)
-    const act = (prepare: () => Promise<void>, service: Cart.Service, skuId: string, count: number) =>
+    const act = (
+      prepare: () => Promise<void>,
+      service: Cart.Service,
+      skuId: string,
+      count: number
+    ) =>
       service.executeManyAsync(
         cartId,
         false,
@@ -268,7 +328,9 @@ describe("Roundtrips against the store", () => {
       [sku22]: 22,
     })
     const syncs = memoryExporter.getFinishedSpans().filter((x) => x.name === "TrySync")
-    const conflicts = syncs.filter((x) => x.status?.code === SpanStatusCode.ERROR && x.status?.message === "ConflictUnknown")
+    const conflicts = syncs.filter(
+      (x) => x.status?.code === SpanStatusCode.ERROR && x.status?.message === "ConflictUnknown"
+    )
     expect(syncs).toHaveLength(6)
     expect(conflicts).toHaveLength(2)
   })
@@ -290,7 +352,13 @@ describe("Caching", () => {
     const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
 
     // Trigger 10 events, then reload
-    await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(cartContext, cartId, skuId, service1, 5)
+    await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(
+      cartContext,
+      cartId,
+      skuId,
+      service1,
+      5
+    )
     expect(getStoreSpanNames()).toEqual(["ReadSlice", "WriteEvents"])
     const staleRes = await service2.readStale(cartId)
     expect(getStoreSpanNames()).toEqual(["ReadSlice", "WriteEvents"])
@@ -307,7 +375,13 @@ describe("Caching", () => {
     // Add two more - the roundtrip should only incur a single read
 
     const skuId2 = randomUUID() as Cart.SkuId
-    await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(cartContext, cartId, skuId2, service1, 1)
+    await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(
+      cartContext,
+      cartId,
+      skuId2,
+      service1,
+      1
+    )
     expect(getStoreSpanNames()).toEqual(["ReadSlice", "WriteEvents"])
     memoryExporter.reset()
 
@@ -320,24 +394,48 @@ describe("Caching", () => {
     // Optimistic transactions
     memoryExporter.reset()
     // As the cache is up to date, we can transact against the cached value and do a null transaction without a roundtrip
-    await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(cartContext, cartId, skuId2, service1, 1)
+    await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(
+      cartContext,
+      cartId,
+      skuId2,
+      service1,
+      1
+    )
     expect(getStoreSpanNames()).toEqual([])
     // As the cache is up to date, we can do an optimistic append, saving a Read roundtrip
     const skuId3 = randomUUID() as Cart.SkuId
-    await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(cartContext, cartId, skuId3, service1, 1)
+    await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(
+      cartContext,
+      cartId,
+      skuId3,
+      service1,
+      1
+    )
     // this time, we did something, so we see the append call
     expect(getStoreSpanNames()).toEqual(["WriteEvents"])
 
     // If we don't have a cache attached, we don't benefit from / pay the price for any optimism
     memoryExporter.reset()
     const skuId4 = randomUUID() as Cart.SkuId
-    await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(cartContext, cartId, skuId4, service3, 1)
+    await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(
+      cartContext,
+      cartId,
+      skuId4,
+      service3,
+      1
+    )
     // Need 2 batches to do the reading
     expect(getStoreSpanNames()).toEqual(["ReadSlice", "ReadSlice", "WriteEvents"])
     // we've engineered a clash with the cache state (service3 doest participate in caching)
     // Conflict with cached state leads to a read forward to resync; Then we'll idempotently decide not to do any append
     memoryExporter.reset()
-    await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(cartContext, cartId, skuId4, service2, 1)
+    await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(
+      cartContext,
+      cartId,
+      skuId4,
+      service2,
+      1
+    )
     expect(memoryExporter.getFinishedSpans()).toContainEqual(
       expect.objectContaining({
         name: "TrySync",
@@ -388,7 +486,13 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
     // Trigger 8 events, then reload
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 4)
     await service.read(cartId)
-    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice", "WriteEvents", "ReadLast", "ReadSlice"])
+    expect(getStoreSpanNames()).toEqual([
+      "ReadLast",
+      "ReadSlice",
+      "WriteEvents",
+      "ReadLast",
+      "ReadSlice",
+    ])
 
     // Add two more, which should push it over the threshold and hence trigger an append of a snapshot event
     memoryExporter.reset()
@@ -434,7 +538,13 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 4)
     await service2.read(cartId)
 
-    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice", "WriteEvents", "ReadLast", "ReadSlice"])
+    expect(getStoreSpanNames()).toEqual([
+      "ReadLast",
+      "ReadSlice",
+      "WriteEvents",
+      "ReadLast",
+      "ReadSlice",
+    ])
 
     // Add two more, which should push it over the threshold and hence trigger generation of a snapshot event
     memoryExporter.reset()

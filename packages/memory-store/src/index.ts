@@ -1,17 +1,35 @@
-import { Codec, ICategory, StreamToken, SyncResult, ITimelineEvent, TokenAndState } from "@equinox-js/core"
+import {
+  Codec,
+  ICategory,
+  StreamToken,
+  SyncResult,
+  ITimelineEvent,
+  TokenAndState,
+  IReloadableCategory,
+} from "@equinox-js/core"
 import * as Equinox from "@equinox-js/core"
 import { randomUUID } from "crypto"
 import { Subject } from "rxjs"
 
 export class VolatileStore<Format> {
   private readonly streams: Map<string, ITimelineEvent<Format>[]> = new Map()
-  private readonly $all = new Subject<{ category: string; streamId: string; events: ITimelineEvent<Format>[] }>()
+  private readonly $all = new Subject<{
+    category: string
+    streamId: string
+    events: ITimelineEvent<Format>[]
+  }>()
 
   load(streamName: string) {
     return this.streams.get(streamName) ?? []
   }
 
-  trySync(streamName: string, categoryName: string, streamId: string, expectedCount: number, events: ITimelineEvent<Format>[]) {
+  trySync(
+    streamName: string,
+    categoryName: string,
+    streamId: string,
+    expectedCount: number,
+    events: ITimelineEvent<Format>[]
+  ) {
     const currentValue = this.streams.get(streamName) ?? []
     if (currentValue.length !== expectedCount) return { success: false, events: currentValue }
     const newValue = [...currentValue, ...events]
@@ -32,9 +50,13 @@ namespace Token {
   export const unpack = (token: StreamToken) => token.value as Token
   export const empty = streamTokenOfEventCount(0)
   export const ofValue = (events: unknown[]) => streamTokenOfEventCount(events.length)
+  export const supersedes = (current: StreamToken, proposed: StreamToken) =>
+    proposed.version > current.version
 }
 
-class Category<Event, State, Context, Format> implements ICategory<Event, State, Context> {
+class Category<Event, State, Context, Format>
+  implements IReloadableCategory<Event, State, Context>
+{
   constructor(
     private readonly store: VolatileStore<Format>,
     private readonly codec: Codec<Event, Format, Context>,
@@ -42,7 +64,15 @@ class Category<Event, State, Context, Format> implements ICategory<Event, State,
     private readonly initial: State
   ) {}
 
-  async load(categoryName: string, streamId: string, streamName: string, allowStale: boolean, requireLeader: boolean): Promise<TokenAndState<State>> {
+  supersedes = Token.supersedes
+
+  async load(
+    categoryName: string,
+    streamId: string,
+    streamName: string,
+    allowStale: boolean,
+    requireLeader: boolean
+  ): Promise<TokenAndState<State>> {
     const result = this.store.load(streamName)
     const token = Token.ofValue(result)
     const events = await this.decodeEvents(result)
@@ -87,7 +117,10 @@ class Category<Event, State, Context, Format> implements ICategory<Event, State,
     const encoded = await this.encodeEvents(eventCount, context, events)
     const res = this.store.trySync(streamName, categoryName, streamId, eventCount, encoded)
     if (res.success) {
-      return { type: "Written", data: { token: Token.ofValue(events), state: this.fold(originState, events) } }
+      return {
+        type: "Written",
+        data: { token: Token.ofValue(events), state: this.fold(originState, events) },
+      }
     }
     const conflictingEvents = res.events
     const resync = async (): Promise<TokenAndState<State>> => {
@@ -97,11 +130,30 @@ class Category<Event, State, Context, Format> implements ICategory<Event, State,
     }
     return { type: "Conflict", resync }
   }
+
+  async reload(
+    streamName: string,
+    requireLeader: boolean,
+    t: TokenAndState<State>
+  ): Promise<TokenAndState<State>> {
+    const result = this.store.load(streamName)
+    const token = Token.ofValue(result)
+    const events = await this.decodeEvents(result)
+
+    return { token, state: this.fold(this.initial, events) }
+  }
 }
 
-export class MemoryStoreCategory<Event, State, Context, Format> extends Equinox.Category<Event, State, Context> {
+export class MemoryStoreCategory<Event, State, Context, Format> extends Equinox.Category<
+  Event,
+  State,
+  Context
+> {
   constructor(
-    resolveInner: (categoryName: string, streamId: string) => readonly [ICategory<Event, State, Context>, string],
+    resolveInner: (
+      categoryName: string,
+      streamId: string
+    ) => readonly [ICategory<Event, State, Context>, string],
     empty: TokenAndState<State>
   ) {
     super(resolveInner, empty)
@@ -114,7 +166,8 @@ export class MemoryStoreCategory<Event, State, Context, Format> extends Equinox.
     initial: State
   ) {
     const category = new Category(store, codec, fold, initial)
-    const resolveInner = (categoryName: string, streamId: string) => [category, `${categoryName}-${streamId}`] as const
+    const resolveInner = (categoryName: string, streamId: string) =>
+      [category, `${categoryName}-${streamId}`] as const
     const empty: TokenAndState<State> = { token: Token.empty, state: initial }
     return new MemoryStoreCategory(resolveInner, empty)
   }

@@ -1,15 +1,32 @@
-import type { Codec, ICache, ICategory, IEventData, StreamToken, SyncResult, ITimelineEvent, TokenAndState } from "@equinox-js/core"
+import type {
+  Codec,
+  ICache,
+  ICategory,
+  IEventData,
+  StreamToken,
+  SyncResult,
+  ITimelineEvent,
+  TokenAndState,
+} from "@equinox-js/core"
 import * as Equinox from "@equinox-js/core"
 import * as Token from "./Token.js"
 import * as Snapshot from "./Snapshot.js"
 import * as Write from "./Write.js"
 import * as Read from "./Read.js"
-import * as Caching from "./Caching.js"
-import { context, SpanStatusCode, trace } from "@opentelemetry/api"
+import { SpanStatusCode, trace } from "@opentelemetry/api"
 import { Format, MessageDbReader, MessageDbWriter } from "./MessageDbClient.js"
 import { Pool } from "pg"
+import {
+  CachingCategory,
+  CachingStrategy,
+  ICachingStrategy,
+  IReloadableCategory,
+} from "@equinox-js/core"
 
-async function keepMapAsync<T, V>(arr: T[], fn: (v: T) => Promise<V | null | undefined> | V | null | undefined): Promise<V[]> {
+async function keepMapAsync<T, V>(
+  arr: T[],
+  fn: (v: T) => Promise<V | null | undefined> | V | null | undefined
+): Promise<V[]> {
   const result: V[] = []
   for (let i = 0; i < arr.length; ++i) {
     const value = await fn(arr[i])
@@ -20,42 +37,92 @@ async function keepMapAsync<T, V>(arr: T[], fn: (v: T) => Promise<V | null | und
 
 type GatewaySyncResult = { type: "Written"; token: StreamToken } | { type: "ConflictUnknown" }
 
-type TryDecode<E> = (v: ITimelineEvent<Format>) => Promise<E | null | undefined> | E | null | undefined
+type TryDecode<E> = (
+  v: ITimelineEvent<Format>
+) => Promise<E | null | undefined> | E | null | undefined
 
 export class MessageDbConnection {
   constructor(public read: MessageDbReader, public write: MessageDbWriter) {}
 
   static build(pool: Pool, followerPool = pool) {
-    return new MessageDbConnection(new MessageDbReader(followerPool, pool), new MessageDbWriter(pool))
+    return new MessageDbConnection(
+      new MessageDbReader(followerPool, pool),
+      new MessageDbWriter(pool)
+    )
   }
 }
 
 export class MessageDbContext {
-  constructor(private readonly conn: MessageDbConnection, public readonly batchSize: number, public readonly maxBatches?: number) {}
+  constructor(
+    private readonly conn: MessageDbConnection,
+    public readonly batchSize: number,
+    public readonly maxBatches?: number
+  ) {}
 
   tokenEmpty = Token.create(-1n)
 
-  async loadBatched<Event>(streamName: string, requireLeader: boolean, tryDecode: TryDecode<Event>): Promise<[StreamToken, Event[]]> {
-    const [version, events] = await Read.loadForwardsFrom(this.conn.read, this.batchSize, this.maxBatches, streamName, 0n, requireLeader)
+  async loadBatched<Event>(
+    streamName: string,
+    requireLeader: boolean,
+    tryDecode: TryDecode<Event>
+  ): Promise<[StreamToken, Event[]]> {
+    const [version, events] = await Read.loadForwardsFrom(
+      this.conn.read,
+      this.batchSize,
+      this.maxBatches,
+      streamName,
+      0n,
+      requireLeader
+    )
     return [Token.create(version), await keepMapAsync(events, tryDecode)]
   }
 
-  async loadLast<Event>(streamName: string, requireLeader: boolean, tryDecode: TryDecode<Event>): Promise<[StreamToken, Event[]]> {
+  async loadLast<Event>(
+    streamName: string,
+    requireLeader: boolean,
+    tryDecode: TryDecode<Event>
+  ): Promise<[StreamToken, Event[]]> {
     const [version, events] = await Read.loadLastEvent(this.conn.read, requireLeader, streamName)
     return [Token.create(version), await keepMapAsync(events, tryDecode)]
   }
 
-  async loadSnapshot<Event>(category: string, streamId: string, requireLeader: boolean, tryDecode: TryDecode<Event>, eventType: string) {
+  async loadSnapshot<Event>(
+    category: string,
+    streamId: string,
+    requireLeader: boolean,
+    tryDecode: TryDecode<Event>,
+    eventType: string
+  ) {
     const snapshotStream = Snapshot.streamName(category, streamId)
-    const [, events] = await Read.loadLastEvent(this.conn.read, requireLeader, snapshotStream, eventType)
+    const [, events] = await Read.loadLastEvent(
+      this.conn.read,
+      requireLeader,
+      snapshotStream,
+      eventType
+    )
     return Snapshot.decode(tryDecode, events)
   }
 
-  async reload<Event>(streamName: string, requireLeader: boolean, token: StreamToken, tryDecode: TryDecode<Event>): Promise<[StreamToken, Event[]]> {
+  async reload<Event>(
+    streamName: string,
+    requireLeader: boolean,
+    token: StreamToken,
+    tryDecode: TryDecode<Event>
+  ): Promise<[StreamToken, Event[]]> {
     const streamVersion = Token.streamVersion(token)
     const startPos = streamVersion + 1n // Reading a stream uses {inclusive} positions, but the streamVersion is `-1`-based
-    const [version, events] = await Read.loadForwardsFrom(this.conn.read, this.batchSize, this.maxBatches, streamName, startPos, requireLeader)
-    return [Token.create(streamVersion > version ? streamVersion : version), await keepMapAsync(events, tryDecode)]
+    const [version, events] = await Read.loadForwardsFrom(
+      this.conn.read,
+      this.batchSize,
+      this.maxBatches,
+      streamName,
+      startPos,
+      requireLeader
+    )
+    return [
+      Token.create(streamVersion > version ? streamVersion : version),
+      await keepMapAsync(events, tryDecode),
+    ]
   }
 
   async trySync(
@@ -66,7 +133,14 @@ export class MessageDbContext {
     encodedEvents: IEventData<Format>[]
   ): Promise<GatewaySyncResult> {
     const streamVersion = Token.streamVersion(token)
-    const result = await Write.writeEvents(this.conn.write, category, streamId, streamName, streamVersion, encodedEvents)
+    const result = await Write.writeEvents(
+      this.conn.write,
+      category,
+      streamId,
+      streamName,
+      streamVersion,
+      encodedEvents
+    )
     switch (result.type) {
       case "ConflictUnknown":
         const span = trace.getActiveSpan()
@@ -98,69 +172,85 @@ type AccessStrategy<Event, State> =
 export namespace AccessStrategy {
   export const Unoptimized = <E, S>(): AccessStrategy<E, S> => ({ type: "Unoptimized" })
   export const LatestKnownEvent = <E, S>(): AccessStrategy<E, S> => ({ type: "LatestKnownEvent" })
-  export const AdjacentSnapshots = <E, S>(eventName: string, toSnapshot: (state: S) => E): AccessStrategy<E, S> => ({
+  export const AdjacentSnapshots = <E, S>(
+    eventName: string,
+    toSnapshot: (state: S) => E
+  ): AccessStrategy<E, S> => ({
     type: "AdjacentSnapshots",
     eventName,
     toSnapshot,
   })
 }
 
-class CategoryWithAccessStrategy<Event, State, Context> {
+class InternalCategory<Event, State, Context>
+  implements IReloadableCategory<Event, State, Context>
+{
   constructor(
     private readonly context: MessageDbContext,
     private readonly codec: Codec<Event, Format, Context>,
+    private readonly fold: (state: State, events: Event[]) => State,
+    private readonly initial: State,
     private readonly access: AccessStrategy<Event, State> = AccessStrategy.Unoptimized()
   ) {}
 
-  private async loadAlgorithm(category: string, streamId: string, streamName: string, requireLeader: boolean): Promise<[StreamToken, Event[]]> {
+  private async loadAlgorithm(
+    category: string,
+    streamId: string,
+    streamName: string,
+    requireLeader: boolean
+  ): Promise<[StreamToken, Event[]]> {
     switch (this.access?.type) {
       case "Unoptimized":
         return this.context.loadBatched(streamName, requireLeader, this.codec.tryDecode)
       case "LatestKnownEvent":
         return this.context.loadLast(streamName, requireLeader, this.codec.tryDecode)
       case "AdjacentSnapshots": {
-        const result = await this.context.loadSnapshot(category, streamId, requireLeader, this.codec.tryDecode, this.access.eventName)
-        if (!result) return this.context.loadBatched(streamName, requireLeader, this.codec.tryDecode)
+        const result = await this.context.loadSnapshot(
+          category,
+          streamId,
+          requireLeader,
+          this.codec.tryDecode,
+          this.access.eventName
+        )
+        if (!result)
+          return this.context.loadBatched(streamName, requireLeader, this.codec.tryDecode)
         const [pos, snapshotEvent] = result
-        const [token, rest] = await this.context.reload(streamName, requireLeader, pos, this.codec.tryDecode)
+        const [token, rest] = await this.context.reload(
+          streamName,
+          requireLeader,
+          pos,
+          this.codec.tryDecode
+        )
         return [token, [snapshotEvent].concat(rest)]
       }
     }
   }
 
-  private async load_(
-    fold: (state: State, events: Event[]) => State,
-    initial: State,
-    f: Promise<[StreamToken, Event[]]>
-  ): Promise<TokenAndState<State>> {
-    const [token, events] = await f
-    return { token, state: fold(initial, events) }
+  supersedes = Token.supersedes
+
+  async load(category: string, streamId: string, streamName: string, requireLeader: boolean) {
+    const [token, events] = await this.loadAlgorithm(category, streamId, streamName, requireLeader)
+    return { token, state: this.fold(this.initial, events) }
   }
 
-  async load(
-    fold: (state: State, events: Event[]) => State,
-    initial: State,
-    category: string,
-    streamId: string,
-    streamName: string,
-    requireLeader: boolean
-  ) {
-    return this.load_(fold, initial, this.loadAlgorithm(category, streamId, streamName, requireLeader))
-  }
-
-  async reload(fold: (state: State, events: Event[]) => State, state: State, streamName: string, requireLeader: boolean, token: StreamToken) {
-    return this.load_(fold, state, this.context.reload(streamName, requireLeader, token, this.codec.tryDecode))
+  async reload(streamName: string, requireLeader: boolean, t: TokenAndState<State>) {
+    const [token, events] = await this.context.reload(
+      streamName,
+      requireLeader,
+      t.token,
+      this.codec.tryDecode
+    )
+    return { token, state: this.fold(t.state, events) }
   }
 
   async trySync(
-    fold: (state: State, events: Event[]) => State,
     category: string,
     streamId: string,
     streamName: string,
+    ctx: Context,
     token: StreamToken,
     state: State,
-    events: Event[],
-    ctx: Context
+    events: Event[]
   ): Promise<SyncResult<State>> {
     const encode = (ev: Event) => this.codec.encode(ev, ctx)
     const encodedEvents = await Promise.all(events.map(encode))
@@ -169,17 +259,23 @@ class CategoryWithAccessStrategy<Event, State, Context> {
       case "ConflictUnknown":
         return {
           type: "Conflict",
-          resync: () => this.reload(fold, state, streamName, true, token),
+          resync: () => this.reload(streamName, true, { token, state }),
         }
       case "Written": {
-        const newState = fold(state, events)
+        const newState = this.fold(state, events)
         switch (this.access.type) {
           case "LatestKnownEvent":
           case "Unoptimized":
             break
           case "AdjacentSnapshots":
             if (Token.shouldSnapshot(this.context.batchSize, token, result.token)) {
-              await this.storeSnapshot(category, streamId, ctx, result.token, this.access.toSnapshot(newState))
+              await this.storeSnapshot(
+                category,
+                streamId,
+                ctx,
+                result.token,
+                this.access.toSnapshot(newState)
+              )
             }
         }
         return { type: "Written", data: { token: result.token, state: newState } }
@@ -187,74 +283,29 @@ class CategoryWithAccessStrategy<Event, State, Context> {
     }
   }
 
-  async storeSnapshot(category: string, streamId: string, ctx: Context, token: StreamToken, snapshotEvent: Event) {
+  async storeSnapshot(
+    category: string,
+    streamId: string,
+    ctx: Context,
+    token: StreamToken,
+    snapshotEvent: Event
+  ) {
     const event = await this.codec.encode(snapshotEvent, ctx)
     event.meta = JSON.stringify(Snapshot.meta(token))
     await this.context.storeSnapshot(category, streamId, event)
   }
 }
 
-class Folder<Event, State, Context> implements ICategory<Event, State, Context> {
+export class MessageDbCategory<Event, State, Context = null> extends Equinox.Category<
+  Event,
+  State,
+  Context
+> {
   constructor(
-    private readonly category: CategoryWithAccessStrategy<Event, State, Context>,
-    private readonly fold: (state: State, events: Event[]) => State,
-    private readonly initial: State,
-    private readonly readCache?: [ICache, string]
-  ) {}
-
-  async load(categoryName: string, streamId: string, streamName: string, allowStale: boolean, requireLeader: boolean) {
-    const load = () => this.category.load(this.fold, this.initial, categoryName, streamId, streamName, requireLeader)
-    if (!this.readCache) {
-      return load()
-    }
-    const [cache, prefix] = this.readCache
-    const cacheItem = await cache.tryGet<State>(prefix + streamName)
-    trace.getSpan(context.active())?.setAttribute("eqx.cache_hit", cacheItem != null)
-    if (!cacheItem) return load()
-    if (allowStale) return cacheItem
-    const { token, state } = cacheItem
-    return this.category.reload(this.fold, state, streamName, requireLeader, token)
-  }
-
-  trySync(categoryName: string, streamId: string, streamName: string, context: Context, token: StreamToken, originState: State, events: Event[]) {
-    return this.category.trySync(this.fold, categoryName, streamId, streamName, token, originState, events, context)
-  }
-}
-
-export type CachingStrategy =
-  | { type: "NoCaching" }
-  | { type: "SlidingWindow"; cache: ICache; windowInMs: number }
-  | { type: "FixedTimeSpan"; cache: ICache; periodInMs: number }
-  | {
-      type: "SlidingWindowPrefixed"
-      prefix: string
-      cache: ICache
-      windowInMs: number
-    }
-
-export namespace CachingStrategy {
-  export const NoCaching = (): CachingStrategy => ({ type: "NoCaching" })
-  export const SlidingWindow = (cache: ICache, windowInMs: number): CachingStrategy => ({
-    type: "SlidingWindow",
-    cache,
-    windowInMs,
-  })
-  export const SlidingWindowPrefixed = (prefix: string, cache: ICache, windowInMs: number): CachingStrategy => ({
-    type: "SlidingWindowPrefixed",
-    prefix,
-    cache,
-    windowInMs,
-  })
-  export const FixedTimeSpan = (cache: ICache, periodInMs: number): CachingStrategy => ({
-    type: "FixedTimeSpan",
-    cache,
-    periodInMs,
-  })
-}
-
-export class MessageDbCategory<Event, State, Context = null> extends Equinox.Category<Event, State, Context> {
-  constructor(
-    resolveInner: (categoryName: string, streamId: string) => readonly [ICategory<Event, State, Context>, string],
+    resolveInner: (
+      categoryName: string,
+      streamId: string
+    ) => readonly [ICategory<Event, State, Context>, string],
     empty: TokenAndState<State>
   ) {
     super(resolveInner, empty)
@@ -265,37 +316,13 @@ export class MessageDbCategory<Event, State, Context = null> extends Equinox.Cat
     codec: Codec<Event, Format, Context>,
     fold: (state: State, events: Event[]) => State,
     initial: State,
-    caching?: CachingStrategy,
+    caching: ICachingStrategy = CachingStrategy.noCache(),
     access?: AccessStrategy<Event, State>
   ) {
-    const inner = new CategoryWithAccessStrategy(context, codec, access)
-    const readCache = ((): [ICache, string] | undefined => {
-      switch (caching?.type) {
-        case undefined:
-          return undefined
-        case "SlidingWindow":
-        case "FixedTimeSpan":
-          return [caching.cache, ""]
-        case "SlidingWindowPrefixed":
-          return [caching.cache, caching.prefix]
-      }
-    })()
-    const folder = new Folder(inner, fold, initial, readCache)
-    const category = ((): ICategory<Event, State, Context> => {
-      switch (caching?.type) {
-        case "NoCaching":
-        case undefined:
-          return folder
-        case "SlidingWindow":
-          return Caching.applyCacheUpdatesWithSlidingExpiration(caching.cache, "", caching.windowInMs, folder, Token.supersedes)
-        case "SlidingWindowPrefixed":
-          return Caching.applyCacheUpdatesWithSlidingExpiration(caching.cache, caching.prefix, caching.windowInMs, folder, Token.supersedes)
-        case "FixedTimeSpan":
-          return Caching.applyCacheUpdatesWithFixedTimeSpan(caching.cache, "", caching.periodInMs, folder, Token.supersedes)
-      }
-    })()
-
-    const resolveInner = (categoryName: string, streamId: string) => [category, `${categoryName}-${streamId}`] as const
+    const inner = new InternalCategory(context, codec, fold, initial, access)
+    const category = CachingCategory.apply(inner, caching)
+    const resolveInner = (categoryName: string, streamId: string) =>
+      [category, `${categoryName}-${streamId}`] as const
     const empty: TokenAndState<State> = { token: context.tokenEmpty, state: initial }
     return new MessageDbCategory(resolveInner, empty)
   }
