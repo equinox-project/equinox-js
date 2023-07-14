@@ -5,10 +5,9 @@ Based on the blog post on [The Equinox Programming Model](https://nordfjord.io/2
 ```ts
 import { PayerId, InvoiceId } from "./types"
 import * as Mdb from "@equinox-js/message-db"
-import * as Ddb from "@equinox-js/dynamo-store"
 import * as Mem from "@equinox-js/memory-store"
 import z from "zod"
-import { Codec, Decider } from "@equinox-js/core"
+import { ICodec, Decider, ICachingStrategy } from "@equinox-js/core"
 
 export const Category = "Invoice"
 export const streamId = (invoiceId: InvoiceId) => invoiceId.toString()
@@ -28,9 +27,13 @@ const RaisedSchema = z.object({
   amount: z.number(),
 })
 const PaymentSchema = z.object({ reference: z.string(), amount: z.number() })
-const EmailReceiptSchema = z.object({ idempotency_key: z.string(), recipient: z.string().email(), sent_at: z.date() })
+const EmailReceiptSchema = z.object({
+  idempotency_key: z.string(),
+  recipient: z.string().email(),
+  sent_at: z.date(),
+})
 
-export const codec: Codec<Event, string> = {
+export const codec: ICodec<Event, string> = {
   tryDecode(ev): Event | undefined {
     switch (ev.type) {
       case "InvoiceRaised":
@@ -49,8 +52,17 @@ export const codec: Codec<Event, string> = {
 }
 
 namespace Fold {
-  export type InvoiceState = { amount: number; payer_id: PayerId; emailed_to: Set<string>; payments: Set<string>; amount_paid: number }
-  export type State = { type: "Initial" } | { type: "Raised"; state: InvoiceState } | { type: "Finalized"; state: InvoiceState }
+  export type InvoiceState = {
+    amount: number
+    payer_id: PayerId
+    emailed_to: Set<string>
+    payments: Set<string>
+    amount_paid: number
+  }
+  export type State =
+    | { type: "Initial" }
+    | { type: "Raised"; state: InvoiceState }
+    | { type: "Finalized"; state: InvoiceState }
   export const initial: State = { type: "Initial" }
 
   function evolveInitial(event: Event): State {
@@ -119,14 +131,16 @@ namespace Decide {
           case "Initial":
             return [{ type: "InvoiceRaised", data }]
           case "Raised":
-            if (state.state.amount === data.amount && state.state.payer_id === data.payer_id) return []
+            if (state.state.amount === data.amount && state.state.payer_id === data.payer_id)
+              return []
             throw new Error("Invoice is already raised")
           case "Finalized":
             throw new Error("invoice is finalized")
         }
       }
 
-  const hasSentEmailToRecipient = (recipient: string, state: Fold.InvoiceState) => state.emailed_to.has(recipient)
+  const hasSentEmailToRecipient = (recipient: string, state: Fold.InvoiceState) =>
+    state.emailed_to.has(recipient)
   export const recordEmailReceipt =
     (data: EmailReceipt) =>
       (state: Fold.State): Event[] => {
@@ -224,21 +238,17 @@ export class Service {
     return decider.query(Queries.summary)
   }
 
-  static createMessageDb(context: Mdb.MessageDbContext, caching: Mdb.CachingStrategy) {
+  static createMessageDb(context: Mdb.MessageDbContext, caching: ICachingStrategy) {
     const category = Mdb.MessageDbCategory.build(context, codec, Fold.fold, Fold.initial, caching)
-    const resolve = (invoiceId: InvoiceId) => Decider.resolve(category, Category, streamId(invoiceId), null)
-    return new Service(resolve)
-  }
-
-  static createDynamo(context: Ddb.DynamoStoreContext, caching: Ddb.CachingStrategy.CachingStrategy) {
-    const category = Ddb.DynamoStoreCategory.build(context, Codec.deflate(codec), Fold.fold, Fold.initial, caching, Ddb.AccessStrategy.Unoptimized())
-    const resolve = (invoiceId: InvoiceId) => Decider.resolve(category, Category, streamId(invoiceId), null)
+    const resolve = (invoiceId: InvoiceId) =>
+      Decider.resolve(category, Category, streamId(invoiceId), null)
     return new Service(resolve)
   }
 
   static createMem(store: Mem.VolatileStore<string>) {
     const category = Mem.MemoryStoreCategory.build(store, codec, Fold.fold, Fold.initial)
-    const resolve = (invoiceId: InvoiceId) => Decider.resolve(category, Category, streamId(invoiceId), null)
+    const resolve = (invoiceId: InvoiceId) =>
+      Decider.resolve(category, Category, streamId(invoiceId), null)
     return new Service(resolve)
   }
 }

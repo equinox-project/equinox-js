@@ -1,7 +1,6 @@
 import { ChargeId, GuestStayId, PaymentId } from "./types"
-import { Codec, Decider } from "@equinox-js/core"
+import { Decider, ICachingStrategy, ICodec } from "@equinox-js/core"
 import * as Mdb from "@equinox-js/message-db"
-import * as Ddb from "@equinox-js/dynamo-store"
 import * as Mem from "@equinox-js/memory-store"
 
 export const Category = "GuestStay"
@@ -18,27 +17,42 @@ type Event =
   /** Notes an ordinary checkout by the Guest (requires prior payment of all outstanding charges) */
   | { type: "CheckedOut"; data: { at: Date } }
 
-const codec: Codec<Event, Record<string, any>> = {
+const codec: ICodec<Event, string> = {
   tryDecode(ev): Event | undefined {
+    const data = JSON.parse(ev.data || "{}")
     switch (ev.type) {
       case "CheckedIn":
-        return { type: ev.type, data: { at: new Date(ev.data.at) } }
+        return { type: ev.type, data: { at: new Date(data.at) } }
       case "CheckedOut":
-        return { type: ev.type, data: { at: new Date(ev.data.at) } }
+        return { type: ev.type, data: { at: new Date(data.at) } }
       case "Charged":
-        return { type: ev.type, data: { chargeId: ev.data.chargeId, amount: ev.data.amount, at: new Date(ev.data.at) } }
+        return {
+          type: ev.type,
+          data: { chargeId: data.chargeId, amount: data.amount, at: new Date(data.at) },
+        }
       case "Paid":
-        return { type: ev.type, data: { paymentId: ev.data.paymentId, amount: ev.data.amount, at: new Date(ev.data.at) } }
+        return {
+          type: ev.type,
+          data: { paymentId: data.paymentId, amount: data.amount, at: new Date(data.at) },
+        }
     }
   },
   encode(ev) {
-    return ev
+    return { type: ev.type, data: JSON.stringify(ev.data) }
   },
 }
 
-type Balance = { balance: number; charges: Set<ChargeId>; payments: Set<PaymentId>; checkedInAt?: Date }
+type Balance = {
+  balance: number
+  charges: Set<ChargeId>
+  payments: Set<PaymentId>
+  checkedInAt?: Date
+}
 type State = { type: "Active"; balance: Balance } | { type: "Closed" }
-const initial: State = { type: "Active", balance: { balance: 0, charges: new Set(), payments: new Set() } }
+const initial: State = {
+  type: "Active",
+  balance: { balance: 0, charges: new Set(), payments: new Set() },
+}
 
 function evolve(state: State, event: Event): State {
   switch (state.type) {
@@ -100,12 +114,16 @@ const pay =
     return [{ type: "Paid", data: { paymentId, amount, at } }]
   }
 
-type CheckoutResult = { type: "OK" } | { type: "AlreadyCheckedOut" } | { type: "BalanceOutstanding"; amount: number }
+type CheckoutResult =
+  | { type: "OK" }
+  | { type: "AlreadyCheckedOut" }
+  | { type: "BalanceOutstanding"; amount: number }
 const checkOut =
   (at: Date) =>
   (state: State): [CheckoutResult, Event[]] => {
     if (state.type === "Closed") return [{ type: "AlreadyCheckedOut" }, []]
-    if (state.balance.balance > 0) return [{ type: "BalanceOutstanding", amount: state.balance.balance }, []]
+    if (state.balance.balance > 0)
+      return [{ type: "BalanceOutstanding", amount: state.balance.balance }, []]
     return [{ type: "OK" }, [{ type: "CheckedOut", data: { at } }]]
   }
 
@@ -131,21 +149,17 @@ export class Service {
     return decider.transactResult(checkOut(new Date()))
   }
 
-  static createMessageDb(context: Mdb.MessageDbContext, caching: Mdb.CachingStrategy) {
+  static createMessageDb(context: Mdb.MessageDbContext, caching: ICachingStrategy) {
     const category = Mdb.MessageDbCategory.build(context, codec, fold, initial, caching)
-    const resolve = (stayId: GuestStayId) => Decider.resolve(category, Category, streamId(stayId), null)
+    const resolve = (stayId: GuestStayId) =>
+      Decider.resolve(category, Category, streamId(stayId), null)
     return new Service(resolve)
   }
 
-  static createDynamo(context: Ddb.DynamoStoreContext, caching: Ddb.CachingStrategy.CachingStrategy) {
-    const category = Ddb.DynamoStoreCategory.build(context, Codec.deflate(codec), fold, initial, caching, Ddb.AccessStrategy.Unoptimized())
-    const resolve = (stayId: GuestStayId) => Decider.resolve(category, Category, streamId(stayId), null)
-    return new Service(resolve)
-  }
-
-  static createMem(store: Mem.VolatileStore<Record<string, any>>) {
+  static createMem(store: Mem.VolatileStore<string>) {
     const category = Mem.MemoryStoreCategory.build(store, codec, fold, initial)
-    const resolve = (stayId: GuestStayId) => Decider.resolve(category, Category, streamId(stayId), null)
+    const resolve = (stayId: GuestStayId) =>
+      Decider.resolve(category, Category, streamId(stayId), null)
     return new Service(resolve)
   }
 }

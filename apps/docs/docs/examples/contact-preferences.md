@@ -4,10 +4,9 @@ This decider is used in integration tests for MessageDb and DynamoStore
 
 ```ts
 import * as Mdb from "@equinox-js/message-db"
-import * as Ddb from "@equinox-js/dynamo-store"
 import * as Mem from "@equinox-js/memory-store"
 import { createHash } from "crypto"
-import { Codec, Decider, LoadOption } from "@equinox-js/core"
+import { Codec, Decider, LoadOption, ICachingStrategy } from "@equinox-js/core"
 import { equals } from "ramda"
 
 
@@ -67,21 +66,14 @@ export class Service {
     return decider.query((x) => x, LoadOption.AllowStale)
   }
 
-  static createMessageDb(context: Mdb.MessageDbContext, caching: Mdb.CachingStrategy) {
+  static createMessageDb(context: Mdb.MessageDbContext, caching: ICachingStrategy) {
     const access = Mdb.AccessStrategy.LatestKnownEvent<Event, State>()
     const category = Mdb.MessageDbCategory.build(context, codec, fold, initial, caching, access)
     const resolve = (clientId: ClientId) => Decider.resolve(category, Category, streamId(clientId), null)
     return new Service(resolve)
   }
 
-  static createDynamo(context: Ddb.DynamoStoreContext, caching: Ddb.CachingStrategy.CachingStrategy) {
-    const access = Ddb.AccessStrategy.LatestKnownEvent<Event, State>()
-    const category = Ddb.DynamoStoreCategory.build(context, Codec.deflate(codec), fold, initial, caching, access)
-    const resolve = (clientId: ClientId) => Decider.resolve(category, Category, streamId(clientId), null)
-    return new Service(resolve)
-  }
-
-  static createMem(store: Mem.VolatileStore<Record<string, any>>) {
+  static createMem(store: Mem.VolatileStore<string>) {
     const category = Mem.MemoryStoreCategory.build(store, codec, fold, initial)
     const resolve = (clientId: ClientId) => Decider.resolve(category, Category, streamId(clientId), null)
     return new Service(resolve)
