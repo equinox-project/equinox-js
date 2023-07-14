@@ -1,5 +1,0 @@
-export * as ExactlyOnceIngester from "./lib/ExactlyOnceIngester.js"
-export * as AppendsEpoch from "./lib/AppendsEpoch.js"
-export * as AppendsIndex from "./lib/AppendsIndex.js"
-export { DynamoStoreIndexer, DynamoStoreIngester } from "./lib/DynamoStoreIndexer.js"
-export * from "./lib/Types.js"
