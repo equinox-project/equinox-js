@@ -10,7 +10,6 @@ import type {
 import * as Equinox from "@equinox-js/core"
 import * as Token from "./Token.js"
 import * as Snapshot from "./Snapshot.js"
-import * as Write from "./Write.js"
 import * as Read from "./Read.js"
 import { SpanStatusCode, trace } from "@opentelemetry/api"
 import { Format, MessageDbReader, MessageDbWriter } from "./MessageDbClient.js"
@@ -134,14 +133,8 @@ export class MessageDbContext {
     encodedEvents: IEventData<Format>[]
   ): Promise<GatewaySyncResult> {
     const streamVersion = Token.streamVersion(token)
-    const result = await Write.writeEvents(
-      this.conn.write,
-      category,
-      streamId,
-      streamName,
-      streamVersion,
-      encodedEvents
-    )
+    const result = await this.conn.write.writeMessages(streamName, encodedEvents, streamVersion)
+
     switch (result.type) {
       case "ConflictUnknown":
         const span = trace.getActiveSpan()
@@ -156,12 +149,11 @@ export class MessageDbContext {
 
   async storeSnapshot(categoryName: string, streamId: string, event: IEventData<Format>) {
     const snapshotStream = Snapshot.streamName(categoryName, streamId)
-    const category = Snapshot.snapshotCategory(categoryName)
-    return Write.writeEvents(this.conn.write, category, streamId, snapshotStream, null, [event])
+    return this.conn.write.writeMessages(snapshotStream, [event], null)
   }
 
-  static create({ pool, followerPool, batchSize, maxBatches}: ContextConfig) {
-    const connection =  MessageDbConnection.create( pool, followerPool)
+  static create({ pool, followerPool, batchSize, maxBatches }: ContextConfig) {
+    const connection = MessageDbConnection.create(pool, followerPool)
     return new MessageDbContext(connection, batchSize, maxBatches)
   }
 }
@@ -169,11 +161,7 @@ export class MessageDbContext {
 type AccessStrategy<Event, State> =
   | { type: "Unoptimized" }
   | { type: "LatestKnownEvent" }
-  | {
-      type: "AdjacentSnapshots"
-      eventName: string
-      toSnapshot: (state: State) => Event
-    }
+  | { type: "AdjacentSnapshots"; eventName: string; toSnapshot: (state: State) => Event }
 
 export namespace AccessStrategy {
   export const Unoptimized = <E, S>(): AccessStrategy<E, S> => ({ type: "Unoptimized" })
@@ -205,6 +193,7 @@ class InternalCategory<Event, State, Context>
     streamName: string,
     requireLeader: boolean
   ): Promise<[StreamToken, Event[]]> {
+    const span = trace.getActiveSpan()
     switch (this.access?.type) {
       case "Unoptimized":
         return this.context.loadBatched(streamName, requireLeader, this.codec.tryDecode)
@@ -218,6 +207,9 @@ class InternalCategory<Event, State, Context>
           this.codec.tryDecode,
           this.access.eventName
         )
+        span?.setAttributes({
+          "eqx.snapshot_version": result ? String(result[0].version) : String(-1),
+        })
         if (!result)
           return this.context.loadBatched(streamName, requireLeader, this.codec.tryDecode)
         const [pos, snapshotEvent] = result
@@ -258,6 +250,7 @@ class InternalCategory<Event, State, Context>
     state: State,
     events: Event[]
   ): Promise<SyncResult<State>> {
+    const span = trace.getActiveSpan()
     const encode = (ev: Event) => this.codec.encode(ev, ctx)
     const encodedEvents = await Promise.all(events.map(encode))
     const result = await this.context.trySync(category, streamId, streamName, token, encodedEvents)
@@ -273,8 +266,10 @@ class InternalCategory<Event, State, Context>
           case "LatestKnownEvent":
           case "Unoptimized":
             break
-          case "AdjacentSnapshots":
-            if (Token.shouldSnapshot(this.context.batchSize, token, result.token)) {
+          case "AdjacentSnapshots": {
+            const shouldSnapshot = Token.shouldSnapshot(this.context.batchSize, token, result.token)
+            span?.setAttribute("eqx.should_snapshot", shouldSnapshot)
+            if (shouldSnapshot) {
               await this.storeSnapshot(
                 category,
                 streamId,
@@ -283,6 +278,7 @@ class InternalCategory<Event, State, Context>
                 this.access.toSnapshot(newState)
               )
             }
+          }
         }
         return { type: "Written", data: { token: result.token, state: newState } }
       }

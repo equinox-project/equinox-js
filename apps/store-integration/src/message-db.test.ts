@@ -11,7 +11,7 @@ import {
 import { describe, test, expect, afterEach, afterAll } from "vitest"
 import { Pool } from "pg"
 import { randomUUID } from "crypto"
-import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
+import { NodeTracerProvider, ReadableSpan } from "@opentelemetry/sdk-trace-node"
 import { InMemorySpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base"
 import { SpanStatusCode } from "@opentelemetry/api"
 import {
@@ -20,6 +20,7 @@ import {
   MessageDbConnection,
   MessageDbContext,
 } from "@equinox-js/message-db"
+import exp from "constants"
 
 const Category = MessageDbCategory
 
@@ -150,8 +151,12 @@ const spanProcessor = new SimpleSpanProcessor(memoryExporter)
 const getStoreSpans = () =>
   memoryExporter
     .getFinishedSpans()
-    .filter((x) => x.instrumentationLibrary.name === "@equinox-js/message-db")
-const getStoreSpanNames = () => getStoreSpans().map((x) => x.name)
+    .filter((x) => x.instrumentationLibrary.name === "@equinox-js/core")
+
+const assertSpans = (...expected: Record<string, any>[]) => {
+  const attributes = getStoreSpans().map((x) => ({ name: x.name, ...x.attributes }))
+  expect(attributes).toEqual(expected.map(expect.objectContaining))
+}
 
 provider.addSpanProcessor(spanProcessor)
 provider.register()
@@ -230,7 +235,7 @@ describe("Roundtrips against the store", () => {
       addRemoveCount
     )
 
-    expect(getStoreSpanNames()).toEqual(["ReadSlice", "WriteEvents"])
+    assertSpans({ name: "Load", "eqx.batches": 1 }, { name: "TrySync" })
     memoryExporter.reset()
 
     const state = await service.read(cartId)
@@ -238,7 +243,7 @@ describe("Roundtrips against the store", () => {
 
     const expectedEventCount = 2 * addRemoveCount - 1
     const expectedBatches = Math.ceil(expectedEventCount / batchSize)
-    expect(getStoreSpanNames()).toEqual(new Array(expectedBatches).fill("ReadSlice"))
+    assertSpans({ name: "Load", "eqx.batches": expectedBatches, "eqx.count": expectedEventCount })
   })
   test("manages sync conflicts by retrying [without any optimizations]", async () => {
     const batchSize = 3
@@ -358,17 +363,16 @@ describe("Caching", () => {
       service1,
       5
     )
-    expect(getStoreSpanNames()).toEqual(["ReadSlice", "WriteEvents"])
+    assertSpans(
+      { name: "Load", "eqx.load_method": "BatchForward", "eqx.count": 0 },
+      { name: "TrySync" }
+    )
     const staleRes = await service2.readStale(cartId)
-    expect(getStoreSpanNames()).toEqual(["ReadSlice", "WriteEvents"])
     memoryExporter.reset()
     const freshRes = await service2.read(cartId)
     expect(staleRes).toEqual(freshRes)
 
-    expect(getStoreSpanNames()).toEqual(["ReadSlice"])
-    expect(getStoreSpans()[0].attributes).toMatchObject({
-      "eqx.start_position": 9,
-    })
+    assertSpans({ name: "Load", "eqx.batches": 1, "eqx.start_position": 9 })
     memoryExporter.reset()
 
     // Add two more - the roundtrip should only incur a single read
@@ -381,14 +385,16 @@ describe("Caching", () => {
       service1,
       1
     )
-    expect(getStoreSpanNames()).toEqual(["ReadSlice", "WriteEvents"])
+    assertSpans({ name: "Load", "eqx.batches": 1 }, { name: "TrySync" })
     memoryExporter.reset()
 
     const res = await service2.readStale(cartId)
     expect(res).not.toEqual(freshRes)
-    expect(getStoreSpanNames()).toEqual([])
+    assertSpans({ name: "Load" })
+    expect(getStoreSpans()[0].attributes).not.to.have.property("eqx.batches")
+    memoryExporter.reset()
     await service2.read(cartId)
-    expect(getStoreSpanNames()).toEqual(["ReadSlice"])
+    assertSpans({ name: "Load", "eqx.batches": 1 })
 
     // Optimistic transactions
     memoryExporter.reset()
@@ -400,7 +406,9 @@ describe("Caching", () => {
       service1,
       1
     )
-    expect(getStoreSpanNames()).toEqual([])
+    assertSpans({ name: "Load" })
+    expect(getStoreSpans()[0].attributes).not.to.have.property("eqx.batches")
+    memoryExporter.reset()
     // As the cache is up to date, we can do an optimistic append, saving a Read roundtrip
     const skuId3 = randomUUID() as Cart.SkuId
     await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(
@@ -410,8 +418,10 @@ describe("Caching", () => {
       service1,
       1
     )
+
     // this time, we did something, so we see the append call
-    expect(getStoreSpanNames()).toEqual(["WriteEvents"])
+    assertSpans({ name: "Load" }, { name: "TrySync" })
+    expect(getStoreSpans()[0].attributes).not.to.have.property("eqx.batches")
 
     // If we don't have a cache attached, we don't benefit from / pay the price for any optimism
     memoryExporter.reset()
@@ -424,7 +434,7 @@ describe("Caching", () => {
       1
     )
     // Need 2 batches to do the reading
-    expect(getStoreSpanNames()).toEqual(["ReadSlice", "ReadSlice", "WriteEvents"])
+    assertSpans({ name: "Load", "eqx.batches": 2 }, { name: "TrySync" })
     // we've engineered a clash with the cache state (service3 doest participate in caching)
     // Conflict with cached state leads to a read forward to resync; Then we'll idempotently decide not to do any append
     memoryExporter.reset()
@@ -441,7 +451,8 @@ describe("Caching", () => {
         status: expect.objectContaining({ message: "ConflictUnknown" }),
       })
     )
-    expect(getStoreSpanNames()).toEqual(["WriteEvents", "ReadSlice"])
+
+    assertSpans({ name: "Load" }, { name: "TrySync" })
   })
 })
 
@@ -468,7 +479,11 @@ describe("AccessStrategy.LatestKnownEvent", () => {
 
     const result = await service.read(id)
     expect(result).toEqual(value)
-    expect(getStoreSpanNames()).toEqual(["ReadLast", "WriteEvents", "ReadLast"])
+    assertSpans(
+      { name: "Load", "eqx.load_method": "Last", "eqx.count": 1 },
+      { name: "TrySync" },
+      { name: "Load", "eqx.load_method": "Last", "eqx.count": 1 }
+    )
   })
 })
 
@@ -485,42 +500,59 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
     // Trigger 8 events, then reload
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 4)
     await service.read(cartId)
-    expect(getStoreSpanNames()).toEqual([
-      "ReadLast",
-      "ReadSlice",
-      "WriteEvents",
-      "ReadLast",
-      "ReadSlice",
-    ])
+    assertSpans(
+      { name: "Load", "eqx.count": 0, "eqx.snapshot_version": "-1" },
+      { name: "TrySync" },
+      { name: "Load", "eqx.count": 8, "eqx.snapshot_version": "-1" }
+    )
 
     // Add two more, which should push it over the threshold and hence trigger an append of a snapshot event
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 1)
-    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice", "WriteEvents", "WriteEvents"])
+    assertSpans(
+      { name: "Load", "eqx.count": 8, "eqx.snapshot_version": "-1" },
+      { name: "TrySync", "eqx.should_snapshot": true }
+    )
 
     // We now have 10 events and should be able to read them with a single call
     memoryExporter.reset()
     await service.read(cartId)
-    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice"])
+    assertSpans({ name: "Load", "eqx.count": 0, "eqx.snapshot_version": "10" })
 
     // Add 8 more; total of 18 should not trigger snapshotting as we snapshotted at Event Number 10
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 4)
-    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice", "WriteEvents"])
+    assertSpans(
+      { name: "Load", "eqx.count": 0, "eqx.snapshot_version": "10", "eqx.start_position": 10 },
+      { name: "TrySync", "eqx.should_snapshot": false }
+    )
 
     // While we now have 18 events, we should be able to read them with a single call
     memoryExporter.reset()
     await service.read(cartId)
-    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice"])
+    assertSpans({
+      name: "Load",
+      "eqx.count": 8,
+      "eqx.snapshot_version": "10",
+      "eqx.start_position": 10,
+    })
 
     // add two more events, triggering a snapshot, then read it in a single snapshotted read
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 1)
-    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice", "WriteEvents", "WriteEvents"])
+    assertSpans(
+      { name: "Load", "eqx.count": 8, "eqx.snapshot_version": "10", "eqx.start_position": 10 },
+      { name: "TrySync", "eqx.should_snapshot": true }
+    )
     // While we now have 18 events, we should be able to read them with a single call
     memoryExporter.reset()
     await service.read(cartId)
-    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice"])
+    assertSpans({
+      name: "Load",
+      "eqx.count": 0,
+      "eqx.snapshot_version": "20",
+      "eqx.start_position": 20,
+    })
   })
 
   test("Combining snapshots and caching", async () => {
@@ -537,43 +569,50 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 4)
     await service2.read(cartId)
 
-    expect(getStoreSpanNames()).toEqual([
-      "ReadLast",
-      "ReadSlice",
-      "WriteEvents",
-      "ReadLast",
-      "ReadSlice",
-    ])
+    assertSpans(
+      { name: "Load", "eqx.count": 0, "eqx.snapshot_version": "-1" },
+      { name: "TrySync", "eqx.should_snapshot": false },
+      { name: "Load", "eqx.count": 8, "eqx.snapshot_version": "-1" }
+    )
 
     // Add two more, which should push it over the threshold and hence trigger generation of a snapshot event
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 1)
-    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice", "WriteEvents", "WriteEvents"])
+    assertSpans(
+      { name: "Load", "eqx.count": 8, "eqx.snapshot_version": "-1" },
+      { name: "TrySync", "eqx.should_snapshot": true }
+    )
 
     // We now have 10 events, we should be able to read them with a single snapshotted read
     memoryExporter.reset()
     await service1.read(cartId)
-    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice"])
+    assertSpans({ name: "Load", "eqx.count": 0, "eqx.snapshot_version": "10" })
 
     // Add 8 more; total of 18 should not trigger snapshotting as the snapshot is at version 10
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 4)
-    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice", "WriteEvents"])
+    assertSpans(
+      { name: "Load", "eqx.count": 0, "eqx.snapshot_version": "10" },
+      { name: "TrySync", "eqx.should_snapshot": false }
+    )
 
     // While we now have 18 events, we should be able to read them with a single snapshotted read
     memoryExporter.reset()
     await service1.read(cartId)
-    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice"])
+    assertSpans({ name: "Load", "eqx.count": 8, "eqx.snapshot_version": "10" })
 
     // ... trigger a second snapshotting
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 1)
-    expect(getStoreSpanNames()).toEqual(["ReadLast", "ReadSlice", "WriteEvents", "WriteEvents"])
+    assertSpans(
+      { name: "Load", "eqx.count": 8, "eqx.snapshot_version": "10" },
+      { name: "TrySync", "eqx.should_snapshot": true }
+    )
 
     // and we _could_ reload the 20 events with a single slice read. However we are using the cache, which last saw it with 10 events, which necessitates two reads
     memoryExporter.reset()
     await service2.read(cartId)
-    expect(getStoreSpanNames()).toEqual(["ReadSlice", "ReadSlice"])
+    assertSpans({ name: "Load", "eqx.count": 12, "eqx.cache_hit": true })
   })
 })
 

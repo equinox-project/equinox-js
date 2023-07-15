@@ -4,7 +4,8 @@ import { Format } from "./MessageDbClient.js"
 
 export const snapshotCategory = (original: string) => original + ":snapshot"
 
-export const streamName = (category: string, streamId: string) => `${category}-${streamId}`
+export const streamName = (category: string, streamId: string) =>
+  `${snapshotCategory(category)}-${streamId}`
 export type Meta = { streamVersion: string }
 const streamVersion = (evt: ITimelineEvent<Format>) => {
   const meta = JSON.parse(evt.meta ?? "null") as Meta | null
