@@ -154,7 +154,11 @@ const getStoreSpans = () =>
     .filter((x) => x.instrumentationLibrary.name === "@equinox-js/core")
 
 const assertSpans = (...expected: Record<string, any>[]) => {
-  const attributes = getStoreSpans().map((x) => ({ name: x.name, ...x.attributes }))
+  const attributes = getStoreSpans().map((x) => ({
+    name: x.name,
+    ...x.attributes,
+    status_message: x.status.message,
+  }))
   expect(attributes).toEqual(expected.map(expect.objectContaining))
 }
 
@@ -235,7 +239,10 @@ describe("Roundtrips against the store", () => {
       addRemoveCount
     )
 
-    assertSpans({ name: "Load", "eqx.batches": 1 }, { name: "TrySync" })
+    assertSpans(
+      { name: "Load", "eqx.batches": 1, "eqx.count": 0 },
+      { name: "TrySync", "eqx.append_count": 11 }
+    )
     memoryExporter.reset()
 
     const state = await service.read(cartId)
@@ -355,7 +362,7 @@ describe("Caching", () => {
 
     const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
 
-    // Trigger 10 events, then reload
+    // Trigger 9 events, then reload
     await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(
       cartContext,
       cartId,
@@ -365,17 +372,23 @@ describe("Caching", () => {
     )
     assertSpans(
       { name: "Load", "eqx.load_method": "BatchForward", "eqx.count": 0 },
-      { name: "TrySync" }
+      { name: "TrySync", "eqx.append_count": 9 }
     )
     const staleRes = await service2.readStale(cartId)
     memoryExporter.reset()
     const freshRes = await service2.read(cartId)
     expect(staleRes).toEqual(freshRes)
 
-    assertSpans({ name: "Load", "eqx.batches": 1, "eqx.start_position": 9 })
+    assertSpans({
+      name: "Load",
+      "eqx.batches": 1,
+      "eqx.count": 0,
+      "eqx.start_position": 9,
+      "eqx.cache_hit": true,
+    })
     memoryExporter.reset()
 
-    // Add two more - the roundtrip should only incur a single read
+    // Add one more - the roundtrip should only incur a single read
 
     const skuId2 = randomUUID() as Cart.SkuId
     await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(
@@ -385,16 +398,19 @@ describe("Caching", () => {
       service1,
       1
     )
-    assertSpans({ name: "Load", "eqx.batches": 1 }, { name: "TrySync" })
+    assertSpans(
+      { name: "Load", "eqx.batches": 1, "eqx.count": 0, "eqx.cache_hit": true },
+      { name: "TrySync", "eqx.append_count": 1 }
+    )
     memoryExporter.reset()
 
     const res = await service2.readStale(cartId)
     expect(res).not.toEqual(freshRes)
-    assertSpans({ name: "Load" })
+    assertSpans({ name: "Load", "eqx.cache_hit": true })
     expect(getStoreSpans()[0].attributes).not.to.have.property("eqx.batches")
     memoryExporter.reset()
     await service2.read(cartId)
-    assertSpans({ name: "Load", "eqx.batches": 1 })
+    assertSpans({ name: "Load", "eqx.batches": 1, "eqx.cache_hit": true })
 
     // Optimistic transactions
     memoryExporter.reset()
@@ -406,7 +422,7 @@ describe("Caching", () => {
       service1,
       1
     )
-    assertSpans({ name: "Load" })
+    assertSpans({ name: "Load", "eqx.cache_hit": true })
     expect(getStoreSpans()[0].attributes).not.to.have.property("eqx.batches")
     memoryExporter.reset()
     // As the cache is up to date, we can do an optimistic append, saving a Read roundtrip
@@ -420,7 +436,7 @@ describe("Caching", () => {
     )
 
     // this time, we did something, so we see the append call
-    assertSpans({ name: "Load" }, { name: "TrySync" })
+    assertSpans({ name: "Load", "eqx.cache_hit": true }, { name: "TrySync", "eqx.append_count": 1 })
     expect(getStoreSpans()[0].attributes).not.to.have.property("eqx.batches")
 
     // If we don't have a cache attached, we don't benefit from / pay the price for any optimism
@@ -434,7 +450,10 @@ describe("Caching", () => {
       1
     )
     // Need 2 batches to do the reading
-    assertSpans({ name: "Load", "eqx.batches": 2 }, { name: "TrySync" })
+    assertSpans(
+      { name: "Load", "eqx.batches": 2, "eqx.cache_hit": false },
+      { name: "TrySync", "eqx.append_count": 1 }
+    )
     // we've engineered a clash with the cache state (service3 doest participate in caching)
     // Conflict with cached state leads to a read forward to resync; Then we'll idempotently decide not to do any append
     memoryExporter.reset()
@@ -445,14 +464,11 @@ describe("Caching", () => {
       service2,
       1
     )
-    expect(memoryExporter.getFinishedSpans()).toContainEqual(
-      expect.objectContaining({
-        name: "TrySync",
-        status: expect.objectContaining({ message: "ConflictUnknown" }),
-      })
-    )
 
-    assertSpans({ name: "Load" }, { name: "TrySync" })
+    assertSpans(
+      { name: "Load", "eqx.cache_hit": true, "eqx.allow_stale": true },
+      { name: "TrySync", status_message: "ConflictUnknown" }
+    )
   })
 })
 
@@ -481,7 +497,7 @@ describe("AccessStrategy.LatestKnownEvent", () => {
     expect(result).toEqual(value)
     assertSpans(
       { name: "Load", "eqx.load_method": "Last", "eqx.count": 1 },
-      { name: "TrySync" },
+      { name: "TrySync", "eqx.append_count": 1 },
       { name: "Load", "eqx.load_method": "Last", "eqx.count": 1 }
     )
   })
@@ -502,7 +518,7 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
     await service.read(cartId)
     assertSpans(
       { name: "Load", "eqx.count": 0, "eqx.snapshot_version": "-1" },
-      { name: "TrySync" },
+      { name: "TrySync", "eqx.append_count": 8, "eqx.should_snapshot": false },
       { name: "Load", "eqx.count": 8, "eqx.snapshot_version": "-1" }
     )
 
@@ -511,7 +527,7 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 1)
     assertSpans(
       { name: "Load", "eqx.count": 8, "eqx.snapshot_version": "-1" },
-      { name: "TrySync", "eqx.should_snapshot": true }
+      { name: "TrySync", "eqx.append_count": 2, "eqx.should_snapshot": true }
     )
 
     // We now have 10 events and should be able to read them with a single call
@@ -524,7 +540,7 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 4)
     assertSpans(
       { name: "Load", "eqx.count": 0, "eqx.snapshot_version": "10", "eqx.start_position": 10 },
-      { name: "TrySync", "eqx.should_snapshot": false }
+      { name: "TrySync", "eqx.append_count": 8, "eqx.should_snapshot": false }
     )
 
     // While we now have 18 events, we should be able to read them with a single call
@@ -542,7 +558,7 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 1)
     assertSpans(
       { name: "Load", "eqx.count": 8, "eqx.snapshot_version": "10", "eqx.start_position": 10 },
-      { name: "TrySync", "eqx.should_snapshot": true }
+      { name: "TrySync", "eqx.append_count": 2, "eqx.should_snapshot": true }
     )
     // While we now have 18 events, we should be able to read them with a single call
     memoryExporter.reset()
