@@ -55,9 +55,6 @@ importers:
       '@equinox-js/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@equinox-js/dynamo-store':
-        specifier: workspace:*
-        version: link:../../packages/dynamo-store/dynamo-store
       '@equinox-js/memory-store':
         specifier: workspace:*
         version: link:../../packages/memory-store
@@ -82,9 +79,6 @@ importers:
       '@equinox-js/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@equinox-js/dynamo-store':
-        specifier: workspace:*
-        version: link:../../packages/dynamo-store/dynamo-store
       '@equinox-js/message-db':
         specifier: workspace:*
         version: link:../../packages/message-db
@@ -141,6 +135,12 @@ importers:
       typescript:
         specifier: ^4.7.4
         version: 4.9.4
+      vitest:
+        specifier: ^0.25.3
+        version: 0.25.8
+      zod:
+        specifier: ^3.20.2
+        version: 3.20.2
 
   packages/dynamo-store/dynamo-store:
     dependencies:
@@ -10716,7 +10716,6 @@ packages:
 
   /zod@3.20.2:
     resolution: {integrity: sha512-1MzNQdAvO+54H+EaK5YpyEy0T+Ejo/7YLHS93G3RnYWh5gaotGHwGeN/ZO687qEDU2y4CdStQYXVHIgrUl5UVQ==}
-    dev: false
 
   /zwitch@1.0.5:
     resolution: {integrity: sha512-V50KMwwzqJV0NpZIZFwfOD5/lyny3WlSzRiXgA0G7VUnRlqttta1L6UQIHzd6EuBY/cHGfwTIck7w1yH6Q5zUw==}

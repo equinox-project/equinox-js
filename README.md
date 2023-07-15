@@ -17,11 +17,6 @@ First clone this repository and enter the directory
 $ pnpm i
 $ pnpm exec turbo build
 $ docker-compose up -d
-$ cd ./packages/dynamo-store-tf
-$ terraform init
-$ terraform apply
-$ cd ../../apps/sample
-$ pnpm dev
 ```
 
 # Differences from Equinox

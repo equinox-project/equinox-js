@@ -11,7 +11,8 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean"
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "test": "vitest run"
   },
   "version": "1.0.0-alpha.4",
   "files": [
@@ -22,7 +23,9 @@
     "lru-cache": "^7.14.1",
     "tsconfig": "workspace:*",
     "tsup": "^6.5.0",
-    "typescript": "^4.7.4"
+    "typescript": "^4.7.4",
+    "vitest": "^0.25.3",
+    "zod": "^3.20.2"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.4.0"

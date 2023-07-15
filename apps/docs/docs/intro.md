@@ -11,7 +11,6 @@ programming model centered around Deciders as the central domain abstraction.
 
 ```ts
 import * as Mdb from "@equinox-js/message-db"
-import * as Ddb from "@equinox-js/dynamo-store"
 import * as Mem from "@equinox-js/memory-store"
 
 export const Category = "Account"
@@ -65,12 +64,6 @@ export class Service {
 
   static createMessageDb(context: Mdb.MessageDbContext, caching: Mdb.CachingStrategy) {
     const category = Mdb.MessageDbCategory.create(context, codec, fold, initial, caching)
-    const resolve = (stayId: GuestStayId) => Decider.resolve(category, Category, streamId(stayId), null)
-    return new Service(resolve)
-  }
-
-  static createDynamo(context: Ddb.DynamoStoreContext, caching: Ddb.CachingStrategy.CachingStrategy) {
-    const category = Ddb.DynamoStoreCategory.create(context, Codec.deflate(codec), fold, initial, caching, Ddb.AccessStrategy.Unoptimized())
     const resolve = (stayId: GuestStayId) => Decider.resolve(category, Category, streamId(stayId), null)
     return new Service(resolve)
   }

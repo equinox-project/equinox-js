@@ -27,7 +27,6 @@
   "devDependencies": {
     "@docusaurus/module-type-aliases": "2.3.1",
     "@equinox-js/core": "workspace:*",
-    "@equinox-js/dynamo-store": "workspace:*",
     "@equinox-js/memory-store": "workspace:*",
     "@equinox-js/message-db": "workspace:*",
     "tsconfig": "workspace:*",
