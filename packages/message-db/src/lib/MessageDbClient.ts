@@ -47,8 +47,8 @@ export class MessageDbWriter {
           message.id || randomUUID(),
           streamName,
           message.type,
-          JSON.stringify(message.data),
-          JSON.stringify(message.meta),
+          message.data || null,
+          message.meta || null,
           expectedVersion == null ? null : Number(expectedVersion++),
         ])
 
