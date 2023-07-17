@@ -94,11 +94,7 @@ export class MessageDbReader {
     const client = await this.connect(requiresLeader)
     try {
       const result = await client.query(
-        `select
-           position, type, data, metadata, id::uuid,
-           (metadata::jsonb->>'$correlationId')::text,
-           (metadata::jsonb->>'$causationId')::text,
-           time
+        `select position, type, data, metadata, id, time
          from get_stream_messages($1, $2, $3)`,
         [streamName, String(fromPosition), batchSize]
       )
@@ -115,8 +111,8 @@ function fromDb(row: any): ITimelineEvent<Format> {
     id: row.id,
     time: new Date(row.time),
     type: row.type,
-    data: JSON.parse(row.data),
-    meta: JSON.parse(row.metadata || "null"),
+    data: row.data,
+    meta: row.metadata,
     index: BigInt(row.position),
     isUnfold: false,
   }
