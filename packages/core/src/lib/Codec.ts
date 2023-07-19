@@ -18,13 +18,13 @@ export const json = <E extends { type: string; data?: Record<string, any> }, C =
   }
 }
 
-export const zod = <K extends string, E extends { type: K; data?: Record<string, any> }, C = null>(
-  mapping: { [P in K]: (obj: unknown) => Extract<E, { type: P }>["data"] | undefined },
+export const zod = <E extends { type: string; data?: Record<string, any> }, C = null>(
+  mapping: { [P in E["type"]]: (obj: unknown) => Extract<E, { type: P }>["data"] | undefined },
   ctxToMeta: (ctx: C) => Record<string, any> | undefined = () => undefined
 ): ICodec<E, string, C> => {
   return {
     tryDecode(event: ITimelineEvent<string>): E | undefined {
-      const decode = mapping[event.type as K]
+      const decode = mapping[event.type as E["type"]]
       if (!decode) return
       if (!event.data) return { type: event.type } as E
       try {
@@ -35,7 +35,7 @@ export const zod = <K extends string, E extends { type: K; data?: Record<string,
       }
     },
     encode: (e, ctx) => {
-      const parse = mapping[e.type]
+      const parse = mapping[e.type as E["type"]]
       const data = e.data ? JSON.stringify(parse(e.data)) : undefined
       return {
         type: e.type,

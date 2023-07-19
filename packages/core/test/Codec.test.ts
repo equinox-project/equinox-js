@@ -53,5 +53,27 @@ describe("Codec", () => {
         data: JSON.stringify(event.data),
       })
     })
+
+    const schema = z.object({ amount: z.number() })
+    type Amount = z.infer<typeof schema>
+    type Event = { type: "Increment"; data: Amount } | { type: "Decrement"; data: Amount }
+    const codec = Codec.zod<Event, { hello: string }>(
+      {
+        Increment: schema.parse,
+        Decrement: schema.parse,
+      },
+      (ctx) => ctx
+    )
+    test("Encoding with meta", () => {
+      const event: Event = { type: "Increment", data: { amount: 3 } }
+      const meta = { hello: "hi" }
+      const expected = {
+        type: "Increment",
+        data: '{"amount":3}',
+        meta: '{"hello":"hi"}',
+      }
+      expect(codec.encode(event, meta)).toEqual(expected)
+      expect(codec.tryDecode(expected as any)).toEqual(event)
+    })
   })
 })

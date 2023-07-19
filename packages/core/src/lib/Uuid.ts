@@ -2,7 +2,7 @@ import { randomUUID } from "crypto"
 
 export type Uuid<T> = string & { __brand: T }
 
-export interface UuidModule<T> {
+export type UuidModule<T> = {
   create: () => Uuid<T>
   toString: (uuid: Uuid<T>) => string
   parse: (uuid: string) => Uuid<T>
