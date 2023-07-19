@@ -7,7 +7,7 @@ type MdbWriteResult = { type: "Written"; position: bigint } | { type: "ConflictU
 export type Format = string
 
 export class MessageDbWriter {
-  constructor(private readonly pool: Pool) {}
+  constructor(private readonly pool: Pool) { }
   async writeSingleMessage(streamName: string, message: IEventData<Format>, expectedVersion: bigint | null): Promise<MdbWriteResult> {
     const client = await this.pool.connect()
     try {
@@ -73,7 +73,7 @@ export class MessageDbWriter {
 }
 
 export class MessageDbReader {
-  constructor(private readonly pool: Pool, private readonly leaderPool: Pool) {}
+  constructor(private readonly pool: Pool, private readonly leaderPool: Pool) { }
 
   private connect(requiresLeader: boolean) {
     if (requiresLeader) return this.leaderPool.connect()

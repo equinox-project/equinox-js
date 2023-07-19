@@ -161,18 +161,20 @@ export class MessageDbContext {
 type AccessStrategy<Event, State> =
   | { type: "Unoptimized" }
   | { type: "LatestKnownEvent" }
-  | { type: "AdjacentSnapshots"; eventName: string; toSnapshot: (state: State) => Event }
+  | { type: "AdjacentSnapshots"; eventName: string; toSnapshot: (state: State) => Event, frequency?: number }
 
 export namespace AccessStrategy {
   export const Unoptimized = <E, S>(): AccessStrategy<E, S> => ({ type: "Unoptimized" })
   export const LatestKnownEvent = <E, S>(): AccessStrategy<E, S> => ({ type: "LatestKnownEvent" })
   export const AdjacentSnapshots = <E, S>(
     eventName: string,
-    toSnapshot: (state: S) => E
+    toSnapshot: (state: S) => E,
+    frequency?: number
   ): AccessStrategy<E, S> => ({
     type: "AdjacentSnapshots",
     eventName,
     toSnapshot,
+    frequency
   })
 }
 
@@ -219,7 +221,7 @@ class InternalCategory<Event, State, Context>
           pos,
           this.codec.tryDecode
         )
-        return [token, [snapshotEvent].concat(rest)]
+        return [Token.withSnapshot(token, pos.version), [snapshotEvent].concat(rest)]
       }
     }
   }
@@ -267,7 +269,8 @@ class InternalCategory<Event, State, Context>
           case "Unoptimized":
             break
           case "AdjacentSnapshots": {
-            const shouldSnapshot = Token.shouldSnapshot(this.context.batchSize, token, result.token)
+            const shapshotFrequency = this.access.frequency ?? this.context.batchSize
+            const shouldSnapshot = Token.shouldSnapshot(shapshotFrequency, token, result.token)
             span?.setAttribute("eqx.should_snapshot", shouldSnapshot)
             if (shouldSnapshot) {
               await this.storeSnapshot(
