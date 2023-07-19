@@ -77,7 +77,6 @@ jobs:
         uses: changesets/action@v1
         if: github.ref == 'refs/heads/main'
         with:
-          version: pnpm ci:version
           commit: "chore: update versions"
           title: "chore: update versions"
           publish: pnpm -r publish 
