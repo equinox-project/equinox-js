@@ -35,24 +35,30 @@ const readLastEventAsync = async (
   return toSlice(events == null ? [] : [events], false)
 }
 
-function readBatches(
+async function* readBatches(
   readSlice: (start: bigint) => Promise<StreamEventsSlice>,
   maxPermittedReads: number | undefined,
   startPosition: bigint,
-) {
-  async function* loop(
-    batchCount: number,
-    pos: bigint,
-  ): AsyncIterable<[bigint, ITimelineEvent<any>[]]> {
+): AsyncIterable<[bigint, ITimelineEvent<string>[]]> {
+  const span = trace.getActiveSpan()
+  let batchCount = 0
+  let eventCount = 0
+  let slice: StreamEventsSlice
+  do {
     if (maxPermittedReads && batchCount >= maxPermittedReads)
       throw new Error("Batch limit exceeded")
-    const slice = await readSlice(pos)
+    slice = await readSlice(startPosition)
     yield [slice.lastVersion, slice.messages]
-    if (!slice.isEnd) {
-      yield* loop(batchCount + 1, slice.lastVersion + 1n)
-    }
-  }
-  return loop(0, startPosition)
+    batchCount++
+    eventCount += slice.messages.length
+    startPosition = slice.lastVersion + 1n
+  } while (!slice.isEnd)
+
+  span?.setAttributes({
+    "eqx.batches": batchCount,
+    "eqx.count": eventCount,
+    "eqx.version": Number(slice.lastVersion),
+  })
 }
 
 export function loadForwardsFrom(
@@ -64,21 +70,6 @@ export function loadForwardsFrom(
   requiresLeader: boolean,
 ) {
   const span = trace.getActiveSpan()
-  const mergeBatches = async (batches: AsyncIterable<[bigint, ITimelineEvent<any>[]]>) => {
-    let versionFromStream = -1n
-    const eventBatches = []
-    for await (const [version, messages] of batches) {
-      versionFromStream = version
-      eventBatches.push(messages)
-    }
-    const events = eventBatches.flat()
-    span?.setAttributes({
-      "eqx.batches": eventBatches.length,
-      "eqx.count": events.length,
-      "eqx.version": Number(versionFromStream),
-    })
-    return [versionFromStream, events] as const
-  }
   span?.setAttributes({
     "eqx.batch_size": batchSize,
     "eqx.start_position": Number(startPosition),
@@ -88,7 +79,7 @@ export function loadForwardsFrom(
   const readSlice = (start: bigint) =>
     readSliceAsync(reader, streamName, batchSize, start, requiresLeader)
 
-  return mergeBatches(readBatches(readSlice, maxPermittedBatchReads, startPosition))
+  return readBatches(readSlice, maxPermittedBatchReads, startPosition)
 }
 
 export function loadLastEvent(

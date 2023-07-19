@@ -64,29 +64,38 @@ export class MessageDbContext {
 
   tokenEmpty = Token.create(-1n)
 
-  async loadBatched<Event>(
+  async loadBatched<Event, State>(
     streamName: string,
     requireLeader: boolean,
     tryDecode: TryDecode<Event>,
-  ): Promise<[StreamToken, Event[]]> {
-    const [version, events] = await Read.loadForwardsFrom(
+    fold: (state: State, events: Event[]) => State,
+    initial: State,
+  ): Promise<[StreamToken, State]> {
+    let state = initial
+    let version = -1n
+    for await (const [lastVersion, events] of Read.loadForwardsFrom(
       this.conn.read,
       this.batchSize,
       this.maxBatches,
       streamName,
       0n,
       requireLeader,
-    )
-    return [Token.create(version), keepMap(events, tryDecode)]
+    )) {
+      state = fold(state, keepMap(events, tryDecode))
+      version = lastVersion
+    }
+    return [Token.create(version), state]
   }
 
-  async loadLast<Event>(
+  async loadLast<Event, State>(
     streamName: string,
     requireLeader: boolean,
     tryDecode: TryDecode<Event>,
-  ): Promise<[StreamToken, Event[]]> {
+    fold: (state: State, events: Event[]) => State,
+    initial: State,
+  ): Promise<[StreamToken, State]> {
     const [version, events] = await Read.loadLastEvent(this.conn.read, requireLeader, streamName)
-    return [Token.create(version), keepMap(events, tryDecode)]
+    return [Token.create(version), fold(initial, keepMap(events, tryDecode))]
   }
 
   async loadSnapshot<Event>(
@@ -106,26 +115,28 @@ export class MessageDbContext {
     return Snapshot.decode(tryDecode, events)
   }
 
-  async reload<Event>(
+  async reload<Event, State>(
     streamName: string,
     requireLeader: boolean,
     token: StreamToken,
     tryDecode: TryDecode<Event>,
-  ): Promise<[StreamToken, Event[]]> {
-    const streamVersion = Token.streamVersion(token)
+    fold: (state: State, events: Event[]) => State,
+    state: State,
+  ): Promise<[StreamToken, State]> {
+    let streamVersion = Token.streamVersion(token)
     const startPos = streamVersion + 1n // Reading a stream uses {inclusive} positions, but the streamVersion is `-1`-based
-    const [version, events] = await Read.loadForwardsFrom(
+    for await (const [version, events] of Read.loadForwardsFrom(
       this.conn.read,
       this.batchSize,
       this.maxBatches,
       streamName,
       startPos,
       requireLeader,
-    )
-    return [
-      Token.create(streamVersion > version ? streamVersion : version),
-      keepMap(events, tryDecode),
-    ]
+    )) {
+      state = fold(state, keepMap(events, tryDecode))
+      streamVersion = streamVersion > version ? streamVersion : version
+    }
+    return [Token.create(streamVersion), state]
   }
 
   async trySync(
@@ -202,13 +213,25 @@ class InternalCategory<Event, State, Context>
     streamId: string,
     streamName: string,
     requireLeader: boolean,
-  ): Promise<[StreamToken, Event[]]> {
+  ): Promise<[StreamToken, State]> {
     const span = trace.getActiveSpan()
     switch (this.access?.type) {
       case "Unoptimized":
-        return this.context.loadBatched(streamName, requireLeader, this.codec.tryDecode)
+        return this.context.loadBatched(
+          streamName,
+          requireLeader,
+          this.codec.tryDecode,
+          this.fold,
+          this.initial,
+        )
       case "LatestKnownEvent":
-        return this.context.loadLast(streamName, requireLeader, this.codec.tryDecode)
+        return this.context.loadLast(
+          streamName,
+          requireLeader,
+          this.codec.tryDecode,
+          this.fold,
+          this.initial,
+        )
       case "AdjacentSnapshots": {
         const result = await this.context.loadSnapshot(
           category,
@@ -221,15 +244,24 @@ class InternalCategory<Event, State, Context>
           "eqx.snapshot_version": result ? String(result[0].version) : String(-1),
         })
         if (!result)
-          return this.context.loadBatched(streamName, requireLeader, this.codec.tryDecode)
+          return this.context.loadBatched(
+            streamName,
+            requireLeader,
+            this.codec.tryDecode,
+            this.fold,
+            this.initial,
+          )
         const [pos, snapshotEvent] = result
-        const [token, rest] = await this.context.reload(
+        const initial = this.fold(this.initial, [snapshotEvent])
+        const [token, state] = await this.context.reload(
           streamName,
           requireLeader,
           pos,
           this.codec.tryDecode,
+          this.fold,
+          initial,
         )
-        return [Token.withSnapshot(token, pos.version), [snapshotEvent].concat(rest)]
+        return [Token.withSnapshot(token, pos.version), state]
       }
     }
   }
@@ -237,18 +269,20 @@ class InternalCategory<Event, State, Context>
   supersedes = Token.supersedes
 
   async load(category: string, streamId: string, streamName: string, requireLeader: boolean) {
-    const [token, events] = await this.loadAlgorithm(category, streamId, streamName, requireLeader)
-    return { token, state: this.fold(this.initial, events) }
+    const [token, state] = await this.loadAlgorithm(category, streamId, streamName, requireLeader)
+    return { token, state }
   }
 
   async reload(streamName: string, requireLeader: boolean, t: TokenAndState<State>) {
-    const [token, events] = await this.context.reload(
+    const [token, state] = await this.context.reload(
       streamName,
       requireLeader,
       t.token,
       this.codec.tryDecode,
+      this.fold,
+      t.state,
     )
-    return { token, state: this.fold(t.state, events) }
+    return { token, state }
   }
 
   async trySync(
