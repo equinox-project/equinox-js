@@ -6,7 +6,10 @@ import { trace } from "@opentelemetry/api"
 type Expiration = { absolute: number } | { relative: number }
 
 export class CacheEntry<State> {
-  constructor(public token: StreamToken, public state: State) {}
+  constructor(
+    public token: StreamToken,
+    public state: State,
+  ) {}
 
   updateIfNewer(supersedes: (a: StreamToken, b: StreamToken) => boolean, other: CacheEntry<State>) {
     if (supersedes(this.token, other.token)) {
@@ -28,7 +31,7 @@ export interface ICache {
     key: string,
     expiration: Expiration,
     supersedes: (a: StreamToken, b: StreamToken) => boolean,
-    entry: CacheEntry<State>
+    entry: CacheEntry<State>,
   ): Promise<void>
 
   tryGet<State>(key: string): Promise<TokenAndState<State> | undefined>
@@ -53,7 +56,7 @@ export class MemoryCache implements ICache {
     key: string,
     expiration: Expiration,
     supersedes: Supersedes,
-    entry: CacheEntry<State>
+    entry: CacheEntry<State>,
   ): Promise<void> {
     const ttl = "absolute" in expiration ? expiration.absolute - Date.now() : expiration.relative
     if (!this.cache.has(key)) {
@@ -75,7 +78,7 @@ export interface ICachingStrategy {
   store<S>(
     supersedes: Supersedes,
     streamName: string,
-    value: Promise<TokenAndState<S>>
+    value: Promise<TokenAndState<S>>,
   ): Promise<TokenAndState<S>>
 }
 
@@ -86,7 +89,7 @@ class NoCaching implements ICachingStrategy {
   store<S>(
     supersedes: Supersedes,
     streamName: string,
-    value: Promise<TokenAndState<S>>
+    value: Promise<TokenAndState<S>>,
   ): Promise<TokenAndState<S>> {
     return value
   }
@@ -96,7 +99,7 @@ class SlidingWindow implements ICachingStrategy {
   constructor(
     private readonly cache: ICache,
     private readonly windowInMs: number,
-    private readonly prefix = ""
+    private readonly prefix = "",
   ) {}
 
   load<S>(streamName: string): Promise<TokenAndState<S> | undefined> {
@@ -106,7 +109,7 @@ class SlidingWindow implements ICachingStrategy {
   async store<S>(
     supersedes: Supersedes,
     streamName: string,
-    value: Promise<TokenAndState<S>>
+    value: Promise<TokenAndState<S>>,
   ): Promise<TokenAndState<S>> {
     const v = await value
     const key = this.prefix + streamName
@@ -120,7 +123,7 @@ class FixedTimeSpan implements ICachingStrategy {
   constructor(
     private readonly cache: ICache,
     private readonly timeSpanInMs: number,
-    private readonly prefix = ""
+    private readonly prefix = "",
   ) {}
 
   load<S>(streamName: string): Promise<TokenAndState<S> | undefined> {
@@ -130,7 +133,7 @@ class FixedTimeSpan implements ICachingStrategy {
   async store<S>(
     supersedes: Supersedes,
     streamName: string,
-    value: Promise<TokenAndState<S>>
+    value: Promise<TokenAndState<S>>,
   ): Promise<TokenAndState<S>> {
     const v = await value
     const key = this.prefix + streamName
@@ -144,20 +147,20 @@ export namespace CachingStrategy {
   export const slidingWindow = (
     cache: ICache,
     windowInMs: number,
-    prefix?: string
+    prefix?: string,
   ): ICachingStrategy => new SlidingWindow(cache, windowInMs, prefix)
   export const noCache = (): ICachingStrategy => new NoCaching()
   export const fixedTimeSpan = (
     cache: ICache,
     periodInMs: number,
-    prefix?: string
+    prefix?: string,
   ): ICachingStrategy => new FixedTimeSpan(cache, periodInMs, prefix)
 }
 
 export class CachingCategory<Event, State, Context> implements ICategory<Event, State, Context> {
   constructor(
     private readonly inner: IReloadableCategory<Event, State, Context>,
-    private readonly strategy: ICachingStrategy
+    private readonly strategy: ICachingStrategy,
   ) {}
 
   async load(
@@ -165,7 +168,7 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
     streamId: string,
     streamName: string,
     allowStale: boolean,
-    requireLeader: boolean
+    requireLeader: boolean,
   ): Promise<TokenAndState<State>> {
     const cachedValue = await this.strategy.load<State>(streamName)
     trace.getActiveSpan()?.setAttributes({
@@ -176,13 +179,13 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
       return this.strategy.store(
         this.inner.supersedes,
         streamName,
-        this.inner.reload(streamName, requireLeader, cachedValue)
+        this.inner.reload(streamName, requireLeader, cachedValue),
       )
     }
     return this.strategy.store(
       this.inner.supersedes,
       streamName,
-      this.inner.load(categoryName, streamId, streamName, allowStale, requireLeader)
+      this.inner.load(categoryName, streamId, streamName, allowStale, requireLeader),
     )
   }
 
@@ -193,7 +196,7 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
     context: Context,
     originToken: StreamToken,
     originState: State,
-    events: Event[]
+    events: Event[],
   ): Promise<SyncResult<State>> {
     const result = await this.inner.trySync(
       categoryName,
@@ -202,7 +205,7 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
       context,
       originToken,
       originState,
-      events
+      events,
     )
     switch (result.type) {
       case "Conflict":

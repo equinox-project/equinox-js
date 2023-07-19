@@ -18,7 +18,7 @@ const readSliceAsync = async (
   streamName: string,
   batchSize: number,
   startPos: bigint,
-  requiresLeader: boolean
+  requiresLeader: boolean,
 ) => {
   const page = await reader.readStream(streamName, startPos, batchSize, requiresLeader)
   const isLast = page.length < batchSize
@@ -29,7 +29,7 @@ const readLastEventAsync = async (
   reader: MessageDbReader,
   streamName: string,
   requiresLeader: boolean,
-  eventType?: string
+  eventType?: string,
 ): Promise<StreamEventsSlice> => {
   const events = await reader.readLastEvent(streamName, requiresLeader, eventType)
   return toSlice(events == null ? [] : [events], false)
@@ -38,11 +38,11 @@ const readLastEventAsync = async (
 function readBatches(
   readSlice: (start: bigint) => Promise<StreamEventsSlice>,
   maxPermittedReads: number | undefined,
-  startPosition: bigint
+  startPosition: bigint,
 ) {
   async function* loop(
     batchCount: number,
-    pos: bigint
+    pos: bigint,
   ): AsyncIterable<[bigint, ITimelineEvent<any>[]]> {
     if (maxPermittedReads && batchCount >= maxPermittedReads)
       throw new Error("Batch limit exceeded")
@@ -61,7 +61,7 @@ export function loadForwardsFrom(
   maxPermittedBatchReads: number | undefined,
   streamName: string,
   startPosition: bigint,
-  requiresLeader: boolean
+  requiresLeader: boolean,
 ) {
   const span = trace.getActiveSpan()
   const mergeBatches = async (batches: AsyncIterable<[bigint, ITimelineEvent<any>[]]>) => {
@@ -95,7 +95,7 @@ export function loadLastEvent(
   reader: MessageDbReader,
   requiresLeader: boolean,
   streamName: string,
-  eventType?: string
+  eventType?: string,
 ) {
   const span = trace.getActiveSpan()
   span?.setAttribute("eqx.load_method", "Last")

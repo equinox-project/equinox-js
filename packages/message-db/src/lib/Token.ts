@@ -1,7 +1,6 @@
 import { StreamToken } from "@equinox-js/core"
 
-
-type TokenValue = { version: bigint; snapshot_version?: bigint}
+type TokenValue = { version: bigint; snapshot_version?: bigint }
 
 export const create = (version: bigint, snapshot?: bigint): StreamToken => ({
   value: { version, snapshot_version: snapshot },
@@ -14,9 +13,11 @@ export const snapshotVersion = (token: StreamToken) => tokenValue(token).snapsho
 
 export const withSnapshot = (token: StreamToken, snapshot: bigint) => {
   const value = tokenValue(token)
-  return { 
+  return {
     value: { version: value.version, snapshot_version: snapshot },
-    version: token.version, bytes: -1n,  }
+    version: token.version,
+    bytes: -1n,
+  }
 }
 
 export const shouldSnapshot = (frequency: number, previous: StreamToken, next: StreamToken) => {

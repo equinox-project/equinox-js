@@ -28,7 +28,7 @@ export class VolatileStore<Format> {
     categoryName: string,
     streamId: string,
     expectedCount: number,
-    events: ITimelineEvent<Format>[]
+    events: ITimelineEvent<Format>[],
   ) {
     const currentValue = this.streams.get(streamName) ?? []
     if (currentValue.length !== expectedCount) return { success: false, events: currentValue }
@@ -61,7 +61,7 @@ class Category<Event, State, Context, Format>
     private readonly store: VolatileStore<Format>,
     private readonly codec: ICodec<Event, Format, Context>,
     private readonly fold: (state: State, events: Event[]) => State,
-    private readonly initial: State
+    private readonly initial: State,
   ) {}
 
   supersedes = Token.supersedes
@@ -71,7 +71,7 @@ class Category<Event, State, Context, Format>
     _streamId: string,
     streamName: string,
     _allowStale: boolean,
-    _requireLeader: boolean
+    _requireLeader: boolean,
   ): Promise<TokenAndState<State>> {
     const result = this.store.load(streamName)
     const token = Token.ofValue(result)
@@ -111,7 +111,7 @@ class Category<Event, State, Context, Format>
     context: Context,
     originToken: StreamToken,
     originState: State,
-    events: Event[]
+    events: Event[],
   ): Promise<SyncResult<State>> {
     const eventCount = Token.unpack(originToken)
     const encoded = await this.encodeEvents(eventCount, context, events)
@@ -134,7 +134,7 @@ class Category<Event, State, Context, Format>
   async reload(
     streamName: string,
     _requireLeader: boolean,
-    _t: TokenAndState<State>
+    _t: TokenAndState<State>,
   ): Promise<TokenAndState<State>> {
     const result = this.store.load(streamName)
     const token = Token.ofValue(result)
@@ -152,9 +152,9 @@ export class MemoryStoreCategory<Event, State, Context> extends Equinox.Category
   constructor(
     resolveInner: (
       categoryName: string,
-      streamId: string
+      streamId: string,
     ) => readonly [ICategory<Event, State, Context>, string],
-    empty: TokenAndState<State>
+    empty: TokenAndState<State>,
   ) {
     super(resolveInner, empty)
   }
@@ -163,7 +163,7 @@ export class MemoryStoreCategory<Event, State, Context> extends Equinox.Category
     store: VolatileStore<Format>,
     codec: ICodec<Event, Format, Context>,
     fold: (state: State, events: Event[]) => State,
-    initial: State
+    initial: State,
   ) {
     const category = new Category(store, codec, fold, initial)
     const resolveInner = (categoryName: string, streamId: string) =>

@@ -18,7 +18,7 @@ describe("Codec", () => {
           type: "Hello",
           data: '{"world":"hello"}',
           meta: '{"hello":"world"}',
-        } as any)
+        } as any),
       ).toEqual(event)
     })
   })
@@ -28,14 +28,14 @@ describe("Codec", () => {
       const HelloSchema = z.object({ hello: z.string().uuid() })
       const codec = Codec.zod({ Hello: HelloSchema.parse })
       expect(codec.tryDecode({ type: "Hello", data: '{"world":"hello"}' } as any)).toEqual(
-        undefined
+        undefined,
       )
       const correctEvent = { hello: randomUUID() }
       expect(codec.tryDecode({ type: "Hello", data: JSON.stringify(correctEvent) } as any)).toEqual(
         {
           type: "Hello",
           data: correctEvent,
-        }
+        },
       )
     })
 
@@ -62,7 +62,7 @@ describe("Codec", () => {
         Increment: schema.parse,
         Decrement: schema.parse,
       },
-      (ctx) => ctx
+      (ctx) => ctx,
     )
     test("Encoding with meta", () => {
       const event: Event = { type: "Increment", data: { amount: 3 } }

@@ -31,7 +31,11 @@ export interface IStream<Event, State> {
    * SyncResult.Written: implies the state is now the value represented by the Result's value
    * SyncResult.Conflict: implies the `events` were not synced; if desired the consumer can use the included resync workflow in order to retry
    */
-  trySync(attempt: number, originTokenAndState: TokenAndState<State>, events: Event[]): Promise<SyncResult<State>>
+  trySync(
+    attempt: number,
+    originTokenAndState: TokenAndState<State>,
+    events: Event[],
+  ): Promise<SyncResult<State>>
 }
 
 function run<Event, State, Result, V = Result>(
@@ -39,7 +43,7 @@ function run<Event, State, Result, V = Result>(
   decide: (ctx: TokenAndState<State>) => Promise<[Result, Event[]]>,
   validateResync: (attempt: number) => void,
   mapResult: (r: Result, ctx: TokenAndState<State>) => V,
-  origin: TokenAndState<State>
+  origin: TokenAndState<State>,
 ) {
   async function loop(attempt: number, tokenAndState: TokenAndState<State>): Promise<V> {
     const [result, events] = await decide(tokenAndState)
@@ -65,7 +69,7 @@ export async function transactAsync<Event, State, Result, V = Result>(
   fetch: (stream: IStream<Event, State>) => Promise<TokenAndState<State>>,
   decide: (ctx: TokenAndState<State>) => Promise<[Result, Event[]]>,
   reload: (attempt: number) => void,
-  mapResult: (r: Result, ctx: TokenAndState<State>) => V
+  mapResult: (r: Result, ctx: TokenAndState<State>) => V,
 ) {
   const origin = await fetch(stream)
   return run(stream, decide, reload, mapResult, origin)
@@ -74,7 +78,7 @@ export async function transactAsync<Event, State, Result, V = Result>(
 export async function queryAsync<Event, State, V>(
   stream: IStream<Event, State>,
   fetch: (stream: IStream<Event, State>) => Promise<TokenAndState<State>>,
-  projection: (ctx: TokenAndState<State>) => V
+  projection: (ctx: TokenAndState<State>) => V,
 ): Promise<V> {
   const origin = await fetch(stream)
   return projection(origin)

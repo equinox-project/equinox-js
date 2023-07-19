@@ -6,10 +6,10 @@ export interface ICodec<E, F, C = undefined> {
 }
 
 export const json = <E extends { type: string; data?: Record<string, any> }, C = null>(
-  ctxToMeta: (ctx: C) => Record<string, any> | undefined = () => undefined
+  ctxToMeta: (ctx: C) => Record<string, any> | undefined = () => undefined,
 ): ICodec<E, string, C> => {
   return {
-    tryDecode: (e) => ({ type: e.type, data: e.data ? JSON.parse(e.data) : undefined } as E),
+    tryDecode: (e) => ({ type: e.type, data: e.data ? JSON.parse(e.data) : undefined }) as E,
     encode: (e, ctx) => ({
       type: e.type,
       data: "data" in e && e.data ? JSON.stringify(e.data) : undefined,
@@ -20,7 +20,7 @@ export const json = <E extends { type: string; data?: Record<string, any> }, C =
 
 export const zod = <E extends { type: string; data?: Record<string, any> }, C = null>(
   mapping: { [P in E["type"]]: (obj: unknown) => Extract<E, { type: P }>["data"] | undefined },
-  ctxToMeta: (ctx: C) => Record<string, any> | undefined = () => undefined
+  ctxToMeta: (ctx: C) => Record<string, any> | undefined = () => undefined,
 ): ICodec<E, string, C> => {
   return {
     tryDecode(event: ITimelineEvent<string>): E | undefined {

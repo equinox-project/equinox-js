@@ -35,12 +35,15 @@ type GatewaySyncResult = { type: "Written"; token: StreamToken } | { type: "Conf
 type TryDecode<E> = (v: ITimelineEvent<Format>) => E | undefined
 
 export class MessageDbConnection {
-  constructor(public read: MessageDbReader, public write: MessageDbWriter) {}
+  constructor(
+    public read: MessageDbReader,
+    public write: MessageDbWriter,
+  ) {}
 
   static create(pool: Pool, followerPool = pool) {
     return new MessageDbConnection(
       new MessageDbReader(followerPool, pool),
-      new MessageDbWriter(pool)
+      new MessageDbWriter(pool),
     )
   }
 }
@@ -56,7 +59,7 @@ export class MessageDbContext {
   constructor(
     private readonly conn: MessageDbConnection,
     public readonly batchSize: number,
-    public readonly maxBatches?: number
+    public readonly maxBatches?: number,
   ) {}
 
   tokenEmpty = Token.create(-1n)
@@ -64,7 +67,7 @@ export class MessageDbContext {
   async loadBatched<Event>(
     streamName: string,
     requireLeader: boolean,
-    tryDecode: TryDecode<Event>
+    tryDecode: TryDecode<Event>,
   ): Promise<[StreamToken, Event[]]> {
     const [version, events] = await Read.loadForwardsFrom(
       this.conn.read,
@@ -72,7 +75,7 @@ export class MessageDbContext {
       this.maxBatches,
       streamName,
       0n,
-      requireLeader
+      requireLeader,
     )
     return [Token.create(version), keepMap(events, tryDecode)]
   }
@@ -80,7 +83,7 @@ export class MessageDbContext {
   async loadLast<Event>(
     streamName: string,
     requireLeader: boolean,
-    tryDecode: TryDecode<Event>
+    tryDecode: TryDecode<Event>,
   ): Promise<[StreamToken, Event[]]> {
     const [version, events] = await Read.loadLastEvent(this.conn.read, requireLeader, streamName)
     return [Token.create(version), keepMap(events, tryDecode)]
@@ -91,14 +94,14 @@ export class MessageDbContext {
     streamId: string,
     requireLeader: boolean,
     tryDecode: TryDecode<Event>,
-    eventType: string
+    eventType: string,
   ) {
     const snapshotStream = Snapshot.streamName(category, streamId)
     const [, events] = await Read.loadLastEvent(
       this.conn.read,
       requireLeader,
       snapshotStream,
-      eventType
+      eventType,
     )
     return Snapshot.decode(tryDecode, events)
   }
@@ -107,7 +110,7 @@ export class MessageDbContext {
     streamName: string,
     requireLeader: boolean,
     token: StreamToken,
-    tryDecode: TryDecode<Event>
+    tryDecode: TryDecode<Event>,
   ): Promise<[StreamToken, Event[]]> {
     const streamVersion = Token.streamVersion(token)
     const startPos = streamVersion + 1n // Reading a stream uses {inclusive} positions, but the streamVersion is `-1`-based
@@ -117,7 +120,7 @@ export class MessageDbContext {
       this.maxBatches,
       streamName,
       startPos,
-      requireLeader
+      requireLeader,
     )
     return [
       Token.create(streamVersion > version ? streamVersion : version),
@@ -130,7 +133,7 @@ export class MessageDbContext {
     streamId: string,
     streamName: string,
     token: StreamToken,
-    encodedEvents: IEventData<Format>[]
+    encodedEvents: IEventData<Format>[],
   ): Promise<GatewaySyncResult> {
     const streamVersion = Token.streamVersion(token)
     const result = await this.conn.write.writeMessages(streamName, encodedEvents, streamVersion)
@@ -161,7 +164,12 @@ export class MessageDbContext {
 type AccessStrategy<Event, State> =
   | { type: "Unoptimized" }
   | { type: "LatestKnownEvent" }
-  | { type: "AdjacentSnapshots"; eventName: string; toSnapshot: (state: State) => Event, frequency?: number }
+  | {
+      type: "AdjacentSnapshots"
+      eventName: string
+      toSnapshot: (state: State) => Event
+      frequency?: number
+    }
 
 export namespace AccessStrategy {
   export const Unoptimized = <E, S>(): AccessStrategy<E, S> => ({ type: "Unoptimized" })
@@ -169,12 +177,12 @@ export namespace AccessStrategy {
   export const AdjacentSnapshots = <E, S>(
     eventName: string,
     toSnapshot: (state: S) => E,
-    frequency?: number
+    frequency?: number,
   ): AccessStrategy<E, S> => ({
     type: "AdjacentSnapshots",
     eventName,
     toSnapshot,
-    frequency
+    frequency,
   })
 }
 
@@ -186,14 +194,14 @@ class InternalCategory<Event, State, Context>
     private readonly codec: ICodec<Event, Format, Context>,
     private readonly fold: (state: State, events: Event[]) => State,
     private readonly initial: State,
-    private readonly access: AccessStrategy<Event, State> = AccessStrategy.Unoptimized()
+    private readonly access: AccessStrategy<Event, State> = AccessStrategy.Unoptimized(),
   ) {}
 
   private async loadAlgorithm(
     category: string,
     streamId: string,
     streamName: string,
-    requireLeader: boolean
+    requireLeader: boolean,
   ): Promise<[StreamToken, Event[]]> {
     const span = trace.getActiveSpan()
     switch (this.access?.type) {
@@ -207,7 +215,7 @@ class InternalCategory<Event, State, Context>
           streamId,
           requireLeader,
           this.codec.tryDecode,
-          this.access.eventName
+          this.access.eventName,
         )
         span?.setAttributes({
           "eqx.snapshot_version": result ? String(result[0].version) : String(-1),
@@ -219,7 +227,7 @@ class InternalCategory<Event, State, Context>
           streamName,
           requireLeader,
           pos,
-          this.codec.tryDecode
+          this.codec.tryDecode,
         )
         return [Token.withSnapshot(token, pos.version), [snapshotEvent].concat(rest)]
       }
@@ -238,7 +246,7 @@ class InternalCategory<Event, State, Context>
       streamName,
       requireLeader,
       t.token,
-      this.codec.tryDecode
+      this.codec.tryDecode,
     )
     return { token, state: this.fold(t.state, events) }
   }
@@ -250,7 +258,7 @@ class InternalCategory<Event, State, Context>
     ctx: Context,
     token: StreamToken,
     state: State,
-    events: Event[]
+    events: Event[],
   ): Promise<SyncResult<State>> {
     const span = trace.getActiveSpan()
     const encode = (ev: Event) => this.codec.encode(ev, ctx)
@@ -278,7 +286,7 @@ class InternalCategory<Event, State, Context>
                 streamId,
                 ctx,
                 result.token,
-                this.access.toSnapshot(newState)
+                this.access.toSnapshot(newState),
               )
             }
           }
@@ -293,7 +301,7 @@ class InternalCategory<Event, State, Context>
     streamId: string,
     ctx: Context,
     token: StreamToken,
-    snapshotEvent: Event
+    snapshotEvent: Event,
   ) {
     const event = this.codec.encode(snapshotEvent, ctx)
     event.meta = JSON.stringify(Snapshot.meta(token))
@@ -309,9 +317,9 @@ export class MessageDbCategory<Event, State, Context = null> extends Equinox.Cat
   constructor(
     resolveInner: (
       categoryName: string,
-      streamId: string
+      streamId: string,
     ) => readonly [ICategory<Event, State, Context>, string],
-    empty: TokenAndState<State>
+    empty: TokenAndState<State>,
   ) {
     super(resolveInner, empty)
   }
@@ -322,7 +330,7 @@ export class MessageDbCategory<Event, State, Context = null> extends Equinox.Cat
     fold: (state: State, events: Event[]) => State,
     initial: State,
     caching: ICachingStrategy = CachingStrategy.noCache(),
-    access?: AccessStrategy<Event, State>
+    access?: AccessStrategy<Event, State>,
   ) {
     const inner = new InternalCategory(context, codec, fold, initial, access)
     const category = CachingCategory.apply(inner, caching)

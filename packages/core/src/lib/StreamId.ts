@@ -30,7 +30,7 @@ export const gen4 =
     fa: (value: A) => string,
     fb: (value: B) => string,
     fc: (value: C) => string,
-    fd: (value: D) => string
+    fd: (value: D) => string,
   ) =>
   (a: A, b: B, c: C, d: D) =>
     Internal.createStreamId([fa(a), fb(b), fc(c), fd(d)])

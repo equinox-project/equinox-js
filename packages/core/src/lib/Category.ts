@@ -10,7 +10,7 @@ export interface ICategory<Event, State, Context = null> {
     streamId: string,
     streamName: string,
     allowStale: boolean,
-    requireLeader: boolean
+    requireLeader: boolean,
   ): Promise<TokenAndState<State>>
 
   /**
@@ -25,7 +25,7 @@ export interface ICategory<Event, State, Context = null> {
     context: Context,
     originToken: StreamToken,
     originState: State,
-    events: Event[]
+    events: Event[],
   ): Promise<SyncResult<State>>
 }
 
@@ -33,9 +33,9 @@ export class Category<Event, State, Context = null> {
   constructor(
     private readonly resolveInner: (
       categoryName: string,
-      streamId: string
+      streamId: string,
     ) => readonly [ICategory<Event, State, Context>, string],
-    private readonly empty: TokenAndState<State>
+    private readonly empty: TokenAndState<State>,
   ) {}
 
   stream(context: Context, categoryName: string, streamId: string): IStream<Event, State> {
@@ -58,7 +58,7 @@ export class Category<Event, State, Context = null> {
           (span) =>
             inner
               .load(categoryName, streamId, streamName, allowStale, requireLeader)
-              .finally(() => span.end())
+              .finally(() => span.end()),
         ),
       trySync: (attempt, origin, events) =>
         tracer.startActiveSpan(
@@ -82,9 +82,9 @@ export class Category<Event, State, Context = null> {
                 context,
                 origin.token,
                 origin.state,
-                events
+                events,
               )
-              .finally(() => span.end())
+              .finally(() => span.end()),
         ),
     }
   }
