@@ -288,6 +288,9 @@ importers:
       pg:
         specifier: ^8.8.0
         version: 8.8.0
+      vitest:
+        specifier: ^0.25.3
+        version: 0.25.8
     devDependencies:
       '@types/node':
         specifier: ^18.11.18

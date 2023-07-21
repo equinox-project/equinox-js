@@ -12,7 +12,8 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean"
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "test": "vitest run"
   },
   "version": "1.0.0-alpha.8",
   "files": [
@@ -29,6 +30,7 @@
   "dependencies": {
     "@equinox-js/core": "workspace:*",
     "@opentelemetry/api": "^1.4.0",
-    "pg": "^8.8.0"
+    "pg": "^8.8.0",
+    "vitest": "^0.25.3"
   }
 }

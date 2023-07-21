@@ -65,7 +65,13 @@ export class MessageDbSource {
   }
 
   private async pumpCategory(signal: AbortSignal, category: string) {
-    const { handler, groupName, checkpointer, tailSleepIntervalMs, batchSize = defaultBatchSize } = this.options
+    const {
+      handler,
+      groupName,
+      checkpointer,
+      tailSleepIntervalMs,
+      batchSize = defaultBatchSize,
+    } = this.options
     let position = await checkpointer.load(groupName, category)
     while (!signal.aborted) {
       const batch = await this.client.readCategoryMessages(category, position, batchSize)
@@ -95,7 +101,7 @@ export class MessageDbSource {
     }
   }
 
-  async start(signal: AbortSignal) {
+  start(signal: AbortSignal) {
     return Promise.all(
       this.options.categories.map((category) => this.pumpCategory(signal, category)),
     )
