@@ -1,6 +1,5 @@
 import { Pool } from "pg"
 import { randomUUID } from "crypto"
-import { trace, SpanStatusCode } from "@opentelemetry/api"
 import { IEventData, ITimelineEvent } from "@equinox-js/core"
 
 type MdbWriteResult = { type: "Written"; position: bigint } | { type: "ConflictUnknown" }
@@ -29,13 +28,6 @@ export class MessageDbWriter {
       const position = BigInt(results.rows[0].write_message)
       return { type: "Written", position }
     } catch (err: any) {
-      const span = trace.getActiveSpan()
-      span?.recordException(err)
-      span?.setStatus({
-        code: SpanStatusCode.ERROR,
-        message: "ConflictUnknown",
-      })
-      await client.query("rollback")
       return { type: "ConflictUnknown" }
     } finally {
       client.release()
@@ -47,6 +39,8 @@ export class MessageDbWriter {
     messages: IEventData<Format>[],
     expectedVersion: bigint | null,
   ): Promise<MdbWriteResult> {
+    if (messages.length === 1)
+      return this.writeSingleMessage(streamName, messages[0], expectedVersion)
     const client = await this.pool.connect()
     let position = -1n
     try {
@@ -71,13 +65,7 @@ export class MessageDbWriter {
 
       await client.query("COMMIT")
     } catch (err: any) {
-      const span = trace.getActiveSpan()
-      span?.recordException(err)
-      span?.setStatus({
-        code: SpanStatusCode.ERROR,
-        message: "ConflictUnknown",
-      })
-      await client.query("rollback")
+      await client.query("ROLLBACK")
       return { type: "ConflictUnknown" }
     } finally {
       client.release()

@@ -1,3 +1,6 @@
+import { tracer } from "./Tracing"
+import { SpanKind } from "@opentelemetry/api"
+
 export type TokenAndState<State> = { token: StreamToken; state: State }
 
 export type SyncResult<State> =
@@ -64,22 +67,28 @@ function run<Event, State, Result, V = Result>(
   return loop(1, origin)
 }
 
-export async function transactAsync<Event, State, Result, V = Result>(
+export function transactAsync<Event, State, Result, V = Result>(
   stream: IStream<Event, State>,
   fetch: (stream: IStream<Event, State>) => Promise<TokenAndState<State>>,
   decide: (ctx: TokenAndState<State>) => Promise<[Result, Event[]]>,
   reload: (attempt: number) => void,
   mapResult: (r: Result, ctx: TokenAndState<State>) => V,
 ) {
-  const origin = await fetch(stream)
-  return run(stream, decide, reload, mapResult, origin)
+  return tracer.startActiveSpan("Transact", (span) =>
+    fetch(stream)
+      .then((origin) => run(stream, decide, reload, mapResult, origin))
+      .finally(() => span.end()),
+  )
 }
 
-export async function queryAsync<Event, State, V>(
+export function queryAsync<Event, State, V>(
   stream: IStream<Event, State>,
   fetch: (stream: IStream<Event, State>) => Promise<TokenAndState<State>>,
   projection: (ctx: TokenAndState<State>) => V,
 ): Promise<V> {
-  const origin = await fetch(stream)
-  return projection(origin)
+  return tracer.startActiveSpan("Query", (span) =>
+    fetch(stream)
+      .then(projection)
+      .finally(() => span.end()),
+  )
 }
