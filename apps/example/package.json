@@ -1,0 +1,39 @@
+{
+  "name": "example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start:http": "tsup src/entrypoints/http.ts --format cjs --onSuccess 'node dist/http.cjs'",
+    "start:reactions": "tsup src/entrypoints/reactions.ts --format cjs --onSuccess 'node dist/reactions.cjs'",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@equinox-js/core": "workspace:*",
+    "@equinox-js/memory-store": "workspace:*",
+    "@equinox-js/message-db": "workspace:*",
+    "@equinox-js/message-db-consumer": "workspace:*",
+    "@honeycombio/opentelemetry-node": "^0.5.0",
+    "@opentelemetry/api": "^1.4.0",
+    "@opentelemetry/instrumentation-express": "^0.33.0",
+    "@opentelemetry/instrumentation-http": "^0.41.0",
+    "@opentelemetry/instrumentation-pg": "^0.36.0",
+    "@opentelemetry/sdk-node": "^0.41.0",
+    "@opentelemetry/sdk-trace-base": "^1.9.0",
+    "@opentelemetry/sdk-trace-node": "^1.9.0",
+    "express": "^4.18.2",
+    "express-async-errors": "^3.1.1",
+    "get-port": "^7.0.0",
+    "pg": "^8.0.0",
+    "ramda": "^0.28.0",
+    "zod": "^3.20.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.17",
+    "@types/node": "^18.11.18",
+    "@types/pg": "^8.0.0",
+    "@types/ramda": "^0.28.21",
+    "tsconfig": "workspace:*",
+    "tsup": "^6.5.0",
+    "vitest": "^0.25.3"
+  }
+}

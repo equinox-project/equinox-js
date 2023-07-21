@@ -6,7 +6,7 @@ import {
   MemoryCache,
   Codec,
   CachingStrategy,
-  ICachingStrategy,
+  ICachingStrategy
 } from "@equinox-js/core"
 import { describe, test, expect, afterEach, afterAll } from "vitest"
 import { Pool } from "pg"
@@ -18,7 +18,7 @@ import {
   AccessStrategy,
   MessageDbCategory,
   MessageDbConnection,
-  MessageDbContext,
+  MessageDbContext
 } from "@equinox-js/message-db"
 import exp from "constants"
 
@@ -157,7 +157,7 @@ const assertSpans = (...expected: Record<string, any>[]) => {
   const attributes = getStoreSpans().map((x) => ({
     name: x.name,
     ...x.attributes,
-    status_message: x.status.message,
+    status_message: x.status.message
   }))
   expect(attributes).toEqual(expected.map(expect.objectContaining))
 }
@@ -240,8 +240,10 @@ describe("Roundtrips against the store", () => {
     )
 
     assertSpans(
-      { name: "Load", "eqx.batches": 1, "eqx.count": 0 },
-      { name: "TrySync", "eqx.append_count": 11 }
+      {
+        name: "Transact", "eqx.batches": 1, "eqx.count": 0,
+        "eqx.append_count": 11
+      }
     )
     memoryExporter.reset()
 
@@ -250,7 +252,7 @@ describe("Roundtrips against the store", () => {
 
     const expectedEventCount = 2 * addRemoveCount - 1
     const expectedBatches = Math.ceil(expectedEventCount / batchSize)
-    assertSpans({ name: "Load", "eqx.batches": expectedBatches, "eqx.count": expectedEventCount })
+    assertSpans({ name: "Query", "eqx.batches": expectedBatches, "eqx.count": expectedEventCount })
   })
   test("manages sync conflicts by retrying [without any optimizations]", async () => {
     const batchSize = 3
@@ -275,8 +277,8 @@ describe("Roundtrips against the store", () => {
             type: "SyncItem",
             skuId,
             quantity: count,
-            context: cartContext,
-          },
+            context: cartContext
+          }
         ],
         prepare
       )
@@ -287,7 +289,7 @@ describe("Roundtrips against the store", () => {
         new Promise((res) => {
           resolve = res
         }),
-        () => resolve(undefined),
+        () => resolve(undefined)
       ] as const
     }
 
@@ -337,13 +339,13 @@ describe("Roundtrips against the store", () => {
       [sku11]: 11,
       [sku12]: 12,
       [sku21]: 21,
-      [sku22]: 22,
+      [sku22]: 22
     })
-    const syncs = memoryExporter.getFinishedSpans().filter((x) => x.name === "TrySync")
+    const syncs = memoryExporter.getFinishedSpans().filter((x) => x.name === "Transact")
     const conflicts = syncs.filter(
-      (x) => x.status?.code === SpanStatusCode.ERROR && x.status?.message === "ConflictUnknown"
+      (x) => x.events.find(x => x.name == "Conflict")
     )
-    expect(syncs).toHaveLength(6)
+    expect(syncs).toHaveLength(4)
     expect(conflicts).toHaveLength(2)
   })
 })
@@ -371,8 +373,7 @@ describe("Caching", () => {
       5
     )
     assertSpans(
-      { name: "Load", "eqx.load_method": "BatchForward", "eqx.count": 0 },
-      { name: "TrySync", "eqx.append_count": 9 }
+      { name: "Transact", "eqx.load_method": "BatchForward", "eqx.count": 0, "eqx.append_count": 9 }
     )
     const staleRes = await service2.readStale(cartId)
     memoryExporter.reset()
@@ -380,11 +381,11 @@ describe("Caching", () => {
     expect(staleRes).toEqual(freshRes)
 
     assertSpans({
-      name: "Load",
+      name: "Query",
       "eqx.batches": 1,
       "eqx.count": 0,
       "eqx.start_position": 9,
-      "eqx.cache_hit": true,
+      "eqx.cache_hit": true
     })
     memoryExporter.reset()
 
@@ -399,18 +400,17 @@ describe("Caching", () => {
       1
     )
     assertSpans(
-      { name: "Load", "eqx.batches": 1, "eqx.count": 0, "eqx.cache_hit": true },
-      { name: "TrySync", "eqx.append_count": 1 }
+      { name: "Transact", "eqx.batches": 1, "eqx.count": 0, "eqx.cache_hit": true, "eqx.append_count": 1 }
     )
     memoryExporter.reset()
 
     const res = await service2.readStale(cartId)
     expect(res).not.toEqual(freshRes)
-    assertSpans({ name: "Load", "eqx.cache_hit": true })
+    assertSpans({ name: "Query", "eqx.cache_hit": true })
     expect(getStoreSpans()[0].attributes).not.to.have.property("eqx.batches")
     memoryExporter.reset()
     await service2.read(cartId)
-    assertSpans({ name: "Load", "eqx.batches": 1, "eqx.cache_hit": true })
+    assertSpans({ name: "Query", "eqx.batches": 1, "eqx.cache_hit": true })
 
     // Optimistic transactions
     memoryExporter.reset()
@@ -422,7 +422,7 @@ describe("Caching", () => {
       service1,
       1
     )
-    assertSpans({ name: "Load", "eqx.cache_hit": true })
+    assertSpans({ name: "Transact", "eqx.cache_hit": true, "eqx.allow_stale": true })
     expect(getStoreSpans()[0].attributes).not.to.have.property("eqx.batches")
     memoryExporter.reset()
     // As the cache is up to date, we can do an optimistic append, saving a Read roundtrip
@@ -436,7 +436,7 @@ describe("Caching", () => {
     )
 
     // this time, we did something, so we see the append call
-    assertSpans({ name: "Load", "eqx.cache_hit": true }, { name: "TrySync", "eqx.append_count": 1 })
+    assertSpans({ name: "Transact", "eqx.cache_hit": true, "eqx.append_count": 1 })
     expect(getStoreSpans()[0].attributes).not.to.have.property("eqx.batches")
 
     // If we don't have a cache attached, we don't benefit from / pay the price for any optimism
@@ -451,8 +451,7 @@ describe("Caching", () => {
     )
     // Need 2 batches to do the reading
     assertSpans(
-      { name: "Load", "eqx.batches": 2, "eqx.cache_hit": false },
-      { name: "TrySync", "eqx.append_count": 1 }
+      { name: "Transact", "eqx.batches": 2, "eqx.cache_hit": false, "eqx.append_count": 1 }
     )
     // we've engineered a clash with the cache state (service3 doest participate in caching)
     // Conflict with cached state leads to a read forward to resync; Then we'll idempotently decide not to do any append
@@ -466,9 +465,9 @@ describe("Caching", () => {
     )
 
     assertSpans(
-      { name: "Load", "eqx.cache_hit": true, "eqx.allow_stale": true },
-      { name: "TrySync", status_message: "ConflictUnknown" }
+      { name: "Transact", "eqx.cache_hit": true, "eqx.allow_stale": true }
     )
+    expect(memoryExporter.getFinishedSpans()[0].events).toEqual([expect.objectContaining({ name: "Conflict" })])
   })
 })
 
@@ -480,7 +479,7 @@ describe("AccessStrategy.LatestKnownEvent", () => {
       littlePromotions: Math.random() > 0.5,
       manyPromotions: Math.random() > 0.5,
       productReview: Math.random() > 0.5,
-      quickSurveys: Math.random() > 0.5,
+      quickSurveys: Math.random() > 0.5
     }
 
     // Feed some junk into the stream
@@ -496,9 +495,8 @@ describe("AccessStrategy.LatestKnownEvent", () => {
     const result = await service.read(id)
     expect(result).toEqual(value)
     assertSpans(
-      { name: "Load", "eqx.load_method": "Last", "eqx.count": 1 },
-      { name: "TrySync", "eqx.append_count": 1 },
-      { name: "Load", "eqx.load_method": "Last", "eqx.count": 1 }
+      { name: "Transact", "eqx.load_method": "Last", "eqx.count": 1, "eqx.append_count": 1 },
+      { name: "Query", "eqx.load_method": "Last", "eqx.count": 1 }
     )
   })
 })
@@ -517,57 +515,62 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 4)
     await service.read(cartId)
     assertSpans(
-      { name: "Load", "eqx.count": 0, "eqx.snapshot_version": "-1" },
-      { name: "TrySync", "eqx.append_count": 8, "eqx.should_snapshot": false },
-      { name: "Load", "eqx.count": 8, "eqx.snapshot_version": "-1" }
+      {
+        name: "Transact", "eqx.count": 0, "eqx.snapshot_version": -1,
+        "eqx.append_count": 8, "eqx.should_snapshot": false
+      },
+      { name: "Query", "eqx.count": 8, "eqx.snapshot_version": -1 }
     )
 
     // Add two more, which should push it over the threshold and hence trigger an append of a snapshot event
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 1)
     assertSpans(
-      { name: "Load", "eqx.count": 8, "eqx.snapshot_version": "-1" },
-      { name: "TrySync", "eqx.append_count": 2, "eqx.should_snapshot": true }
+      {
+        name: "Transact", "eqx.count": 8, "eqx.snapshot_version": -1,
+        "eqx.append_count": 2, "eqx.should_snapshot": true
+      }
     )
 
     // We now have 10 events and should be able to read them with a single call
     memoryExporter.reset()
     await service.read(cartId)
-    assertSpans({ name: "Load", "eqx.count": 0, "eqx.snapshot_version": "10" })
+    assertSpans({ name: "Query", "eqx.count": 0, "eqx.snapshot_version": 10 })
 
     // Add 8 more; total of 18 should not trigger snapshotting as we snapshotted at Event Number 10
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 4)
     assertSpans(
-      { name: "Load", "eqx.count": 0, "eqx.snapshot_version": "10", "eqx.start_position": 10 },
-      { name: "TrySync", "eqx.append_count": 8, "eqx.should_snapshot": false }
+      {
+        name: "Transact", "eqx.count": 0, "eqx.snapshot_version": 10, "eqx.start_position": 10,
+        "eqx.append_count": 8, "eqx.should_snapshot": false
+      }
     )
 
     // While we now have 18 events, we should be able to read them with a single call
     memoryExporter.reset()
     await service.read(cartId)
     assertSpans({
-      name: "Load",
+      name: "Query",
       "eqx.count": 8,
-      "eqx.snapshot_version": "10",
-      "eqx.start_position": 10,
+      "eqx.snapshot_version": 10,
+      "eqx.start_position": 10
     })
 
     // add two more events, triggering a snapshot, then read it in a single snapshotted read
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 1)
     assertSpans(
-      { name: "Load", "eqx.count": 8, "eqx.snapshot_version": "10", "eqx.start_position": 10 },
-      { name: "TrySync", "eqx.append_count": 2, "eqx.should_snapshot": true }
+      { name: "Transact", "eqx.count": 8, "eqx.snapshot_version": 10, "eqx.start_position": 10, "eqx.append_count": 2, "eqx.should_snapshot": true }
     )
     // While we now have 18 events, we should be able to read them with a single call
     memoryExporter.reset()
     await service.read(cartId)
     assertSpans({
-      name: "Load",
+      name: "Query",
       "eqx.count": 0,
-      "eqx.snapshot_version": "20",
-      "eqx.start_position": 20,
+      "eqx.snapshot_version": 20,
+      "eqx.start_position": 20
     })
   })
 
@@ -586,49 +589,48 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
     await service2.read(cartId)
 
     assertSpans(
-      { name: "Load", "eqx.count": 0, "eqx.snapshot_version": "-1" },
-      { name: "TrySync", "eqx.should_snapshot": false },
-      { name: "Load", "eqx.count": 8, "eqx.snapshot_version": "-1" }
+      { name: "Transact", "eqx.count": 0, "eqx.snapshot_version": -1,
+      "eqx.should_snapshot": false},
+    { name: "Query", "eqx.count": 8, "eqx.snapshot_version": -1 }
     )
 
     // Add two more, which should push it over the threshold and hence trigger generation of a snapshot event
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 1)
     assertSpans(
-      { name: "Load", "eqx.count": 8, "eqx.snapshot_version": "-1" },
-      { name: "TrySync", "eqx.should_snapshot": true }
+      { name: "Transact", "eqx.count": 8, "eqx.snapshot_version": -1,
+      "eqx.should_snapshot": true }
     )
 
     // We now have 10 events, we should be able to read them with a single snapshotted read
     memoryExporter.reset()
     await service1.read(cartId)
-    assertSpans({ name: "Load", "eqx.count": 0, "eqx.snapshot_version": "10" })
+    assertSpans({ name: "Query", "eqx.count": 0, "eqx.snapshot_version": 10 })
 
     // Add 8 more; total of 18 should not trigger snapshotting as the snapshot is at version 10
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 4)
     assertSpans(
-      { name: "Load", "eqx.count": 0, "eqx.snapshot_version": "10" },
-      { name: "TrySync", "eqx.should_snapshot": false }
+      { name: "Transact", "eqx.count": 0, "eqx.snapshot_version": 10,
+      "eqx.should_snapshot": false }
     )
 
     // While we now have 18 events, we should be able to read them with a single snapshotted read
     memoryExporter.reset()
     await service1.read(cartId)
-    assertSpans({ name: "Load", "eqx.count": 8, "eqx.snapshot_version": "10" })
+    assertSpans({ name: "Query", "eqx.count": 8, "eqx.snapshot_version": 10 })
 
     // ... trigger a second snapshotting
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 1)
     assertSpans(
-      { name: "Load", "eqx.count": 8, "eqx.snapshot_version": "10" },
-      { name: "TrySync", "eqx.should_snapshot": true }
+      { name: "Transact", "eqx.count": 8, "eqx.snapshot_version": 10, "eqx.should_snapshot": true }
     )
 
     // and we _could_ reload the 20 events with a single slice read. However we are using the cache, which last saw it with 10 events, which necessitates two reads
     memoryExporter.reset()
     await service2.read(cartId)
-    assertSpans({ name: "Load", "eqx.count": 12, "eqx.cache_hit": true })
+    assertSpans({ name: "Query", "eqx.count": 12, "eqx.cache_hit": true })
   })
 })
 

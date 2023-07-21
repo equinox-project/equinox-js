@@ -11,7 +11,7 @@ import * as Equinox from "@equinox-js/core"
 import * as Token from "./Token.js"
 import * as Snapshot from "./Snapshot.js"
 import * as Read from "./Read.js"
-import { SpanStatusCode, trace } from "@opentelemetry/api"
+import { trace } from "@opentelemetry/api"
 import { Format, MessageDbReader, MessageDbWriter } from "./MessageDbClient.js"
 import { Pool } from "pg"
 import {
@@ -73,6 +73,8 @@ export class MessageDbContext {
   ): Promise<[StreamToken, State]> {
     let state = initial
     let version = -1n
+    let batches = 0
+    let eventCount = 0
     for await (const [lastVersion, events] of Read.loadForwardsFrom(
       this.conn.read,
       this.batchSize,
@@ -81,9 +83,16 @@ export class MessageDbContext {
       0n,
       requireLeader,
     )) {
+      batches++
+      eventCount += events.length
       state = fold(state, keepMap(events, tryDecode))
       version = lastVersion
     }
+    trace.getActiveSpan()?.setAttributes({
+      "eqx.loaded_events": eventCount,
+      "eqx.loaded_batches": batches,
+      "eqx.last_version": Number(version),
+    })
     return [Token.create(version), state]
   }
 
@@ -95,6 +104,10 @@ export class MessageDbContext {
     initial: State,
   ): Promise<[StreamToken, State]> {
     const [version, events] = await Read.loadLastEvent(this.conn.read, requireLeader, streamName)
+    trace.getActiveSpan()?.setAttributes({
+      "eqx.loaded_events": 1,
+      "eqx.last_version": Number(version),
+    })
     return [Token.create(version), fold(initial, keepMap(events, tryDecode))]
   }
 
@@ -112,7 +125,11 @@ export class MessageDbContext {
       snapshotStream,
       eventType,
     )
-    return Snapshot.decode(tryDecode, events)
+    const decoded = await Snapshot.decode(tryDecode, events)
+    trace.getActiveSpan()?.setAttributes({
+      "eqx.snapshot_version": decoded ? Number(decoded?.[0].version) : -1,
+    })
+    return decoded
   }
 
   async reload<Event, State>(
@@ -125,6 +142,8 @@ export class MessageDbContext {
   ): Promise<[StreamToken, State]> {
     let streamVersion = Token.streamVersion(token)
     const startPos = streamVersion + 1n // Reading a stream uses {inclusive} positions, but the streamVersion is `-1`-based
+    let batches = 0
+    let eventCount = 0
     for await (const [version, events] of Read.loadForwardsFrom(
       this.conn.read,
       this.batchSize,
@@ -135,7 +154,13 @@ export class MessageDbContext {
     )) {
       state = fold(state, keepMap(events, tryDecode))
       streamVersion = streamVersion > version ? streamVersion : version
+      batches++
+      eventCount++
     }
+    trace.getActiveSpan()?.setAttributes({
+      "eqx.reloaded_events": eventCount,
+      "eqx.reloaded_batches": batches,
+    })
     return [Token.create(streamVersion), state]
   }
 
@@ -146,13 +171,17 @@ export class MessageDbContext {
     token: StreamToken,
     encodedEvents: IEventData<Format>[],
   ): Promise<GatewaySyncResult> {
+    const span = trace.getActiveSpan()
     const streamVersion = Token.streamVersion(token)
+    span?.setAttribute(
+      "eqx.append_types",
+      encodedEvents.map((x) => x.type),
+    )
     const result = await this.conn.write.writeMessages(streamName, encodedEvents, streamVersion)
 
     switch (result.type) {
       case "ConflictUnknown":
-        const span = trace.getActiveSpan()
-        span?.setStatus({ code: SpanStatusCode.ERROR, message: "ConflictUnknown" })
+        span?.addEvent("Conflict")
         return { type: "ConflictUnknown" }
       case "Written": {
         const token = Token.create(result.position)
@@ -163,7 +192,8 @@ export class MessageDbContext {
 
   async storeSnapshot(categoryName: string, streamId: string, event: IEventData<Format>) {
     const snapshotStream = Snapshot.streamName(categoryName, streamId)
-    return this.conn.write.writeMessages(snapshotStream, [event], null)
+    await this.conn.write.writeMessages(snapshotStream, [event], null)
+    trace.getActiveSpan()?.setAttribute("eqx.snapshot_written", true)
   }
 
   static create({ pool, followerPool, batchSize, maxBatches }: ContextConfig) {
@@ -215,7 +245,8 @@ class InternalCategory<Event, State, Context>
     requireLeader: boolean,
   ): Promise<[StreamToken, State]> {
     const span = trace.getActiveSpan()
-    switch (this.access?.type) {
+    span?.setAttribute("eqx.access_strategy", this.access.type)
+    switch (this.access.type) {
       case "Unoptimized":
         return this.context.loadBatched(
           streamName,
@@ -240,9 +271,6 @@ class InternalCategory<Event, State, Context>
           this.codec.tryDecode,
           this.access.eventName,
         )
-        span?.setAttributes({
-          "eqx.snapshot_version": result ? String(result[0].version) : String(-1),
-        })
         if (!result)
           return this.context.loadBatched(
             streamName,

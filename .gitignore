@@ -36,3 +36,5 @@ docker/
 .terraform
 .state
 dist/
+
+.envrc.private
