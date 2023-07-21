@@ -285,9 +285,6 @@ importers:
       '@opentelemetry/api':
         specifier: ^1.4.0
         version: 1.4.0
-      p-limit:
-        specifier: ^4.0.0
-        version: 4.0.0
       pg:
         specifier: ^8.8.0
         version: 8.8.0
@@ -298,6 +295,9 @@ importers:
       '@types/pg':
         specifier: ^8.6.6
         version: 8.6.6
+      p-limit:
+        specifier: ^4.0.0
+        version: 4.0.0
       tsconfig:
         specifier: workspace:*
         version: link:../tsconfig
@@ -9402,7 +9402,7 @@ packages:
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
     dependencies:
       yocto-queue: 1.0.0
-    dev: false
+    dev: true
 
   /p-locate@3.0.0:
     resolution: {integrity: sha512-x+12w/To+4GFfgJhBEpiDcLozRJGegY+Ei7/z0tSLkMmxGZNybVMSfWj9aJn8Z5Fc7dBUNJOOVgPv2H7IwulSQ==}
@@ -12677,7 +12677,7 @@ packages:
   /yocto-queue@1.0.0:
     resolution: {integrity: sha512-9bnSc/HEW2uRy67wc+T8UwauLuPJVn28jb+GtJY16iiKWyvmYJRXVT4UamsAEGQfPohgr2q4Tq0sQbQlxTfi1g==}
     engines: {node: '>=12.20'}
-    dev: false
+    dev: true
 
   /zod@3.20.2:
     resolution: {integrity: sha512-1MzNQdAvO+54H+EaK5YpyEy0T+Ejo/7YLHS93G3RnYWh5gaotGHwGeN/ZO687qEDU2y4CdStQYXVHIgrUl5UVQ==}
