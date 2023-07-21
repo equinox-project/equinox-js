@@ -1,2 +1,2 @@
-export * from "./lib/MessageDbSource"
-export * from "./lib/Checkpoints"
+export * from "./lib/MessageDbSource.js"
+export * from "./lib/Checkpoints.js"

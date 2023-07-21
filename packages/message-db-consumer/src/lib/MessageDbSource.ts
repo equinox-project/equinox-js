@@ -1,7 +1,10 @@
-import { MessageDbCategoryReader } from "./MessageDbClient"
-import { ICheckpointer } from "./Checkpoints"
+import { MessageDbCategoryReader } from "./MessageDbClient.js"
+import { ICheckpointer } from "./Checkpoints.js"
 import { ITimelineEvent } from "@equinox-js/core"
 import { Pool } from "pg"
+import pLimit from "p-limit"
+import { SpanKind, SpanStatusCode, trace } from "@opentelemetry/api"
+import { sleep } from "./Sleep.js"
 
 type Options = {
   categories: string[]
@@ -10,16 +13,59 @@ type Options = {
   checkpointer: ICheckpointer
   handler: (streamName: string, events: ITimelineEvent<string>[]) => Promise<void>
   tailSleepIntervalMs: number
+  maxConcurrentStreams: number
 }
 
+const tracer = trace.getTracer("@equinox-js/message-db-consumer")
+const defaultBatchSize = 500
+
 export class MessageDbSource {
+  private readonly runHandler: (fn: () => Promise<void>) => Promise<void>
   constructor(
     private readonly client: MessageDbCategoryReader,
     private readonly options: Options,
-  ) {}
+  ) {
+    this.runHandler = pLimit(options.maxConcurrentStreams)
+  }
+
+  private runHandlerWithTrace(
+    category: string,
+    streamName: string,
+    events: ITimelineEvent<string>[],
+    handler: () => Promise<void>,
+  ) {
+    const firstEventTimeStamp = events[events.length - 1]!.time.getTime()
+    return tracer.startActiveSpan(
+      `${category} process`,
+      {
+        kind: SpanKind.CONSUMER,
+        attributes: {
+          "eqx.category": category,
+          "eqx.consumer_group": this.options.groupName,
+          "eqx.stream_name": streamName,
+          "eqx.tail_sleep_interval_ms": this.options.tailSleepIntervalMs,
+          "eqx.max_concurrent_streams": this.options.maxConcurrentStreams,
+          "eqx.batch_size": this.options.batchSize ?? defaultBatchSize,
+          "eqx.stream_version": Number(events[events.length - 1]!.index),
+          "eqx.count": events.length,
+        },
+      },
+      (span) =>
+        handler()
+          .catch((err) => {
+            span.recordException(err)
+            span.setStatus({ code: SpanStatusCode.ERROR, message: err.message })
+            throw err
+          })
+          .finally(() => {
+            span.setAttribute("eqx.lead_time_ms", Date.now() - firstEventTimeStamp)
+            span.end()
+          }),
+    )
+  }
 
   private async pumpCategory(signal: AbortSignal, category: string) {
-    const { handler, groupName, checkpointer, tailSleepIntervalMs, batchSize = 500 } = this.options
+    const { handler, groupName, checkpointer, tailSleepIntervalMs, batchSize = defaultBatchSize } = this.options
     let position = await checkpointer.load(groupName, category)
     while (!signal.aborted) {
       const batch = await this.client.readCategoryMessages(category, position, batchSize)
@@ -31,14 +77,21 @@ export class MessageDbSource {
         byStreamName.get(streamName)!.push(msg)
       }
 
+      const promises = []
+
       for (const [stream, events] of byStreamName.entries()) {
-        await handler(stream, events)
+        promises.push(
+          this.runHandler(() =>
+            this.runHandlerWithTrace(category, stream, events, () => handler(stream, events)),
+          ),
+        )
       }
+      await Promise.all(promises)
       if (batch.checkpoint != position) {
         await checkpointer.commit(groupName, category, batch.checkpoint)
         position = batch.checkpoint
       }
-      if (batch.isTail) await new Promise((res) => setTimeout(res, tailSleepIntervalMs))
+      if (batch.isTail) await sleep(tailSleepIntervalMs, signal).catch(() => {})
     }
   }
 

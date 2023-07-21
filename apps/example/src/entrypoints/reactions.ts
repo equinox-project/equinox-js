@@ -46,7 +46,8 @@ const source = MessageDbSource.create({
   groupName: "InvoiceAutoEmailer",
   checkpointer,
   handler: handle,
-  tailSleepIntervalMs: 100
+  tailSleepIntervalMs: 100,
+  maxConcurrentStreams: 10
 })
 
 const ctrl = new AbortController()
