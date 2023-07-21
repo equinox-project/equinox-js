@@ -46,7 +46,7 @@ export class Category<Event, State, Context = null> {
           "eqx.stream_name": streamName,
           "eqx.stream_id": streamId,
           "eqx.category": categoryName,
-          "eqx.requires_leader": requireLeader,
+          "eqx.require_leader": requireLeader,
           "eqx.allow_stale": allowStale,
         })
         return inner.load(categoryName, streamId, streamName, allowStale, requireLeader)

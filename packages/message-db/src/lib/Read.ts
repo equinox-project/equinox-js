@@ -82,7 +82,7 @@ export function loadForwardsFrom(
   return readBatches(readSlice, maxPermittedBatchReads, startPosition)
 }
 
-export function loadLastEvent(
+export async function loadLastEvent(
   reader: MessageDbReader,
   requiresLeader: boolean,
   streamName: string,
@@ -90,11 +90,10 @@ export function loadLastEvent(
 ) {
   const span = trace.getActiveSpan()
   span?.setAttribute("eqx.load_method", "Last")
-  return readLastEventAsync(reader, streamName, requiresLeader, eventType).then((s) => {
-    span?.setAttributes({
-      "eqx.last_version": Number(s.lastVersion),
-      "eqx.count": s.messages.length,
-    })
-    return [s.lastVersion, s.messages] as const
+  const s = await readLastEventAsync(reader, streamName, requiresLeader, eventType)
+  span?.setAttributes({
+    "eqx.last_version": Number(s.lastVersion),
+    "eqx.count": s.messages.length,
   })
+  return [s.lastVersion, s.messages] as const
 }
