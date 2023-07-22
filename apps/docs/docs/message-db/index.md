@@ -1,3 +1,7 @@
+---
+position: 5
+---
+
 # MessageDB
 
 MessageDB is a fully-featured event store and message store implemented in PostgreSQL for Pub/Sub, Event Sourcing,

@@ -1,3 +1,7 @@
+---
+sidebar_position: 3
+---
+
 # Reactions
 
 Reactions, in the context of EquinoxJS, are a term that represents responding
@@ -114,7 +118,3 @@ await source.start(ctrl.signal)
 
 Now we've wired up a reaction!
 
-# Notes
-
-- The only ordering guarantee is within a stream. You might get events across streams in any order
-- The source will "fail fast." Make sure you restart it on failure
