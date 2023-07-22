@@ -38,3 +38,5 @@ docker/
 dist/
 
 .envrc.private
+
+_site/
