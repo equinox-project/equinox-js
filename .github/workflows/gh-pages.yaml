@@ -33,15 +33,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: latest
+
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: ^8.0.0
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v3
