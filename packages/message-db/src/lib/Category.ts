@@ -1,5 +1,4 @@
 import type {
-  ICategory,
   IEventData,
   StreamToken,
   SyncResult,
