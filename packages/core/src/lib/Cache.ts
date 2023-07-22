@@ -83,12 +83,12 @@ export interface ICachingStrategy {
 }
 
 class NoCaching implements ICachingStrategy {
-  async load<S>(streamName: string): Promise<TokenAndState<S> | undefined> {
+  async load<S>(): Promise<TokenAndState<S> | undefined> {
     return undefined
   }
   store<S>(
-    supersedes: Supersedes,
-    streamName: string,
+    _supersedes: Supersedes,
+    _streamName: string,
     value: Promise<TokenAndState<S>>,
   ): Promise<TokenAndState<S>> {
     return value
@@ -159,18 +159,21 @@ export namespace CachingStrategy {
 
 export class CachingCategory<Event, State, Context> implements ICategory<Event, State, Context> {
   constructor(
+    private readonly categoryName: string,
     private readonly inner: IReloadableCategory<Event, State, Context>,
     private readonly strategy: ICachingStrategy,
   ) {}
 
+  private cacheKey(streamId: string) {
+    return `${this.categoryName}/${streamId}`
+  }
+
   async load(
-    categoryName: string,
     streamId: string,
-    streamName: string,
     allowStale: boolean,
     requireLeader: boolean,
   ): Promise<TokenAndState<State>> {
-    const cachedValue = await this.strategy.load<State>(streamName)
+    const cachedValue = await this.strategy.load<State>(this.cacheKey(streamId))
     trace.getActiveSpan()?.setAttributes({
       "eqx.cache_hit": cachedValue != null,
     })
@@ -178,30 +181,26 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
     if (cachedValue) {
       return this.strategy.store(
         this.inner.supersedes,
-        streamName,
-        this.inner.reload(streamName, requireLeader, cachedValue),
+        this.cacheKey(streamId),
+        this.inner.reload(streamId, requireLeader, cachedValue),
       )
     }
     return this.strategy.store(
       this.inner.supersedes,
-      streamName,
-      this.inner.load(categoryName, streamId, streamName, allowStale, requireLeader),
+      this.cacheKey(streamId),
+      this.inner.load(streamId, allowStale, requireLeader),
     )
   }
 
   async trySync(
-    categoryName: string,
     streamId: string,
-    streamName: string,
     context: Context,
     originToken: StreamToken,
     originState: State,
     events: Event[],
   ): Promise<SyncResult<State>> {
     const result = await this.inner.trySync(
-      categoryName,
       streamId,
-      streamName,
       context,
       originToken,
       originState,
@@ -211,15 +210,15 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
       case "Conflict":
         return {
           type: "Conflict",
-          resync: () => this.strategy.store(this.inner.supersedes, streamName, result.resync()),
+          resync: () => this.strategy.store(this.inner.supersedes, this.cacheKey(streamId), result.resync()),
         }
       case "Written":
-        await this.strategy.store(this.inner.supersedes, streamName, Promise.resolve(result.data))
+        await this.strategy.store(this.inner.supersedes, this.cacheKey(streamId), Promise.resolve(result.data))
         return { type: "Written", data: result.data }
     }
   }
 
-  static apply<E, S, C>(inner: IReloadableCategory<E, S, C>, strategy: ICachingStrategy) {
-    return new CachingCategory(inner, strategy)
+  static apply<E, S, C>(categoryName: string, inner: IReloadableCategory<E, S, C>, strategy: ICachingStrategy) {
+    return new CachingCategory(categoryName, inner, strategy)
   }
 }

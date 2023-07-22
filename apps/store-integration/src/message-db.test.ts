@@ -6,21 +6,19 @@ import {
   MemoryCache,
   Codec,
   CachingStrategy,
-  ICachingStrategy
+  ICachingStrategy,
 } from "@equinox-js/core"
 import { describe, test, expect, afterEach, afterAll } from "vitest"
 import { Pool } from "pg"
 import { randomUUID } from "crypto"
-import { NodeTracerProvider, ReadableSpan } from "@opentelemetry/sdk-trace-node"
+import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
 import { InMemorySpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base"
-import { SpanStatusCode } from "@opentelemetry/api"
 import {
   AccessStrategy,
   MessageDbCategory,
   MessageDbConnection,
-  MessageDbContext
+  MessageDbContext,
 } from "@equinox-js/message-db"
-import exp from "constants"
 
 const Category = MessageDbCategory
 
@@ -38,11 +36,12 @@ namespace CartService {
   export function createWithoutOptimization(context: MessageDbContext) {
     const category = Category.create(
       context,
+      Cart.Category,
       codec,
       fold,
       initial,
       noCache,
-      AccessStrategy.Unoptimized()
+      AccessStrategy.Unoptimized(),
     )
     return Cart.Service.create(category)
   }
@@ -50,25 +49,33 @@ namespace CartService {
   export function createWithSnapshotStrategy(context: MessageDbContext) {
     const access = AccessStrategy.AdjacentSnapshots<E, S>(
       Cart.Fold.snapshotEventType,
-      Cart.Fold.snapshot
+      Cart.Fold.snapshot,
     )
-    const category = Category.create(context, codec, fold, initial, noCache, access)
+    const category = Category.create(context, Cart.Category, codec, fold, initial, noCache, access)
     return Cart.Service.create(category)
   }
 
   const sliding20m = CachingStrategy.slidingWindow(cache, 20 * 60 * 1000)
 
   export function createWithCaching(context: MessageDbContext) {
-    const category = Category.create(context, codec, fold, initial, sliding20m)
+    const category = Category.create(context, Cart.Category, codec, fold, initial, sliding20m)
     return Cart.Service.create(category)
   }
 
   export function createWithSnapshotStrategyAndCaching(context: MessageDbContext) {
     const access = AccessStrategy.AdjacentSnapshots<E, S>(
       Cart.Fold.snapshotEventType,
-      Cart.Fold.snapshot
+      Cart.Fold.snapshot,
     )
-    const category = Category.create(context, codec, fold, initial, sliding20m, access)
+    const category = Category.create(
+      context,
+      Cart.Category,
+      codec,
+      fold,
+      initial,
+      sliding20m,
+      access,
+    )
     return Cart.Service.create(category)
   }
 }
@@ -80,15 +87,16 @@ namespace ContactPreferencesService {
 
   const createWithLatestKnownEvent = (
     context: MessageDbContext,
-    cachingStrategy: ICachingStrategy
+    cachingStrategy: ICachingStrategy,
   ) => {
     const category = Category.create(
       context,
+      ContactPreferences.Category,
       codec,
       fold,
       initial,
       cachingStrategy,
-      AccessStrategy.LatestKnownEvent()
+      AccessStrategy.LatestKnownEvent(),
     )
     return ContactPreferences.Service.create(category)
   }
@@ -102,7 +110,7 @@ namespace ContactPreferencesService {
 }
 
 const client = MessageDbConnection.create(
-  new Pool({ connectionString: "postgres://message_store:@127.0.0.1:5432/message_store" })
+  new Pool({ connectionString: "postgres://message_store:@127.0.0.1:5432/message_store" }),
 )
 
 const createContext = (connection: MessageDbConnection, batchSize: number) =>
@@ -111,14 +119,14 @@ const createContext = (connection: MessageDbConnection, batchSize: number) =>
 namespace SimplestThing {
   export type Event = { type: "StuffHappened" }
   export const codec = Codec.json<Event, undefined>()
-  export const evolve = (state: Event, event: Event) => event
+  export const evolve = (_state: Event, event: Event) => event
   export const initial: Event = { type: "StuffHappened" }
-  export const fold = (state: Event, events: Event[]) => events.reduce(evolve, initial)
-  export const resolve = (context: MessageDbContext, categoryName: string, streamId: string) => {
-    const category = Category.create(context, codec, fold, initial)
-    return Decider.resolve(category, categoryName, streamId, undefined)
-  }
+  export const fold = (_state: Event, events: Event[]) => events.reduce(evolve, initial)
   export const categoryName = "SimplestThing"
+  export const resolve = (context: MessageDbContext, categoryName: string, streamId: string) => {
+    const category = Category.create(context, categoryName, codec, fold, initial)
+    return Decider.resolve(category, streamId, undefined)
+  }
 }
 
 namespace ContactPreferencesService {
@@ -126,7 +134,7 @@ namespace ContactPreferencesService {
 
   export const createUnoptimized = (client: MessageDbConnection) => {
     const context = createContext(client, defaultBatchSize)
-    const category = Category.create(context, codec, fold, initial)
+    const category = Category.create(context, ContactPreferences.Category, codec, fold, initial)
     return ContactPreferences.Service.create(category)
   }
 
@@ -134,11 +142,12 @@ namespace ContactPreferencesService {
     const context = createContext(client, defaultBatchSize)
     const category = Category.create(
       context,
+      ContactPreferences.Category,
       codec,
       fold,
       initial,
       undefined,
-      AccessStrategy.LatestKnownEvent()
+      AccessStrategy.LatestKnownEvent(),
     )
     return ContactPreferences.Service.create(category)
   }
@@ -157,7 +166,7 @@ const assertSpans = (...expected: Record<string, any>[]) => {
   const attributes = getStoreSpans().map((x) => ({
     name: x.name,
     ...x.attributes,
-    status_message: x.status.message
+    status_message: x.status.message,
   }))
   expect(attributes).toEqual(expected.map(expect.objectContaining))
 }
@@ -177,7 +186,7 @@ namespace CartHelpers {
     cartId: Cart.CartId,
     skuId: Cart.SkuId,
     service: Cart.Service,
-    count: number
+    count: number,
   ) =>
     service.executeManyAsync(
       cartId,
@@ -190,15 +199,15 @@ namespace CartHelpers {
               yield { type: "SyncItem", context, skuId, quantity: 0 }
             }
           }
-        })()
-      )
+        })(),
+      ),
     )
   export const addAndThenRemoveItemsManyTimes = (
     context: Cart.Context,
     cartId: Cart.CartId,
     skuId: Cart.SkuId,
     service: Cart.Service,
-    count: number
+    count: number,
   ) => addAndThenRemoveItems(false, false, context, cartId, skuId, service, count)
 
   export const addAndThenRemoveItemsManyTimesExceptTheLastOne = (
@@ -206,7 +215,7 @@ namespace CartHelpers {
     cartId: Cart.CartId,
     skuId: Cart.SkuId,
     service: Cart.Service,
-    count: number
+    count: number,
   ) => addAndThenRemoveItems(false, true, context, cartId, skuId, service, count)
 
   export const addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne = (
@@ -214,7 +223,7 @@ namespace CartHelpers {
     cartId: Cart.CartId,
     skuId: Cart.SkuId,
     service: Cart.Service,
-    count: number
+    count: number,
   ) => addAndThenRemoveItems(true, true, context, cartId, skuId, service, count)
 }
 
@@ -236,15 +245,15 @@ describe("Roundtrips against the store", () => {
       cartId,
       skuId,
       service,
-      addRemoveCount
+      addRemoveCount,
     )
 
-    assertSpans(
-      {
-        name: "Transact", "eqx.batches": 1, "eqx.count": 0,
-        "eqx.append_count": 11
-      }
-    )
+    assertSpans({
+      name: "Transact",
+      "eqx.batches": 1,
+      "eqx.count": 0,
+      "eqx.append_count": 11,
+    })
     memoryExporter.reset()
 
     const state = await service.read(cartId)
@@ -267,20 +276,13 @@ describe("Roundtrips against the store", () => {
       prepare: () => Promise<void>,
       service: Cart.Service,
       skuId: string,
-      count: number
+      count: number,
     ) =>
       service.executeManyAsync(
         cartId,
         false,
-        [
-          {
-            type: "SyncItem",
-            skuId,
-            quantity: count,
-            context: cartContext
-          }
-        ],
-        prepare
+        [{ type: "SyncItem", skuId, quantity: count, context: cartContext }],
+        prepare,
       )
 
     const waiter = () => {
@@ -289,7 +291,7 @@ describe("Roundtrips against the store", () => {
         new Promise((res) => {
           resolve = res
         }),
-        () => resolve(undefined)
+        () => resolve(undefined),
       ] as const
     }
 
@@ -339,12 +341,10 @@ describe("Roundtrips against the store", () => {
       [sku11]: 11,
       [sku12]: 12,
       [sku21]: 21,
-      [sku22]: 22
+      [sku22]: 22,
     })
     const syncs = memoryExporter.getFinishedSpans().filter((x) => x.name === "Transact")
-    const conflicts = syncs.filter(
-      (x) => x.events.find(x => x.name == "Conflict")
-    )
+    const conflicts = syncs.filter((x) => x.events.find((x) => x.name == "Conflict"))
     expect(syncs).toHaveLength(4)
     expect(conflicts).toHaveLength(2)
   })
@@ -370,11 +370,14 @@ describe("Caching", () => {
       cartId,
       skuId,
       service1,
-      5
+      5,
     )
-    assertSpans(
-      { name: "Transact", "eqx.load_method": "BatchForward", "eqx.count": 0, "eqx.append_count": 9 }
-    )
+    assertSpans({
+      name: "Transact",
+      "eqx.load_method": "BatchForward",
+      "eqx.count": 0,
+      "eqx.append_count": 9,
+    })
     const staleRes = await service2.readStale(cartId)
     memoryExporter.reset()
     const freshRes = await service2.read(cartId)
@@ -385,7 +388,7 @@ describe("Caching", () => {
       "eqx.batches": 1,
       "eqx.count": 0,
       "eqx.start_position": 9,
-      "eqx.cache_hit": true
+      "eqx.cache_hit": true,
     })
     memoryExporter.reset()
 
@@ -397,11 +400,15 @@ describe("Caching", () => {
       cartId,
       skuId2,
       service1,
-      1
+      1,
     )
-    assertSpans(
-      { name: "Transact", "eqx.batches": 1, "eqx.count": 0, "eqx.cache_hit": true, "eqx.append_count": 1 }
-    )
+    assertSpans({
+      name: "Transact",
+      "eqx.batches": 1,
+      "eqx.count": 0,
+      "eqx.cache_hit": true,
+      "eqx.append_count": 1,
+    })
     memoryExporter.reset()
 
     const res = await service2.readStale(cartId)
@@ -420,7 +427,7 @@ describe("Caching", () => {
       cartId,
       skuId2,
       service1,
-      1
+      1,
     )
     assertSpans({ name: "Transact", "eqx.cache_hit": true, "eqx.allow_stale": true })
     expect(getStoreSpans()[0].attributes).not.to.have.property("eqx.batches")
@@ -432,7 +439,7 @@ describe("Caching", () => {
       cartId,
       skuId3,
       service1,
-      1
+      1,
     )
 
     // this time, we did something, so we see the append call
@@ -447,12 +454,15 @@ describe("Caching", () => {
       cartId,
       skuId4,
       service3,
-      1
+      1,
     )
     // Need 2 batches to do the reading
-    assertSpans(
-      { name: "Transact", "eqx.batches": 2, "eqx.cache_hit": false, "eqx.append_count": 1 }
-    )
+    assertSpans({
+      name: "Transact",
+      "eqx.batches": 2,
+      "eqx.cache_hit": false,
+      "eqx.append_count": 1,
+    })
     // we've engineered a clash with the cache state (service3 doest participate in caching)
     // Conflict with cached state leads to a read forward to resync; Then we'll idempotently decide not to do any append
     memoryExporter.reset()
@@ -461,13 +471,13 @@ describe("Caching", () => {
       cartId,
       skuId4,
       service2,
-      1
+      1,
     )
 
-    assertSpans(
-      { name: "Transact", "eqx.cache_hit": true, "eqx.allow_stale": true }
-    )
-    expect(memoryExporter.getFinishedSpans()[0].events).toEqual([expect.objectContaining({ name: "Conflict" })])
+    assertSpans({ name: "Transact", "eqx.cache_hit": true, "eqx.allow_stale": true })
+    expect(memoryExporter.getFinishedSpans()[0].events).toEqual([
+      expect.objectContaining({ name: "Conflict" }),
+    ])
   })
 })
 
@@ -479,7 +489,7 @@ describe("AccessStrategy.LatestKnownEvent", () => {
       littlePromotions: Math.random() > 0.5,
       manyPromotions: Math.random() > 0.5,
       productReview: Math.random() > 0.5,
-      quickSurveys: Math.random() > 0.5
+      quickSurveys: Math.random() > 0.5,
     }
 
     // Feed some junk into the stream
@@ -496,7 +506,7 @@ describe("AccessStrategy.LatestKnownEvent", () => {
     expect(result).toEqual(value)
     assertSpans(
       { name: "Transact", "eqx.load_method": "Last", "eqx.count": 1, "eqx.append_count": 1 },
-      { name: "Query", "eqx.load_method": "Last", "eqx.count": 1 }
+      { name: "Query", "eqx.load_method": "Last", "eqx.count": 1 },
     )
   })
 })
@@ -516,21 +526,25 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
     await service.read(cartId)
     assertSpans(
       {
-        name: "Transact", "eqx.count": 0, "eqx.snapshot_version": -1,
-        "eqx.append_count": 8, "eqx.should_snapshot": false
+        name: "Transact",
+        "eqx.count": 0,
+        "eqx.snapshot_version": -1,
+        "eqx.append_count": 8,
+        "eqx.should_snapshot": false,
       },
-      { name: "Query", "eqx.count": 8, "eqx.snapshot_version": -1 }
+      { name: "Query", "eqx.count": 8, "eqx.snapshot_version": -1 },
     )
 
     // Add two more, which should push it over the threshold and hence trigger an append of a snapshot event
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 1)
-    assertSpans(
-      {
-        name: "Transact", "eqx.count": 8, "eqx.snapshot_version": -1,
-        "eqx.append_count": 2, "eqx.should_snapshot": true
-      }
-    )
+    assertSpans({
+      name: "Transact",
+      "eqx.count": 8,
+      "eqx.snapshot_version": -1,
+      "eqx.append_count": 2,
+      "eqx.should_snapshot": true,
+    })
 
     // We now have 10 events and should be able to read them with a single call
     memoryExporter.reset()
@@ -540,12 +554,14 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
     // Add 8 more; total of 18 should not trigger snapshotting as we snapshotted at Event Number 10
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 4)
-    assertSpans(
-      {
-        name: "Transact", "eqx.count": 0, "eqx.snapshot_version": 10, "eqx.start_position": 10,
-        "eqx.append_count": 8, "eqx.should_snapshot": false
-      }
-    )
+    assertSpans({
+      name: "Transact",
+      "eqx.count": 0,
+      "eqx.snapshot_version": 10,
+      "eqx.start_position": 10,
+      "eqx.append_count": 8,
+      "eqx.should_snapshot": false,
+    })
 
     // While we now have 18 events, we should be able to read them with a single call
     memoryExporter.reset()
@@ -554,15 +570,20 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
       name: "Query",
       "eqx.count": 8,
       "eqx.snapshot_version": 10,
-      "eqx.start_position": 10
+      "eqx.start_position": 10,
     })
 
     // add two more events, triggering a snapshot, then read it in a single snapshotted read
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 1)
-    assertSpans(
-      { name: "Transact", "eqx.count": 8, "eqx.snapshot_version": 10, "eqx.start_position": 10, "eqx.append_count": 2, "eqx.should_snapshot": true }
-    )
+    assertSpans({
+      name: "Transact",
+      "eqx.count": 8,
+      "eqx.snapshot_version": 10,
+      "eqx.start_position": 10,
+      "eqx.append_count": 2,
+      "eqx.should_snapshot": true,
+    })
     // While we now have 18 events, we should be able to read them with a single call
     memoryExporter.reset()
     await service.read(cartId)
@@ -570,7 +591,7 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
       name: "Query",
       "eqx.count": 0,
       "eqx.snapshot_version": 20,
-      "eqx.start_position": 20
+      "eqx.start_position": 20,
     })
   })
 
@@ -589,18 +610,24 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
     await service2.read(cartId)
 
     assertSpans(
-      { name: "Transact", "eqx.count": 0, "eqx.snapshot_version": -1,
-      "eqx.should_snapshot": false},
-    { name: "Query", "eqx.count": 8, "eqx.snapshot_version": -1 }
+      {
+        name: "Transact",
+        "eqx.count": 0,
+        "eqx.snapshot_version": -1,
+        "eqx.should_snapshot": false,
+      },
+      { name: "Query", "eqx.count": 8, "eqx.snapshot_version": -1 },
     )
 
     // Add two more, which should push it over the threshold and hence trigger generation of a snapshot event
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 1)
-    assertSpans(
-      { name: "Transact", "eqx.count": 8, "eqx.snapshot_version": -1,
-      "eqx.should_snapshot": true }
-    )
+    assertSpans({
+      name: "Transact",
+      "eqx.count": 8,
+      "eqx.snapshot_version": -1,
+      "eqx.should_snapshot": true,
+    })
 
     // We now have 10 events, we should be able to read them with a single snapshotted read
     memoryExporter.reset()
@@ -610,10 +637,12 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
     // Add 8 more; total of 18 should not trigger snapshotting as the snapshot is at version 10
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 4)
-    assertSpans(
-      { name: "Transact", "eqx.count": 0, "eqx.snapshot_version": 10,
-      "eqx.should_snapshot": false }
-    )
+    assertSpans({
+      name: "Transact",
+      "eqx.count": 0,
+      "eqx.snapshot_version": 10,
+      "eqx.should_snapshot": false,
+    })
 
     // While we now have 18 events, we should be able to read them with a single snapshotted read
     memoryExporter.reset()
@@ -623,9 +652,12 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
     // ... trigger a second snapshotting
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 1)
-    assertSpans(
-      { name: "Transact", "eqx.count": 8, "eqx.snapshot_version": 10, "eqx.should_snapshot": true }
-    )
+    assertSpans({
+      name: "Transact",
+      "eqx.count": 8,
+      "eqx.snapshot_version": 10,
+      "eqx.should_snapshot": true,
+    })
 
     // and we _could_ reload the 20 events with a single slice read. However we are using the cache, which last saw it with 10 events, which necessitates two reads
     memoryExporter.reset()
@@ -641,7 +673,7 @@ test("Version is 0-based", async () => {
   const decider = SimplestThing.resolve(context, SimplestThing.categoryName, id)
   const [before, after] = await decider.transactExMapResult(
     (ctx) => [ctx.version, [{ type: "StuffHappened" }]],
-    (result, ctx) => [result, ctx.version]
+    (result, ctx) => [result, ctx.version],
   )
   expect([before, after]).toEqual([0n, 1n])
 })

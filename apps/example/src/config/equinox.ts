@@ -12,6 +12,7 @@ export type Config =
 
 export const MessageDb = {
   createCached<E, S, C>(
+    name: string,
     codec: ICodec<E, string, C>,
     fold: (s: S, e: E[]) => S,
     initial: S,
@@ -20,20 +21,23 @@ export const MessageDb = {
   ) {
     const caching = CachingStrategy.slidingWindow(cache, 12e5)
     // prettier-ignore
-    return MessageDbCategory.create(context, codec, fold, initial, caching, access);
+    return MessageDbCategory.create(context, name, codec, fold, initial, caching, access);
   },
 
   createUnoptimized<E, S, C>(
+    name: string,
     codec: ICodec<E, string, C>,
     fold: (s: S, e: E[]) => S,
     initial: S,
     config: { context: MessageDbContext; cache: ICache },
   ) {
     const access = AccessStrategy.Unoptimized<E, S>()
-    return MessageDb.createCached(codec, fold, initial, access, config)
+    // prettier-ignore
+    return MessageDb.createCached(name, codec, fold, initial, access, config)
   },
 
   createSnapshotted<E, S, C>(
+    name: string,
     codec: ICodec<E, string, C>,
     fold: (s: S, e: E[]) => S,
     initial: S,
@@ -42,27 +46,32 @@ export const MessageDb = {
     config: { context: MessageDbContext; cache: ICache },
   ) {
     const access = AccessStrategy.AdjacentSnapshots(eventName, toSnapshot)
-    return MessageDb.createCached(codec, fold, initial, access, config)
+    // prettier-ignore
+    return MessageDb.createCached(name, codec, fold, initial, access, config)
   },
 
   createLatestKnown<E, S, C>(
+    name: string,
     codec: ICodec<E, string, C>,
     fold: (s: S, e: E[]) => S,
     initial: S,
     config: { context: MessageDbContext; cache: ICache },
   ) {
     const access = AccessStrategy.LatestKnownEvent<E, S>()
-    return MessageDb.createCached(codec, fold, initial, access, config)
+    // prettier-ignore
+    return MessageDb.createCached(name, codec, fold, initial, access, config)
   },
 }
 
 export const MemoryStore = {
   create<E, S, C>(
+    name: string,
     codec: ICodec<E, string, C>,
     fold: (s: S, e: E[]) => S,
     initial: S,
     { context: store }: { context: VolatileStore<string> },
   ) {
-    return MemoryStoreCategory.create(store, codec, fold, initial)
+    // prettier-ignore
+    return MemoryStoreCategory.create(store, name, codec, fold, initial)
   },
 }

@@ -6,6 +6,7 @@ import {
   TokenAndState,
   IReloadableCategory,
   ICodec,
+  StreamName,
 } from "@equinox-js/core"
 import * as Equinox from "@equinox-js/core"
 import { randomUUID } from "crypto"
@@ -58,6 +59,7 @@ class Category<Event, State, Context, Format>
   implements IReloadableCategory<Event, State, Context>
 {
   constructor(
+    private readonly categoryName: string,
     private readonly store: VolatileStore<Format>,
     private readonly codec: ICodec<Event, Format, Context>,
     private readonly fold: (state: State, events: Event[]) => State,
@@ -67,12 +69,11 @@ class Category<Event, State, Context, Format>
   supersedes = Token.supersedes
 
   async load(
-    _categoryName: string,
-    _streamId: string,
-    streamName: string,
+    streamId: string,
     _allowStale: boolean,
     _requireLeader: boolean,
   ): Promise<TokenAndState<State>> {
+    const streamName = StreamName.compose(this.categoryName, streamId)
     const result = this.store.load(streamName)
     const token = Token.ofValue(result)
     const events = this.decodeEvents(result)
@@ -105,17 +106,16 @@ class Category<Event, State, Context, Format>
   }
 
   async trySync(
-    categoryName: string,
     streamId: string,
-    streamName: string,
     context: Context,
     originToken: StreamToken,
     originState: State,
     events: Event[],
   ): Promise<SyncResult<State>> {
+    const streamName = StreamName.compose(this.categoryName, streamId)
     const eventCount = Token.unpack(originToken)
     const encoded = await this.encodeEvents(eventCount, context, events)
-    const res = this.store.trySync(streamName, categoryName, streamId, eventCount, encoded)
+    const res = this.store.trySync(streamName, this.categoryName, streamId, eventCount, encoded)
     if (res.success) {
       return {
         type: "Written",
@@ -144,31 +144,16 @@ class Category<Event, State, Context, Format>
   }
 }
 
-export class MemoryStoreCategory<Event, State, Context> extends Equinox.Category<
-  Event,
-  State,
-  Context
-> {
-  constructor(
-    resolveInner: (
-      categoryName: string,
-      streamId: string,
-    ) => readonly [ICategory<Event, State, Context>, string],
-    empty: TokenAndState<State>,
-  ) {
-    super(resolveInner, empty)
-  }
-
+export class MemoryStoreCategory {
   static create<Event, State, Format, Context = null>(
     store: VolatileStore<Format>,
+    categoryName: string,
     codec: ICodec<Event, Format, Context>,
     fold: (state: State, events: Event[]) => State,
     initial: State,
   ) {
-    const category = new Category(store, codec, fold, initial)
-    const resolveInner = (categoryName: string, streamId: string) =>
-      [category, `${categoryName}-${streamId}`] as const
+    const category = new Category(categoryName, store, codec, fold, initial)
     const empty: TokenAndState<State> = { token: Token.empty, state: initial }
-    return new MemoryStoreCategory(resolveInner, empty)
+    return new Equinox.Category(category, empty)
   }
 }

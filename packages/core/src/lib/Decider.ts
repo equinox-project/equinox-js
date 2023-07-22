@@ -347,10 +347,9 @@ export class Decider<Event, State> {
 
   static resolve<E, S, C>(
     category: Category<E, S, C>,
-    categoryName: string,
     streamId: string,
     context: C,
   ) {
-    return new Decider(category.stream(context, categoryName, streamId))
+    return new Decider(category.stream(context, streamId))
   }
 }

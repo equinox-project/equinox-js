@@ -176,15 +176,15 @@ export class Service {
   static resolveCategory(config: Config.Config) {
     switch (config.store) {
       case Config.Store.Memory:
-        return Config.MemoryStore.create(codec, fold, initial, config)
+        return Config.MemoryStore.create(CATEGORY, codec, fold, initial, config)
       case Config.Store.MessageDb:
-        return Config.MessageDb.createUnoptimized(codec, fold, initial, config)
+        return Config.MessageDb.createUnoptimized(CATEGORY, codec, fold, initial, config)
     }
   }
 
   static create(config: Config.Config) {
     const category = Service.resolveCategory(config)
-    const resolve = (id: InvoiceId) => Decider.resolve(category, CATEGORY, streamId(id), null)
+    const resolve = (id: InvoiceId) => Decider.resolve(category, streamId(id), null)
     return new Service(resolve)
   }
 }

@@ -5,9 +5,7 @@ import { trace } from "@opentelemetry/api"
 export interface ICategory<Event, State, Context = null> {
   /** Obtain the state from the target stream */
   load(
-    categoryName: string,
     streamId: string,
-    streamName: string,
     allowStale: boolean,
     requireLeader: boolean,
   ): Promise<TokenAndState<State>>
@@ -18,9 +16,7 @@ export interface ICategory<Event, State, Context = null> {
    * SyncResult.Conflict: implies the `events` were not synced; if desired the consumer can use the included resync workflow in order to retry
    */
   trySync(
-    categoryName: string,
     streamId: string,
-    streamName: string,
     context: Context,
     originToken: StreamToken,
     originState: State,
@@ -30,40 +26,30 @@ export interface ICategory<Event, State, Context = null> {
 
 export class Category<Event, State, Context = null> {
   constructor(
-    private readonly resolveInner: (
-      categoryName: string,
-      streamId: string,
-    ) => readonly [ICategory<Event, State, Context>, string],
+    private readonly inner: ICategory<Event, State, Context>,
     private readonly empty: TokenAndState<State>,
   ) {}
 
-  stream(context: Context, categoryName: string, streamId: string): IStream<Event, State> {
-    const [inner, streamName] = this.resolveInner(categoryName, streamId)
+  stream(context: Context, streamId: string): IStream<Event, State> {
     return {
       loadEmpty: () => this.empty,
       load: (allowStale, requireLeader) => {
         trace.getActiveSpan()?.setAttributes({
-          "eqx.stream_name": streamName,
           "eqx.stream_id": streamId,
-          "eqx.category": categoryName,
           "eqx.require_leader": requireLeader,
           "eqx.allow_stale": allowStale,
         })
-        return inner.load(categoryName, streamId, streamName, allowStale, requireLeader)
+        return this.inner.load(streamId, allowStale, requireLeader)
       },
       trySync: (attempt, origin, events) => {
         trace.getActiveSpan()?.setAttributes({
-          "eqx.stream_name": streamName,
           "eqx.stream_id": streamId,
-          "eqx.category": categoryName,
           "eqx.sync_attempts": attempt,
           "eqx.expected_version": Number(origin.token.version),
           "eqx.append_count": events.length,
         })
-        return inner.trySync(
-          categoryName,
+        return this.inner.trySync(
           streamId,
-          streamName,
           context,
           origin.token,
           origin.state,

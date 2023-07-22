@@ -2,16 +2,16 @@
 
 ```ts
 import { ChargeId, GuestStayId, PaymentId } from "./types"
-import { Decider, ICachingStrategy, ICodec } from "@equinox-js/core"
+import { Decider, ICachingStrategy, ICodec, StreamId } from "@equinox-js/core"
 import * as Mdb from "@equinox-js/message-db"
 import * as Mem from "@equinox-js/memory-store"
 
 export const Category = "GuestStay"
 
-const streamId = (guestStayId: GuestStayId) => guestStayId as string
+const streamId = StreamId.gen(GuestStayId.toString)
 
 type Event =
-/** Notes time of checkin of the guest (does not affect whether charges can be levied against the stay) */
+  /** Notes time of checkin of the guest (does not affect whether charges can be levied against the stay) */
   | { type: "CheckedIn"; data: { at: Date } }
   /** Notes addition of a charge against the stay */
   | { type: "Charged"; data: { chargeId: ChargeId; at: Date; amount: number } }
@@ -94,28 +94,28 @@ const fold = (state: State, events: Event[]) => events.reduce(evolve, state)
 
 const checkIn =
   (at: Date) =>
-    (state: State): Event[] => {
-      if (state.type === "Closed") throw new Error("Invalid checkin")
-      if (!state.balance.checkedInAt) return [{ type: "CheckedIn", data: { at } }]
-      if (+state.balance.checkedInAt === +at) return []
-      throw new Error("Invalid checkin")
-    }
+  (state: State): Event[] => {
+    if (state.type === "Closed") throw new Error("Invalid checkin")
+    if (!state.balance.checkedInAt) return [{ type: "CheckedIn", data: { at } }]
+    if (+state.balance.checkedInAt === +at) return []
+    throw new Error("Invalid checkin")
+  }
 
 const charge =
   (at: Date, chargeId: ChargeId, amount: number) =>
-    (state: State): Event[] => {
-      if (state.type === "Closed") throw new Error("Cannot record charge for Closed account")
-      if (state.balance.charges.has(chargeId)) return []
-      return [{ type: "Charged", data: { chargeId, amount, at } }]
-    }
+  (state: State): Event[] => {
+    if (state.type === "Closed") throw new Error("Cannot record charge for Closed account")
+    if (state.balance.charges.has(chargeId)) return []
+    return [{ type: "Charged", data: { chargeId, amount, at } }]
+  }
 
 const pay =
   (at: Date, paymentId: PaymentId, amount: number) =>
-    (state: State): Event[] => {
-      if (state.type === "Closed") throw new Error("Cannot record payment for not opened account")
-      if (state.balance.payments.has(paymentId)) return []
-      return [{ type: "Paid", data: { paymentId, amount, at } }]
-    }
+  (state: State): Event[] => {
+    if (state.type === "Closed") throw new Error("Cannot record payment for not opened account")
+    if (state.balance.payments.has(paymentId)) return []
+    return [{ type: "Paid", data: { paymentId, amount, at } }]
+  }
 
 type CheckoutResult =
   | { type: "OK" }
@@ -123,12 +123,12 @@ type CheckoutResult =
   | { type: "BalanceOutstanding"; amount: number }
 const checkOut =
   (at: Date) =>
-    (state: State): [CheckoutResult, Event[]] => {
-      if (state.type === "Closed") return [{ type: "AlreadyCheckedOut" }, []]
-      if (state.balance.balance > 0)
-        return [{ type: "BalanceOutstanding", amount: state.balance.balance }, []]
-      return [{ type: "OK" }, [{ type: "CheckedOut", data: { at } }]]
-    }
+  (state: State): [CheckoutResult, Event[]] => {
+    if (state.type === "Closed") return [{ type: "AlreadyCheckedOut" }, []]
+    if (state.balance.balance > 0)
+      return [{ type: "BalanceOutstanding", amount: state.balance.balance }, []]
+    return [{ type: "OK" }, [{ type: "CheckedOut", data: { at } }]]
+  }
 
 export class Service {
   constructor(private readonly resolve: (stayId: GuestStayId) => Decider<Event, State>) {}
@@ -153,16 +153,16 @@ export class Service {
   }
 
   static createMessageDb(context: Mdb.MessageDbContext, caching: ICachingStrategy) {
-    const category = Mdb.MessageDbCategory.create(context, codec, fold, initial, caching)
+    const category = Mdb.MessageDbCategory.create(context, Category, codec, fold, initial, caching)
     const resolve = (stayId: GuestStayId) =>
-      Decider.resolve(category, Category, streamId(stayId), null)
+      Decider.resolve(category, streamId(stayId), null)
     return new Service(resolve)
   }
 
   static createMem(store: Mem.VolatileStore<string>) {
-    const category = Mem.MemoryStoreCategory.create(store, codec, fold, initial)
+    const category = Mem.MemoryStoreCategory.create(store, Category, codec, fold, initial)
     const resolve = (stayId: GuestStayId) =>
-      Decider.resolve(category, Category, streamId(stayId), null)
+      Decider.resolve(category, streamId(stayId), null)
     return new Service(resolve)
   }
 }

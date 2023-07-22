@@ -60,15 +60,15 @@ export class Service {
   static resolveCategory(config: Config.Config) {
     switch (config.store) {
       case Config.Store.Memory:
-        return Config.MemoryStore.create(codec, fold, initial, config)
+        return Config.MemoryStore.create(CATEGORY, codec, fold, initial, config)
       case Config.Store.MessageDb:
-        return Config.MessageDb.createLatestKnown(codec, fold, initial, config)
+        return Config.MessageDb.createLatestKnown(CATEGORY, codec, fold, initial, config)
     }
   }
 
   static create(config: Config.Config) {
     const category = Service.resolveCategory(config)
-    const resolve = (id: PayerId) => Decider.resolve(category, CATEGORY, streamId(id), null)
+    const resolve = (id: PayerId) => Decider.resolve(category, streamId(id), null)
     return new Service(resolve)
   }
 }

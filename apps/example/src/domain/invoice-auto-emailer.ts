@@ -70,9 +70,9 @@ export class Service {
   static resolveCategory(config: Config.Config) {
     switch (config.store) {
       case Config.Store.Memory:
-        return Config.MemoryStore.create(codec, fold, initial, config)
+        return Config.MemoryStore.create(CATEGORY, codec, fold, initial, config)
       case Config.Store.MessageDb:
-        return Config.MessageDb.createLatestKnown(codec, fold, initial, config)
+        return Config.MessageDb.createLatestKnown(CATEGORY, codec, fold, initial, config)
     }
   }
 
@@ -81,7 +81,7 @@ export class Service {
     // could inject this via an argument too
     const emailer = new EmailSender()
     const category = Service.resolveCategory(config)
-    const resolve = (id: InvoiceId) => Decider.resolve(category, CATEGORY, streamId(id), null)
+    const resolve = (id: InvoiceId) => Decider.resolve(category, streamId(id), null)
     return new Service(payerService, emailer, resolve)
   }
 }

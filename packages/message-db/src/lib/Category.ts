@@ -1,5 +1,4 @@
 import type {
-  ICategory,
   IEventData,
   StreamToken,
   SyncResult,
@@ -165,8 +164,6 @@ export class MessageDbContext {
   }
 
   async trySync(
-    category: string,
-    streamId: string,
     streamName: string,
     token: StreamToken,
     encodedEvents: IEventData<Format>[],
@@ -232,6 +229,7 @@ class InternalCategory<Event, State, Context>
 {
   constructor(
     private readonly context: MessageDbContext,
+    private readonly categoryName: string,
     private readonly codec: ICodec<Event, Format, Context>,
     private readonly fold: (state: State, events: Event[]) => State,
     private readonly initial: State,
@@ -239,13 +237,16 @@ class InternalCategory<Event, State, Context>
   ) {}
 
   private async loadAlgorithm(
-    category: string,
     streamId: string,
-    streamName: string,
     requireLeader: boolean,
   ): Promise<[StreamToken, State]> {
+    const streamName = Equinox.StreamName.compose(this.categoryName, streamId)
     const span = trace.getActiveSpan()
-    span?.setAttribute("eqx.access_strategy", this.access.type)
+    span?.setAttributes({
+      "eqx.access_strategy": this.access.type,
+      "eqx.category": this.categoryName,
+      "eqx.stream_name": streamName,
+    })
     switch (this.access.type) {
       case "Unoptimized":
         return this.context.loadBatched(
@@ -265,7 +266,7 @@ class InternalCategory<Event, State, Context>
         )
       case "AdjacentSnapshots": {
         const result = await this.context.loadSnapshot(
-          category,
+          this.categoryName,
           streamId,
           requireLeader,
           this.codec.tryDecode,
@@ -296,12 +297,13 @@ class InternalCategory<Event, State, Context>
 
   supersedes = Token.supersedes
 
-  async load(category: string, streamId: string, streamName: string, requireLeader: boolean) {
-    const [token, state] = await this.loadAlgorithm(category, streamId, streamName, requireLeader)
+  async load(streamId: string, requireLeader: boolean) {
+    const [token, state] = await this.loadAlgorithm(streamId, requireLeader)
     return { token, state }
   }
 
-  async reload(streamName: string, requireLeader: boolean, t: TokenAndState<State>) {
+  async reload(streamId: string, requireLeader: boolean, t: TokenAndState<State>) {
+    const streamName = Equinox.StreamName.compose(this.categoryName, streamId)
     const [token, state] = await this.context.reload(
       streamName,
       requireLeader,
@@ -314,23 +316,26 @@ class InternalCategory<Event, State, Context>
   }
 
   async trySync(
-    category: string,
     streamId: string,
-    streamName: string,
     ctx: Context,
     token: StreamToken,
     state: State,
     events: Event[],
   ): Promise<SyncResult<State>> {
     const span = trace.getActiveSpan()
+    const streamName = Equinox.StreamName.compose(this.categoryName, streamId)
+    span?.setAttributes({
+      "eqx.category": this.categoryName,
+      "eqx.stream_name": streamName,
+    })
     const encode = (ev: Event) => this.codec.encode(ev, ctx)
     const encodedEvents = await Promise.all(events.map(encode))
-    const result = await this.context.trySync(category, streamId, streamName, token, encodedEvents)
+    const result = await this.context.trySync(streamName, token, encodedEvents)
     switch (result.type) {
       case "ConflictUnknown":
         return {
           type: "Conflict",
-          resync: () => this.reload(streamName, true, { token, state }),
+          resync: () => this.reload(streamId, true, { token, state }),
         }
       case "Written": {
         const newState = this.fold(state, events)
@@ -344,7 +349,7 @@ class InternalCategory<Event, State, Context>
             span?.setAttribute("eqx.should_snapshot", shouldSnapshot)
             if (shouldSnapshot) {
               await this.storeSnapshot(
-                category,
+                this.categoryName,
                 streamId,
                 ctx,
                 result.token,
@@ -371,34 +376,19 @@ class InternalCategory<Event, State, Context>
   }
 }
 
-export class MessageDbCategory<Event, State, Context = null> extends Equinox.Category<
-  Event,
-  State,
-  Context
-> {
-  constructor(
-    resolveInner: (
-      categoryName: string,
-      streamId: string,
-    ) => readonly [ICategory<Event, State, Context>, string],
-    empty: TokenAndState<State>,
-  ) {
-    super(resolveInner, empty)
-  }
-
+export class MessageDbCategory {
   static create<Event, State, Context = null>(
     context: MessageDbContext,
+    categoryName: string,
     codec: ICodec<Event, Format, Context>,
     fold: (state: State, events: Event[]) => State,
     initial: State,
     caching: ICachingStrategy = CachingStrategy.noCache(),
     access?: AccessStrategy<Event, State>,
   ) {
-    const inner = new InternalCategory(context, codec, fold, initial, access)
-    const category = CachingCategory.apply(inner, caching)
-    const resolveInner = (categoryName: string, streamId: string) =>
-      [category, `${categoryName}-${streamId}`] as const
+    const inner = new InternalCategory(context, categoryName, codec, fold, initial, access)
+    const category = CachingCategory.apply(categoryName, inner, caching)
     const empty: TokenAndState<State> = { token: context.tokenEmpty, state: initial }
-    return new MessageDbCategory(resolveInner, empty)
+    return new Equinox.Category(category, empty)
   }
 }

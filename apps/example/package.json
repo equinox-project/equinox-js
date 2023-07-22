@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "tsc -p . --noEmit && tsup src/entrypoints/http.ts src/entrypoints/reactions.ts --format cjs",
     "start:http": "tsup src/entrypoints/http.ts --format cjs --onSuccess 'node dist/http.cjs'",
     "start:reactions": "tsup src/entrypoints/reactions.ts --format cjs --onSuccess 'node dist/reactions.cjs'",
     "test": "vitest run"
