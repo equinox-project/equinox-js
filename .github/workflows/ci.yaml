@@ -73,14 +73,3 @@ jobs:
       - name: Lint
         run: pnpm dlx turbo lint
 
-      - name: create and publish versions
-        uses: changesets/action@v1
-        if: github.ref == 'refs/heads/main'
-        with:
-          commit: "chore: update versions"
-          title: "chore: update versions"
-          publish: pnpm -r publish 
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
