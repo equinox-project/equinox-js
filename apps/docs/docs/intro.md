@@ -63,14 +63,14 @@ export class Service {
   }
 
   static createMessageDb(context: Mdb.MessageDbContext, caching: Mdb.CachingStrategy) {
-    const category = Mdb.MessageDbCategory.create(context, codec, fold, initial, caching)
-    const resolve = (stayId: GuestStayId) => Decider.resolve(category, Category, streamId(stayId), null)
+    const category = Mdb.MessageDbCategory.create(context, Category, codec, fold, initial, caching)
+    const resolve = (stayId: GuestStayId) => Decider.resolve(category, streamId(stayId), null)
     return new Service(resolve)
   }
 
-  static createMem(store: Mem.VolatileStore<Record<string, any>>) {
-    const category = Mem.MemoryStoreCategory.create(store, codec, fold, initial)
-    const resolve = (stayId: GuestStayId) => Decider.resolve(category, Category, streamId(stayId), null)
+  static createMem(store: Mem.VolatileStore<string>) {
+    const category = Mem.MemoryStoreCategory.create(store, Category, codec, fold, initial)
+    const resolve = (stayId: GuestStayId) => Decider.resolve(category, streamId(stayId), null)
     return new Service(resolve)
   }
 }

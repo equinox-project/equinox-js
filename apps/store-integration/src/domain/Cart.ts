@@ -175,6 +175,6 @@ export class Service {
   }
 
   static create(category: Equinox.Category<Events.Event, Fold.State>) {
-    return new Service((id) => Decider.resolve(category, Category, streamId(id), null))
+    return new Service((id) => Decider.resolve(category, streamId(id), null))
   }
 }

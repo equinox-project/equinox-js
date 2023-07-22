@@ -11,16 +11,14 @@ import {
 import { describe, test, expect, afterEach, afterAll } from "vitest"
 import { Pool } from "pg"
 import { randomUUID } from "crypto"
-import { NodeTracerProvider, ReadableSpan } from "@opentelemetry/sdk-trace-node"
+import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
 import { InMemorySpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base"
-import { SpanStatusCode } from "@opentelemetry/api"
 import {
   AccessStrategy,
   MessageDbCategory,
   MessageDbConnection,
   MessageDbContext
 } from "@equinox-js/message-db"
-import exp from "constants"
 
 const Category = MessageDbCategory
 
@@ -38,6 +36,7 @@ namespace CartService {
   export function createWithoutOptimization(context: MessageDbContext) {
     const category = Category.create(
       context,
+      Cart.Category,
       codec,
       fold,
       initial,
@@ -52,14 +51,14 @@ namespace CartService {
       Cart.Fold.snapshotEventType,
       Cart.Fold.snapshot
     )
-    const category = Category.create(context, codec, fold, initial, noCache, access)
+    const category = Category.create(context, Cart.Category, codec, fold, initial, noCache, access)
     return Cart.Service.create(category)
   }
 
   const sliding20m = CachingStrategy.slidingWindow(cache, 20 * 60 * 1000)
 
   export function createWithCaching(context: MessageDbContext) {
-    const category = Category.create(context, codec, fold, initial, sliding20m)
+    const category = Category.create(context, Cart.Category, codec, fold, initial, sliding20m)
     return Cart.Service.create(category)
   }
 
@@ -68,7 +67,7 @@ namespace CartService {
       Cart.Fold.snapshotEventType,
       Cart.Fold.snapshot
     )
-    const category = Category.create(context, codec, fold, initial, sliding20m, access)
+    const category = Category.create(context, Cart.Category, codec, fold, initial, sliding20m, access)
     return Cart.Service.create(category)
   }
 }
@@ -84,6 +83,7 @@ namespace ContactPreferencesService {
   ) => {
     const category = Category.create(
       context,
+      ContactPreferences.Category,
       codec,
       fold,
       initial,
@@ -111,14 +111,14 @@ const createContext = (connection: MessageDbConnection, batchSize: number) =>
 namespace SimplestThing {
   export type Event = { type: "StuffHappened" }
   export const codec = Codec.json<Event, undefined>()
-  export const evolve = (state: Event, event: Event) => event
+  export const evolve = (_state: Event, event: Event) => event
   export const initial: Event = { type: "StuffHappened" }
-  export const fold = (state: Event, events: Event[]) => events.reduce(evolve, initial)
-  export const resolve = (context: MessageDbContext, categoryName: string, streamId: string) => {
-    const category = Category.create(context, codec, fold, initial)
-    return Decider.resolve(category, categoryName, streamId, undefined)
-  }
+  export const fold = (_state: Event, events: Event[]) => events.reduce(evolve, initial)
   export const categoryName = "SimplestThing"
+  export const resolve = (context: MessageDbContext, categoryName: string, streamId: string) => {
+    const category = Category.create(context, categoryName, codec, fold, initial)
+    return Decider.resolve(category, streamId, undefined)
+  }
 }
 
 namespace ContactPreferencesService {
@@ -126,7 +126,7 @@ namespace ContactPreferencesService {
 
   export const createUnoptimized = (client: MessageDbConnection) => {
     const context = createContext(client, defaultBatchSize)
-    const category = Category.create(context, codec, fold, initial)
+    const category = Category.create(context, ContactPreferences.Category, codec, fold, initial)
     return ContactPreferences.Service.create(category)
   }
 
@@ -134,6 +134,7 @@ namespace ContactPreferencesService {
     const context = createContext(client, defaultBatchSize)
     const category = Category.create(
       context,
+      ContactPreferences.Category,
       codec,
       fold,
       initial,
