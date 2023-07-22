@@ -22,5 +22,6 @@
     "@types/pg": "^8.6.6",
     "@types/ramda": "^0.28.21",
     "tsconfig": "workspace:*"
-  }
+  },
+  "version": null
 }

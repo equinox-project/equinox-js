@@ -36,5 +36,6 @@
     "tsconfig": "workspace:*",
     "tsup": "^6.5.0",
     "vitest": "^0.25.3"
-  }
+  },
+  "version": null
 }
