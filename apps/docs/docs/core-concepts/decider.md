@@ -19,7 +19,7 @@ let initial: State = 0
 let evolve = (state: State, event: Event): State => {
   switch (event.type) {
     case 'Incremented': return state + 1
-    case 'Decremented': return state + 1
+    case 'Decremented': return state - 1
   }
 }
 let decide = (command: Command, state: State): Event[] => {
