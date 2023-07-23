@@ -65,9 +65,6 @@ class Service {
 }
 ```
 
-Through our experience writing event sourced applications we've arrived at a couple of modifications to the decider pattern.
-First, while we think the evolution function is great
-
 However, we've arrived at a slight modification to the decider pattern through
 our experience developing event sourced applications. The first part of the
 decider is its aggregate projection (initial + evolve). We expect users to
