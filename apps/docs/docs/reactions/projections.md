@@ -14,7 +14,7 @@ raising an invoice.
 ```ts
 type Sql = {
   text: string,
-  values: (number | string)[]
+  values: string[]
 }
 
 function change(payerId: PayerId, event: Payer.Event): Sql {
