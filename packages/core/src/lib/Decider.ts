@@ -1,60 +1,36 @@
 import { IStream, queryAsync, TokenAndState, transactAsync } from "./Core.js"
 import { Category } from "./Category.js"
 
-enum LoadOptionType {
-  RequireLoad,
-  RequireLeader,
-  AllowStale,
-  AssumeEmpty,
-  Memento,
-}
-
-type LoadOptionValue<State> =
-  | LoadOptionType.RequireLoad
-  | LoadOptionType.RequireLeader
-  | LoadOptionType.AllowStale
-  | LoadOptionType.AssumeEmpty
-  | { type: LoadOptionType.Memento; memento: TokenAndState<State> }
-
-export namespace LoadOption {
+export enum LoadOption {
   /** Default policy; Obtain the latest state from store based on consistency level configured */
-  export const RequireLoad = LoadOptionType.RequireLoad
+  RequireLoad,
   /** Request that data be read with a quorum read / from a Leader connection */
-  export const RequireLeader = LoadOptionType.RequireLeader
+  RequireLeader,
   /**
    * If the Cache holds any state, use that without checking the backing store for updates, implying:
    * - maximizing how much we lean on Optimistic Concurrency Control when doing a `Transact` (you're still guaranteed a consistent outcome)
    * - enabling stale reads [in the face of multiple writers (either in this process or in other processes)] when doing a `Query`
    */
-  export const AllowStale = LoadOptionType.AllowStale
+  AllowStale,
   /** Inhibit load from database based on the fact that the stream is likely not to have been initialized yet, and we will be generating events */
-  export const AssumeEmpty = LoadOptionType.AssumeEmpty
-  /** Instead of loading from database, seed the loading process with the supplied memento, obtained via ISyncContext.CreateMemento() */
-  export const Memento = <State>(memento: TokenAndState<State>): LoadOptionValue<State> => ({
-    type: LoadOptionType.Memento,
-    memento,
-  })
+  AssumeEmpty,
 }
 
 namespace LoadPolicy {
   export function fetch<State, Event>(
-    x?: LoadOptionValue<State>,
+    x?: LoadOption
   ): (stream: IStream<Event, State>) => Promise<TokenAndState<State>> {
     switch (x) {
-      case LoadOptionType.RequireLoad:
+      case LoadOption.RequireLoad:
       case undefined:
       case null:
         return (stream) => stream.load(false, false)
-      case LoadOptionType.RequireLeader:
+      case LoadOption.RequireLeader:
         return (stream) => stream.load(false, true)
-      case LoadOptionType.AllowStale:
+      case LoadOption.AllowStale:
         return (stream) => stream.load(true, false)
-      case LoadOptionType.AssumeEmpty:
+      case LoadOption.AssumeEmpty:
         return (stream) => Promise.resolve(stream.loadEmpty())
-    }
-    switch (x.type) {
-      case LoadOptionType.Memento:
-        return (_stream) => Promise.resolve(x.memento)
     }
   }
 }
@@ -92,9 +68,6 @@ export interface ISyncContext<State> {
 
   /** The present State of the stream within the context of this Flow */
   state: State
-
-  /** Represents a Checkpoint position on a Stream's timeline; Can be used to manage continuations via LoadOption.FromMemento */
-  createMemento: () => TokenAndState<State>
 }
 
 namespace SyncContext {
@@ -102,12 +75,11 @@ namespace SyncContext {
     state: ctx.state,
     version: ctx.token.version,
     streamEventBytes: ctx.token.bytes === -1n ? undefined : ctx.token.bytes,
-    createMemento: () => ctx,
   })
 }
 
 export class Decider<Event, State> {
-  constructor(private readonly stream: IStream<Event, State>) {}
+  constructor(private readonly stream: IStream<Event, State>) { }
 
   /**
    * 1.  Invoke the supplied `interpret` function with the present state to determine whether any write is to occur.
@@ -116,7 +88,7 @@ export class Decider<Event, State> {
    */
   transact(
     interpret: (state: State) => Event[],
-    load?: LoadOptionValue<State>,
+    load?: LoadOption,
     attempts?: number,
   ): Promise<void> {
     const decide = ({ state }: TokenAndState<State>): Promise<[null, Event[]]> =>
@@ -140,7 +112,7 @@ export class Decider<Event, State> {
   transactProject<View>(
     interpret: (state: State) => Event[],
     render: (state: State) => View,
-    load?: LoadOptionValue<State>,
+    load?: LoadOption,
     attempts?: number,
   ): Promise<View> {
     const decide = ({ state }: TokenAndState<State>): Promise<[null, Event[]]> =>
@@ -163,7 +135,7 @@ export class Decider<Event, State> {
    */
   transactResult<Result>(
     interpret: (state: State) => [Result, Event[]],
-    load?: LoadOptionValue<State>,
+    load?: LoadOption,
     attempts?: number,
   ): Promise<Result> {
     const decide = ({ state }: TokenAndState<State>): Promise<[Result, Event[]]> =>
@@ -187,7 +159,7 @@ export class Decider<Event, State> {
   transactMapResult<Result, View>(
     interpret: (state: State) => [Result, Event[]],
     mapResult: (result: Result, state: State) => View,
-    load?: LoadOptionValue<State>,
+    load?: LoadOption,
     attempts?: number,
   ): Promise<View> {
     const decide = ({ state }: TokenAndState<State>): Promise<[Result, Event[]]> =>
@@ -210,7 +182,7 @@ export class Decider<Event, State> {
    */
   transactEx<Result>(
     decide: (state: ISyncContext<State>) => [Result, Event[]],
-    load?: LoadOptionValue<State>,
+    load?: LoadOption,
     attempts?: number,
   ): Promise<Result> {
     const decide_ = (t: TokenAndState<State>) => Promise.resolve(decide(SyncContext.map(t)))
@@ -233,7 +205,7 @@ export class Decider<Event, State> {
   transactExMapResult<Result, View>(
     decide: (state: ISyncContext<State>) => [Result, Event[]],
     mapResult: (result: Result, ctx: ISyncContext<State>) => View,
-    load?: LoadOptionValue<State>,
+    load?: LoadOption,
     attempts?: number,
   ): Promise<View> {
     const decide_ = (t: TokenAndState<State>) => Promise.resolve(decide(SyncContext.map(t)))
@@ -248,14 +220,14 @@ export class Decider<Event, State> {
   }
 
   /** Project from the folded `'state`, but without executing a decision flow as `Transact` does */
-  query<View>(render: (state: State) => View, load?: LoadOptionValue<State>): Promise<View> {
+  query<View>(render: (state: State) => View, load?: LoadOption): Promise<View> {
     return queryAsync(this.stream, LoadPolicy.fetch(load), ({ state }) => render(state))
   }
 
   /** Project from the stream's complete context, but without executing a decision flow as `TransactEx` does */
   queryEx<View>(
     render: (ctx: ISyncContext<State>) => View,
-    load?: LoadOptionValue<State>,
+    load?: LoadOption,
   ): Promise<View> {
     return queryAsync(this.stream, LoadPolicy.fetch(load), (t) => render(SyncContext.map(t)))
   }
@@ -268,7 +240,7 @@ export class Decider<Event, State> {
    */
   transactAsync(
     interpret: (state: State) => Promise<Event[]>,
-    load?: LoadOptionValue<State>,
+    load?: LoadOption,
     attempts?: number,
   ): Promise<void> {
     const mapRes = () => undefined
@@ -289,7 +261,7 @@ export class Decider<Event, State> {
    */
   transactResultAsync<Result>(
     decide: (state: State) => Promise<[Result, Event[]]>,
-    load?: LoadOptionValue<State>,
+    load?: LoadOption,
     attempts?: number,
   ): Promise<Result> {
     const mapRes = (res: Result) => res
@@ -310,7 +282,7 @@ export class Decider<Event, State> {
    */
   transactExAsync<Result>(
     decide: (state: ISyncContext<State>) => Promise<[Result, Event[]]>,
-    load?: LoadOptionValue<State>,
+    load?: LoadOption,
     attempts?: number,
   ): Promise<Result> {
     const mapRes = (res: Result) => res
@@ -332,7 +304,7 @@ export class Decider<Event, State> {
   transactExMapResultAsync<Result, View>(
     decide: (state: ISyncContext<State>) => Promise<[Result, Event[]]>,
     mapResult: (result: Result, ctx: ISyncContext<State>) => View,
-    load?: LoadOptionValue<State>,
+    load?: LoadOption,
     attempts?: number,
   ): Promise<View> {
     const mapRes = (res: Result, x: TokenAndState<State>) => mapResult(res, SyncContext.map(x))
