@@ -4,7 +4,7 @@ import { ITimelineEvent } from "@equinox-js/core"
 import { Pool } from "pg"
 import { SpanKind, SpanStatusCode, trace } from "@opentelemetry/api"
 import { sleep } from "./Sleep.js"
-const pLimit = require("p-limit")
+import pLimit from "p-limit"
 
 type Options = {
   categories: string[]

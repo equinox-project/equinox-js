@@ -1,5 +1,5 @@
 import { test, expect } from "vitest"
-import { ICheckpointer, MessageDbSource } from "../src/index.js"
+import { ICheckpointer, MessageDbSource } from "../src/index.mjs"
 import { sleep } from "../src/lib/Sleep.js"
 
 class MessageDbReaderSubstitute {
