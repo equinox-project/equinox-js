@@ -2,9 +2,9 @@ import { MessageDbCategoryReader } from "./MessageDbClient.js"
 import { ICheckpointer } from "./Checkpoints.js"
 import { ITimelineEvent } from "@equinox-js/core"
 import { Pool } from "pg"
-import pLimit from "p-limit"
 import { SpanKind, SpanStatusCode, trace } from "@opentelemetry/api"
 import { sleep } from "./Sleep.js"
+const pLimit = require("p-limit")
 
 type Options = {
   categories: string[]
