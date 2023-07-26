@@ -1,6 +1,6 @@
 import { PayerId, InvoiceId } from "./identifiers.js"
 import z from "zod"
-import { Codec, Decider, StreamId } from "@equinox-js/core"
+import { Codec, Decider, LoadOption, StreamId } from "@equinox-js/core"
 import { reduce } from "ramda"
 import * as Config from "../config/equinox.js"
 
@@ -155,7 +155,7 @@ export class Service {
 
   raise(id: InvoiceId, data: InvoiceRaised) {
     const decider = this.resolve(id)
-    return decider.transact(raiseInvoice(data))
+    return decider.transact(raiseInvoice(data), LoadOption.AssumeEmpty)
   }
 
   recordPayment(id: InvoiceId, data: Payment) {
@@ -170,7 +170,7 @@ export class Service {
 
   readInvoice(id: InvoiceId) {
     const decider = this.resolve(id)
-    return decider.query(summary)
+    return decider.query(summary, LoadOption.AllowStale)
   }
 
   static resolveCategory(config: Config.Config) {

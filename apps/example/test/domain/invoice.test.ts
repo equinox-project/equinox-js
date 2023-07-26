@@ -1,6 +1,9 @@
 import { describe, test, expect } from "vitest"
 import * as Invoice from "../../src/domain/invoice.js"
 import { PayerId } from "../../src/domain/identifiers.js"
+import { createBDD, expectError, expectEventsMatching } from "./scenario.js"
+
+const { scenario } = createBDD(Invoice.fold, Invoice.initial)
 
 const raised = {
   type: "InvoiceRaised",
@@ -18,28 +21,40 @@ describe("Codec", () => {
   })
 })
 
-const given = (events: Invoice.Event[], decide: (state: Invoice.State) => Invoice.Event[]) =>
-  decide(Invoice.fold(Invoice.initial, events))
-test("Raising an invoice", () => {
-  expect(given([], Invoice.raiseInvoice(raised.data))).toEqual([raised])
-  expect(given([raised], Invoice.raiseInvoice(raised.data))).toEqual([])
-  expect(() =>
-    given([raised, { type: "InvoiceFinalized" }], Invoice.raiseInvoice(raised.data)),
-  ).toThrow()
-})
-
 const paymentReceived: Invoice.Event = {
   type: "PaymentReceived",
   data: { amount: 10, reference: "123" },
 }
-test("Payments", () => {
-  expect(() => given([], Invoice.recordPayment(paymentReceived.data))).toThrow()
-  expect(given([raised], Invoice.recordPayment(paymentReceived.data))).toEqual([paymentReceived])
-  expect(given([raised, paymentReceived], Invoice.recordPayment(paymentReceived.data))).toEqual([])
+
+describe("Invoice", () => {
+  scenario("Raising an invoice")
+    .given([])
+    .when(Invoice.raiseInvoice(raised.data))
+    .then(expectEventsMatching([raised]))
+
+  scenario("Raising an invoice twice")
+    .given([raised])
+    .when(Invoice.raiseInvoice(raised.data))
+    .then(expectEventsMatching([]))
+
+  scenario("Raising an invoice after it has been finalized")
+    .given([raised, { type: "InvoiceFinalized" }])
+    .when(Invoice.raiseInvoice(raised.data))
+    .then(expectError)
+
+  scenario("Recordong a payment on a non-existent invoice")
+    .given([])
+    .when(Invoice.recordPayment(paymentReceived.data))
+    .then(expectError)
+
+  scenario("Recording a payment on an invoice")
+    .given([raised])
+    .when(Invoice.recordPayment(paymentReceived.data))
+    .then(expectEventsMatching([paymentReceived]))
+
+  scenario("Recording a payment on an invoice twice")
+    .given([raised, paymentReceived])
+    .when(Invoice.recordPayment(paymentReceived.data))
+    .then(expectEventsMatching([]))
 })
 
-test("Payments", () => {
-  expect(() => given([], Invoice.recordPayment(paymentReceived.data))).toThrow()
-  expect(given([raised], Invoice.recordPayment(paymentReceived.data))).toEqual([paymentReceived])
-  expect(given([raised, paymentReceived], Invoice.recordPayment(paymentReceived.data))).toEqual([])
-})
