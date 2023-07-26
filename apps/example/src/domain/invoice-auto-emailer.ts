@@ -46,7 +46,9 @@ export class Service {
       if (state?.type === "EmailSent") return []
       const payer = await this.payerService.readProfile(payerId)
       if (!payer)
-        return [ { type: "EmailSendingFailed", data: { payer_id: payerId, reason: "Payer not found" } }, ]
+        return [
+          { type: "EmailSendingFailed", data: { payer_id: payerId, reason: "Payer not found" } },
+        ]
       try {
         await this.mailer.sendEmail(
           payer.email,
@@ -55,10 +57,12 @@ export class Service {
         )
         return [{ type: "EmailSent", data: { email: payer.email, payer_id: payerId } }]
       } catch (err: any) {
-        return [{
-          type: "EmailSendingFailed",
-          data: { reason: err?.message ?? "Unknown failure", payer_id: payerId },
-        }]
+        return [
+          {
+            type: "EmailSendingFailed",
+            data: { reason: err?.message ?? "Unknown failure", payer_id: payerId },
+          },
+        ]
       }
     })
   }
@@ -66,7 +70,7 @@ export class Service {
   /** Not to be used except in tests */
   inspectState(invoiceId: InvoiceId) {
     const decider = this.resolve(invoiceId)
-    return decider.query(s => s)
+    return decider.query((s) => s)
   }
 
   static resolveCategory(config: Config.Config) {

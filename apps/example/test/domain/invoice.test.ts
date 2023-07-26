@@ -57,4 +57,3 @@ describe("Invoice", () => {
     .when(Invoice.recordPayment(paymentReceived.data))
     .then(expectEventsMatching([]))
 })
-
