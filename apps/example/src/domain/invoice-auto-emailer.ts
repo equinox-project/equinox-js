@@ -46,9 +46,7 @@ export class Service {
       if (state?.type === "EmailSent") return []
       const payer = await this.payerService.readProfile(payerId)
       if (!payer)
-        return [
-          { type: "EmailSendingFailed", data: { payer_id: payerId, reason: "Payer not found" } },
-        ]
+        return [ { type: "EmailSendingFailed", data: { payer_id: payerId, reason: "Payer not found" } }, ]
       try {
         await this.mailer.sendEmail(
           payer.email,
@@ -57,14 +55,18 @@ export class Service {
         )
         return [{ type: "EmailSent", data: { email: payer.email, payer_id: payerId } }]
       } catch (err: any) {
-        return [
-          {
-            type: "EmailSendingFailed",
-            data: { reason: err?.message ?? "Unknown failure", payer_id: payerId },
-          },
-        ]
+        return [{
+          type: "EmailSendingFailed",
+          data: { reason: err?.message ?? "Unknown failure", payer_id: payerId },
+        }]
       }
     })
+  }
+
+  /** Not to be used except in tests */
+  inspectState(invoiceId: InvoiceId) {
+    const decider = this.resolve(invoiceId)
+    return decider.query(s => s)
   }
 
   static resolveCategory(config: Config.Config) {
@@ -76,10 +78,10 @@ export class Service {
     }
   }
 
-  static create(config: Config.Config) {
+  static create(config: Config.Config, emailSender?: ISendEmails) {
     const payerService = Payer.Service.create(config)
     // could inject this via an argument too
-    const emailer = new EmailSender()
+    const emailer = emailSender ?? new EmailSender()
     const category = Service.resolveCategory(config)
     const resolve = (id: InvoiceId) => Decider.resolve(category, streamId(id), null)
     return new Service(payerService, emailer, resolve)
