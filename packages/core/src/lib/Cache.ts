@@ -199,26 +199,29 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
     originState: State,
     events: Event[],
   ): Promise<SyncResult<State>> {
-    const result = await this.inner.trySync(
-      streamId,
-      context,
-      originToken,
-      originState,
-      events,
-    )
+    const result = await this.inner.trySync(streamId, context, originToken, originState, events)
     switch (result.type) {
       case "Conflict":
         return {
           type: "Conflict",
-          resync: () => this.strategy.store(this.inner.supersedes, this.cacheKey(streamId), result.resync()),
+          resync: () =>
+            this.strategy.store(this.inner.supersedes, this.cacheKey(streamId), result.resync()),
         }
       case "Written":
-        await this.strategy.store(this.inner.supersedes, this.cacheKey(streamId), Promise.resolve(result.data))
+        await this.strategy.store(
+          this.inner.supersedes,
+          this.cacheKey(streamId),
+          Promise.resolve(result.data),
+        )
         return { type: "Written", data: result.data }
     }
   }
 
-  static apply<E, S, C>(categoryName: string, inner: IReloadableCategory<E, S, C>, strategy: ICachingStrategy) {
+  static apply<E, S, C>(
+    categoryName: string,
+    inner: IReloadableCategory<E, S, C>,
+    strategy: ICachingStrategy,
+  ) {
     return new CachingCategory(categoryName, inner, strategy)
   }
 }

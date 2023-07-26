@@ -18,7 +18,7 @@ export enum LoadOption {
 
 namespace LoadPolicy {
   export function fetch<State, Event>(
-    x?: LoadOption
+    x?: LoadOption,
   ): (stream: IStream<Event, State>) => Promise<TokenAndState<State>> {
     switch (x) {
       case LoadOption.RequireLoad:
@@ -79,7 +79,7 @@ namespace SyncContext {
 }
 
 export class Decider<Event, State> {
-  constructor(private readonly stream: IStream<Event, State>) { }
+  constructor(private readonly stream: IStream<Event, State>) {}
 
   /**
    * 1.  Invoke the supplied `interpret` function with the present state to determine whether any write is to occur.
@@ -225,10 +225,7 @@ export class Decider<Event, State> {
   }
 
   /** Project from the stream's complete context, but without executing a decision flow as `TransactEx` does */
-  queryEx<View>(
-    render: (ctx: ISyncContext<State>) => View,
-    load?: LoadOption,
-  ): Promise<View> {
+  queryEx<View>(render: (ctx: ISyncContext<State>) => View, load?: LoadOption): Promise<View> {
     return queryAsync(this.stream, LoadPolicy.fetch(load), (t) => render(SyncContext.map(t)))
   }
 
@@ -317,11 +314,7 @@ export class Decider<Event, State> {
     )
   }
 
-  static resolve<E, S, C>(
-    category: Category<E, S, C>,
-    streamId: string,
-    context: C,
-  ) {
+  static resolve<E, S, C>(category: Category<E, S, C>, streamId: string, context: C) {
     return new Decider(category.stream(context, streamId))
   }
 }

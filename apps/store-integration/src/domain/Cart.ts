@@ -52,14 +52,14 @@ export namespace Fold {
       case "ItemQuantityChanged":
         return updateItems((items) =>
           items.map((x) =>
-            x.skuId === event.data.skuId ? { ...x, quantity: event.data.quantity } : x
-          )
+            x.skuId === event.data.skuId ? { ...x, quantity: event.data.quantity } : x,
+          ),
         )
       case "ItemPropertiesChanged":
         return updateItems((items) =>
           items.map((x) =>
-            x.skuId === event.data.skuId ? { ...x, returnsWaived: event.data.waived } : x
-          )
+            x.skuId === event.data.skuId ? { ...x, returnsWaived: event.data.waived } : x,
+          ),
         )
     }
   }
@@ -93,7 +93,7 @@ export const interpret =
     const maybePropChanges = (
       context: Events.ContextInfo,
       skuId: SkuId,
-      waived?: boolean
+      waived?: boolean,
     ): Events.Event[] => {
       if (waived == null) return []
       if (!itemExistsWithDifferentWaiveStatus(skuId, waived)) return []
@@ -102,7 +102,7 @@ export const interpret =
     const maybeQuantityChanges = (
       context: Events.ContextInfo,
       skuId: SkuId,
-      quantity: number
+      quantity: number,
     ): Events.Event[] => {
       if (!itemExistsWithDifferentQuantity(skuId, quantity)) return []
       return [{ type: "ItemQuantityChanged", data: { context, skuId, quantity } }]
@@ -155,7 +155,7 @@ export class Service {
     cartId: CartId,
     optimistic: boolean,
     commands: Command[],
-    prepare?: () => Promise<void>
+    prepare?: () => Promise<void>,
   ): Promise<void> {
     return this.run(cartId, optimistic, commands, prepare).then(() => undefined)
   }

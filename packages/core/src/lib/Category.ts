@@ -4,11 +4,7 @@ import { trace } from "@opentelemetry/api"
 /** Store-agnostic interface representing interactions an Application can have with a set of streams with a given pair of Event and State types */
 export interface ICategory<Event, State, Context = null> {
   /** Obtain the state from the target stream */
-  load(
-    streamId: string,
-    allowStale: boolean,
-    requireLeader: boolean,
-  ): Promise<TokenAndState<State>>
+  load(streamId: string, allowStale: boolean, requireLeader: boolean): Promise<TokenAndState<State>>
 
   /**
    * Given the supplied `token` [and related `originState`], attempt to move to state `state'` by appending the supplied `events` to the underlying stream
@@ -48,13 +44,7 @@ export class Category<Event, State, Context = null> {
           "eqx.expected_version": Number(origin.token.version),
           "eqx.append_count": events.length,
         })
-        return this.inner.trySync(
-          streamId,
-          context,
-          origin.token,
-          origin.state,
-          events,
-        )
+        return this.inner.trySync(streamId, context, origin.token, origin.state, events)
       },
     }
   }

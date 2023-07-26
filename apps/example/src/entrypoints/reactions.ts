@@ -1,9 +1,9 @@
-import './tracing.js'
+import "./tracing.js"
 import pg from "pg"
 import { MessageDbContext } from "@equinox-js/message-db"
 import { Config, Store } from "../config/equinox.js"
 import { ITimelineEvent, MemoryCache, StreamName } from "@equinox-js/core"
-import { Invoice, InvoiceAutoEmailer} from "../domain/index.js"
+import { Invoice, InvoiceAutoEmailer } from "../domain/index.js"
 import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-consumer"
 import { InvoiceId } from "../domain/identifiers.js"
 
@@ -19,14 +19,14 @@ const config: Config = { store: Store.MessageDb, context, cache: new MemoryCache
 const invoiceEmailer = InvoiceAutoEmailer.Service.create(config)
 
 const checkpointer = new PgCheckpoints(createPool(process.env.CP_CONN_STR)!)
-checkpointer.ensureTable().then(() => console.log('table created'))
+checkpointer.ensureTable().then(() => console.log("table created"))
 
 async function handle(streamName: string, events: ITimelineEvent<string>[]) {
   const [category, id] = StreamName.parseCategoryAndId(streamName)
   if (category !== Invoice.CATEGORY) return
   const ev = Invoice.codec.tryDecode(events[0])
   if (!ev) return
-  if (ev.type !== 'InvoiceRaised') return
+  if (ev.type !== "InvoiceRaised") return
   const payerId = ev.data.payer_id
   const amount = ev.data.amount
   await invoiceEmailer.sendEmail(InvoiceId.parse(id), payerId, amount)
@@ -40,17 +40,12 @@ const source = MessageDbSource.create({
   checkpointer,
   handler: handle,
   tailSleepIntervalMs: 100,
-  maxConcurrentStreams: 10
+  maxConcurrentStreams: 10,
 })
 
 const ctrl = new AbortController()
 
-process.on('SIGINT', () => ctrl.abort())
-process.on('SIGTERM', () => ctrl.abort())
+process.on("SIGINT", () => ctrl.abort())
+process.on("SIGTERM", () => ctrl.abort())
 
 source.start(ctrl.signal)
-
-
-
-
-

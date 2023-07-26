@@ -1,4 +1,4 @@
-import './tracing.js'
+import "./tracing.js"
 import "express-async-errors"
 import express from "express"
 import pg from "pg"
@@ -40,7 +40,6 @@ app.delete("/payer/:id", async (req, res) => {
   res.status(200).json(null)
 })
 
-
 app.post("/invoice", async (req, res) => {
   const id = InvoiceId.create()
   const body = Invoice.RaisedSchema.parse(req.body)
@@ -48,7 +47,7 @@ app.post("/invoice", async (req, res) => {
   res.status(200).json({ id })
 })
 
-app.get('/invoice/:id', async (req, res) => {
+app.get("/invoice/:id", async (req, res) => {
   const invoice = await invoiceService.readInvoice(InvoiceId.parse(req.params.id))
   if (!invoice) return res.status(404).json(null)
   return res.status(200).json(invoice)

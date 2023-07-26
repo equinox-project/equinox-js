@@ -8,7 +8,7 @@ It's designed to be used with equinox-js projects but can be used in any node ap
 - High throughput message consumption
 - Integrated checkpointer for resuming from last processed event
 - Configurable batch sizes for event fetching
-- Support for handling multiple concurrent streams 
+- Support for handling multiple concurrent streams
 - Automatic reconnection and backoff
 
 ```ts
@@ -27,7 +27,8 @@ const source = MessageDbSource.create({
   groupName: "InvoiceAutoEmailer", // Consumer group name (used for checkpointing and tracing)
   checkpointer, // the checkpointer maintains checkpoints on per category per group basis
   // Your handler will receive a list of events for a given stream
-  handler: async (streamName, events) => console.log("received", events.length, "events for", streamName),
+  handler: async (streamName, events) =>
+    console.log("received", events.length, "events for", streamName),
   tailSleepIntervalMs: 100, // If we reach the end of the event store, how long should we wait before requesting a new batch?
   maxConcurrentStreams: 10, // How many streams are we OK to process concurrently?
 })
