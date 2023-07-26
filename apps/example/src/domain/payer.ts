@@ -20,23 +20,25 @@ export const codec = Codec.zod<Event>({
 })
 
 type State = null | PayerProfile
-const initial: State = null
-const fold = (state: State, events: Event[]): State => {
+export const initial: State = null
+export const fold = (state: State, events: Event[]): State => {
   if (!events.length) return state
   const event = events[events.length - 1]
   return event.type === "PayerProfileUpdated" ? event.data : null
 }
 
-const updateProfile =
-  (data: PayerProfile) =>
-  (state: State): Event[] => {
-    if (state && equals(data, state)) return []
-    return [{ type: "PayerProfileUpdated", data }]
-  }
+export namespace Decide {
+  export const updateProfile =
+    (data: PayerProfile) =>
+    (state: State): Event[] => {
+      if (state && equals(data, state)) return []
+      return [{ type: "PayerProfileUpdated", data }]
+    }
 
-export const deletePayer = (state: State): Event[] => {
-  if (state == null) return [{ type: "PayerDeleted" }]
-  return []
+  export const deletePayer = (state: State): Event[] => {
+    if (state == null) return []
+    return [{ type: "PayerDeleted" }]
+  }
 }
 
 export class Service {
@@ -44,12 +46,12 @@ export class Service {
 
   updateProfile(id: PayerId, profile: PayerProfile) {
     const decider = this.resolve(id)
-    return decider.transact(updateProfile(profile))
+    return decider.transact(Decide.updateProfile(profile))
   }
 
   deletePayer(id: PayerId) {
     const decider = this.resolve(id)
-    return decider.transact(deletePayer)
+    return decider.transact(Decide.deletePayer)
   }
 
   readProfile(id: PayerId) {
