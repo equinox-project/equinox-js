@@ -147,7 +147,9 @@ test("it fails fast", async () => {
 })
 
 describe("MessageDbCategoryReader", () => {
-  const pool = new Pool({ connectionString: process.env.MDB_CONN_STR })
+  const connectionString =
+    process.env.MDB_CONN_STR ?? "postgres://message_store:@localhost:5432/message_store"
+  const pool = new Pool({ connectionString })
   const conn = MessageDbConnection.create(pool)
   const category = randomUUID().replace(/-/g, "")
   const streamId = randomUUID().replace(/-/g, "")
