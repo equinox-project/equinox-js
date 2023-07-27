@@ -6,14 +6,18 @@ export type Format = string
 export class MessageDbCategoryReader {
   constructor(private readonly pool: Pool) {}
 
-  async readCategoryMessages(category: string, fromPositionInclusive: bigint, batchSize: number) {
+  async readCategoryMessages(
+    category: string,
+    fromPositionInclusive: bigint,
+    batchSize: number,
+    condition: string | null,
+  ) {
     const client = await this.pool.connect()
     try {
-      const result = await client.query("select * from get_category_messages($1, $2, $3)", [
-        category,
-        String(fromPositionInclusive),
-        batchSize,
-      ])
+      const result = await client.query(
+        "select * from get_category_messages($1, $2, $3, condition => $4)",
+        [category, String(fromPositionInclusive), batchSize, condition],
+      )
       const messages = result.rows.map(fromDb)
       const isTail = messages.length < batchSize
       const checkpoint = result.rows.length

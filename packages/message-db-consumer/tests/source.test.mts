@@ -1,13 +1,18 @@
-import { test, expect } from "vitest"
+import { StreamName } from "@equinox-js/core"
+import { describe, test, expect, beforeAll } from "vitest"
 import { ICheckpointer, MessageDbSource } from "../src/index.mjs"
+import { MessageDbConnection } from "@equinox-js/message-db"
 import { sleep } from "../src/lib/Sleep.js"
+import { Pool } from "pg"
+import { randomUUID } from "crypto"
+import { MessageDbCategoryReader } from "../src/lib/MessageDbClient.js"
 
 class MessageDbReaderSubstitute {
   batches: any[] = []
   pushBatch(batch: any) {
     this.batches.push(batch)
   }
-  async readCategoryMessages(category: string, fromPositionInclusive: bigint, batchSize: number) {
+  async readCategoryMessages(_category: string, fromPositionInclusive: bigint, _batchSize: number) {
     const batch = this.batches.find((b) => b.checkpoint >= fromPositionInclusive + 1n)
 
     return batch || { messages: [], isTail: true, checkpoint: fromPositionInclusive }
@@ -139,4 +144,43 @@ test("it fails fast", async () => {
   })
 
   await expect(src.start(ctrl.signal)).rejects.toThrow("failed")
+})
+
+describe("MessageDbCategoryReader", () => {
+  const pool = new Pool({ connectionString: process.env.MDB_CONN_STR })
+  const conn = MessageDbConnection.create(pool)
+  const category = randomUUID().replace(/-/g, "")
+  const streamId = randomUUID().replace(/-/g, "")
+  const streamName = StreamName.compose(category, streamId)
+  beforeAll(async () => {
+    await conn.write.writeMessages(streamName, Array(100).fill({ type: "TestEvent" }), -1n)
+    await conn.write.writeSingleMessage(streamName, { type: "ExclusiveEvent" }, null)
+  })
+  test("Can read a category", async () => {
+    const reader = new MessageDbCategoryReader(pool)
+    const batch = await reader.readCategoryMessages(category, 0n, 10, null)
+    expect(batch.messages).toHaveLength(10)
+    expect(batch.isTail).toBe(false)
+    expect(batch.checkpoint).toBeGreaterThan(0n)
+  })
+  test("Can not read a category with a condition if sql_condition is off", async () => {
+    const reader = new MessageDbCategoryReader(pool)
+    await expect(
+      reader.readCategoryMessages(category, 0n, 10, "messages.type = 'ExclusiveEvent'"),
+    ).rejects.toThrow("SQL condition is not activated")
+  })
+
+  test("Can read a category with a condition", async () => {
+    await pool.query("SELECT set_config('message_store.sql_condition', 'on', true)", [])
+    const reader = new MessageDbCategoryReader(pool)
+    const batch = await reader.readCategoryMessages(
+      category,
+      0n,
+      10,
+      "messages.type = 'ExclusiveEvent'",
+    )
+    expect(batch.messages).toHaveLength(1)
+    expect(batch.isTail).toBe(true)
+    expect(batch.checkpoint).toBeGreaterThan(0n)
+  })
 })
