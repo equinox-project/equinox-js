@@ -7,9 +7,9 @@ type ReadCategoryParams = {
   category: string
   fromPositionInclusive: bigint
   batchSize: number
-  consumerGroupMember?: number, 
-  consumerGroupSize?: number,
-  condition?: string 
+  consumerGroupMember?: number
+  consumerGroupSize?: number
+  condition?: string
 }
 
 export class MessageDbCategoryReader {

@@ -12,7 +12,7 @@ class MessageDbReaderSubstitute {
   pushBatch(batch: any) {
     this.batches.push(batch)
   }
-  async readCategoryMessages({fromPositionInclusive}: any) {
+  async readCategoryMessages({ fromPositionInclusive }: any) {
     const batch = this.batches.find((b) => b.checkpoint >= fromPositionInclusive + 1n)
 
     return batch || { messages: [], isTail: true, checkpoint: fromPositionInclusive }
