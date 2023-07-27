@@ -27,21 +27,16 @@ export class MessageDbCategoryReader {
   }
 
   async readCategoryMessages(params: ReadCategoryParams) {
-    const client = await this.pool.connect()
-    try {
-      const result = await client.query(
-        "select * from get_category_messages($1, $2, $3, null, $4, $5, $6)",
-        this.paramsToArray(params),
-      )
-      const messages = result.rows.map(fromDb)
-      const isTail = messages.length < params.batchSize
-      const checkpoint = result.rows.length
-        ? BigInt(result.rows[result.rows.length - 1].global_position) + 1n
-        : params.fromPositionInclusive
-      return { messages, isTail, checkpoint }
-    } finally {
-      client.release()
-    }
+    const result = await this.pool.query(
+      "select * from get_category_messages($1, $2, $3, null, $4, $5, $6)",
+      this.paramsToArray(params),
+    )
+    const messages = result.rows.map(fromDb)
+    const isTail = messages.length < params.batchSize
+    const checkpoint = result.rows.length
+      ? BigInt(result.rows[result.rows.length - 1].global_position) + 1n
+      : params.fromPositionInclusive
+    return { messages, isTail, checkpoint }
   }
 }
 

@@ -12,9 +12,8 @@ export class MessageDbWriter {
     message: IEventData<Format>,
     expectedVersion: bigint | null,
   ): Promise<MdbWriteResult> {
-    const client = await this.pool.connect()
     try {
-      const results = await client.query(
+      const results = await this.pool.query(
         `select message_store.write_message($1, $2, $3, $4, $5, $6)`,
         [
           message.id || randomUUID(),
@@ -29,8 +28,6 @@ export class MessageDbWriter {
       return { type: "Written", position }
     } catch (err: any) {
       return { type: "ConflictUnknown" }
-    } finally {
-      client.release()
     }
   }
 
@@ -80,22 +77,17 @@ export class MessageDbReader {
     private readonly leaderPool: Pool,
   ) {}
 
-  private connect(requiresLeader: boolean) {
-    if (requiresLeader) return this.leaderPool.connect()
-    return this.pool.connect()
+  private getPool(requiresLeader: boolean) {
+    if (requiresLeader) return this.leaderPool
+    return this.pool
   }
 
   async readLastEvent(streamName: string, requiresLeader: boolean, eventType?: string) {
-    const client = await this.connect(requiresLeader)
-    try {
-      const result = await client.query(
-        "select * from message_store.get_last_stream_message($1, $2)",
-        [streamName, eventType ?? null],
-      )
-      return result.rows.map(fromDb)[0]
-    } finally {
-      client.release()
-    }
+    const result = await this.getPool(requiresLeader).query(
+      "select * from message_store.get_last_stream_message($1, $2)",
+      [streamName, eventType ?? null],
+    )
+    return result.rows.map(fromDb)[0]
   }
 
   async readStream(
@@ -104,17 +96,12 @@ export class MessageDbReader {
     batchSize: number,
     requiresLeader: boolean,
   ): Promise<ITimelineEvent<Format>[]> {
-    const client = await this.connect(requiresLeader)
-    try {
-      const result = await client.query(
-        `select position, type, data, metadata, id, time
+    const result = await this.getPool(requiresLeader).query(
+      `select position, type, data, metadata, id, time
          from get_stream_messages($1, $2, $3)`,
-        [streamName, String(fromPosition), batchSize],
-      )
-      return result.rows.map(fromDb)
-    } finally {
-      client.release()
-    }
+      [streamName, String(fromPosition), batchSize],
+    )
+    return result.rows.map(fromDb)
   }
 }
 
