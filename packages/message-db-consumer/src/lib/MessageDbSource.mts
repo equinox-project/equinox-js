@@ -15,6 +15,8 @@ type Options = {
   tailSleepIntervalMs: number
   maxConcurrentStreams: number
   condition?: string
+  consumerGroupMember?: number
+  consumerGroupSize?: number
 }
 
 const tracer = trace.getTracer("@equinox-js/message-db-consumer")
@@ -72,11 +74,22 @@ export class MessageDbSource {
       checkpointer,
       tailSleepIntervalMs,
       batchSize = defaultBatchSize,
-      condition = null
+      condition,
+      consumerGroupMember,
+      consumerGroupSize,
     } = this.options
+    const readBatch = (fromPositionInclusive: bigint) =>
+      this.client.readCategoryMessages({
+        category,
+        fromPositionInclusive,
+        batchSize,
+        condition,
+        consumerGroupSize,
+        consumerGroupMember,
+      })
     let position = await checkpointer.load(groupName, category)
     while (!signal.aborted) {
-      const batch = await this.client.readCategoryMessages(category, position, batchSize, condition)
+      const batch = await readBatch(position)
       if (signal.aborted) return
       const byStreamName = new Map<string, ITimelineEvent<string>[]>()
       for (let i = 0; i < batch.messages.length; ++i) {

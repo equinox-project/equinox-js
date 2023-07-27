@@ -12,7 +12,7 @@ class MessageDbReaderSubstitute {
   pushBatch(batch: any) {
     this.batches.push(batch)
   }
-  async readCategoryMessages(_category: string, fromPositionInclusive: bigint, _batchSize: number) {
+  async readCategoryMessages({fromPositionInclusive}: any) {
     const batch = this.batches.find((b) => b.checkpoint >= fromPositionInclusive + 1n)
 
     return batch || { messages: [], isTail: true, checkpoint: fromPositionInclusive }
@@ -160,27 +160,36 @@ describe("MessageDbCategoryReader", () => {
   })
   test("Can read a category", async () => {
     const reader = new MessageDbCategoryReader(pool)
-    const batch = await reader.readCategoryMessages(category, 0n, 10, null)
+    const batch = await reader.readCategoryMessages({
+      category,
+      fromPositionInclusive: 0n,
+      batchSize: 10,
+    })
     expect(batch.messages).toHaveLength(10)
     expect(batch.isTail).toBe(false)
     expect(batch.checkpoint).toBeGreaterThan(0n)
   })
   test("Can not read a category with a condition if sql_condition is off", async () => {
     const reader = new MessageDbCategoryReader(pool)
-    await expect(
-      reader.readCategoryMessages(category, 0n, 10, "messages.type = 'ExclusiveEvent'"),
-    ).rejects.toThrow("SQL condition is not activated")
+    const batch = reader.readCategoryMessages({
+      category,
+      fromPositionInclusive: 0n,
+      batchSize: 10,
+      condition: "messages.type = 'ExclusiveEvent'",
+    })
+
+    await expect(batch).rejects.toThrow("SQL condition is not activated")
   })
 
   test("Can read a category with a condition", async () => {
     await pool.query("SELECT set_config('message_store.sql_condition', 'on', true)", [])
     const reader = new MessageDbCategoryReader(pool)
-    const batch = await reader.readCategoryMessages(
+    const batch = await reader.readCategoryMessages({
       category,
-      0n,
-      10,
-      "messages.type = 'ExclusiveEvent'",
-    )
+      fromPositionInclusive: 0n,
+      batchSize: 10,
+      condition: "messages.type = 'ExclusiveEvent'",
+    })
     expect(batch.messages).toHaveLength(1)
     expect(batch.isTail).toBe(true)
     expect(batch.checkpoint).toBeGreaterThan(0n)
