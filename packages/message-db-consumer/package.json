@@ -19,6 +19,7 @@
     "./dist"
   ],
   "devDependencies": {
+    "@equinox-js/message-db": "workspace:*",
     "@types/node": "^18.11.18",
     "@types/pg": "^8.6.6",
     "p-limit": "^4.0.0",

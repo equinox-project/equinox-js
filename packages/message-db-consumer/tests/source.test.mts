@@ -1,13 +1,18 @@
-import { test, expect } from "vitest"
+import { StreamName } from "@equinox-js/core"
+import { describe, test, expect, beforeAll } from "vitest"
 import { ICheckpointer, MessageDbSource } from "../src/index.mjs"
+import { MessageDbConnection } from "@equinox-js/message-db"
 import { sleep } from "../src/lib/Sleep.js"
+import { Pool } from "pg"
+import { randomUUID } from "crypto"
+import { MessageDbCategoryReader } from "../src/lib/MessageDbClient.js"
 
 class MessageDbReaderSubstitute {
   batches: any[] = []
   pushBatch(batch: any) {
     this.batches.push(batch)
   }
-  async readCategoryMessages(category: string, fromPositionInclusive: bigint, batchSize: number) {
+  async readCategoryMessages({ fromPositionInclusive }: any) {
     const batch = this.batches.find((b) => b.checkpoint >= fromPositionInclusive + 1n)
 
     return batch || { messages: [], isTail: true, checkpoint: fromPositionInclusive }

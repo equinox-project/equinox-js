@@ -1,18 +1,23 @@
 # Access Strategies
 
+An access strategy controls how your category will _access_ events from the
+store.
+
 
 # Unoptimized
 
-The first, and likely most used access strategy is the unoptimized one. It'll not apply any optimised reading logic.
-When loading a stream for the first time all of its events will be loaded in batches of `batchSize` (default: `500`).
-This turns out to be a sensible default for most aggregates, especially when used in conjunction with the
-built-in caching layer.
+The first, and likely most used access strategy is the unoptimized one. It'll
+not apply any optimised reading logic. When loading a stream for the first time
+all of its events will be loaded in batches of `batchSize` (default: `500`).
+This turns out to be a sensible default for most aggregates, especially when
+used in conjunction with the built-in caching layer.
 
 # LatestKnownEvent(type)
 
-There is a special case of stream whose events are all a "full-replace". An example could be a customer's contact
-preferences, or an entity view-data stream. This access strategy will ensure that you only load at most a single event
-when transacting or querying such a stream.
+There is a special case of stream whose events are all a "full-replace". An
+example could be a customer's contact preferences, or an entity view-data
+stream. This access strategy will ensure that you only load at most a single
+event when transacting or querying such a stream.
 
 # AdjacentSnapshots(type, toSnapshot, frequency)
 

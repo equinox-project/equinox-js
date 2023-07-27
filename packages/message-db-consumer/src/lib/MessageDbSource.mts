@@ -6,15 +6,36 @@ import { SpanKind, SpanStatusCode, trace } from "@opentelemetry/api"
 import { sleep } from "./Sleep.js"
 import pLimit from "p-limit"
 
-type Options = {
+interface CreateOptions {
+  /** The database pool to use to read messages from the category */
+  pool: Pool
+  /** The categories to read from */
   categories: string[]
+  /** The maximum number of messages to read from the category at a time
+   * @default 500
+   */
   batchSize?: number
+  /** The name of the consumer group to use for checkpointing */
   groupName: string
+  /** The checkpointer to use for checkpointing */
   checkpointer: ICheckpointer
+  /** The handler to call for each batch of stream messages */
   handler: (streamName: string, events: ITimelineEvent<string>[]) => Promise<void>
+  /** The number of milliseconds to sleep between tail reads */
   tailSleepIntervalMs: number
+  /** The maximum number of concurrent streams to process, enforced via p-limit */
   maxConcurrentStreams: number
+  /** Apply a server side filter condition to the reading of messages
+   * NOTE: you will need to set the `message_store.sql_condition` setting to `"on"` to use this feature
+   */
+  condition?: string
+  /** When using consumer groups: the index of the consumer. 0 <= i <= consumerGroupSize
+   * each consumer in the group maintains their own checkpoint */
+  consumerGroupMember?: number
+  /** The number of group consumers you have deployed */
+  consumerGroupSize?: number
 }
+type Options = Omit<CreateOptions, "pool">
 
 const tracer = trace.getTracer("@equinox-js/message-db-consumer")
 const defaultBatchSize = 500
@@ -71,10 +92,24 @@ export class MessageDbSource {
       checkpointer,
       tailSleepIntervalMs,
       batchSize = defaultBatchSize,
+      condition,
+      consumerGroupMember,
+      consumerGroupSize,
     } = this.options
-    let position = await checkpointer.load(groupName, category)
+    const readBatch = (fromPositionInclusive: bigint) =>
+      this.client.readCategoryMessages({
+        category,
+        fromPositionInclusive,
+        batchSize,
+        condition,
+        consumerGroupSize,
+        consumerGroupMember,
+      })
+    const checkpointGroupName =
+      consumerGroupMember != null ? `${groupName}-${consumerGroupMember}` : groupName
+    let position = await checkpointer.load(checkpointGroupName, category)
     while (!signal.aborted) {
-      const batch = await this.client.readCategoryMessages(category, position, batchSize)
+      const batch = await readBatch(position)
       if (signal.aborted) return
       const byStreamName = new Map<string, ITimelineEvent<string>[]>()
       for (let i = 0; i < batch.messages.length; ++i) {
@@ -94,7 +129,7 @@ export class MessageDbSource {
       }
       await Promise.all(promises)
       if (batch.checkpoint != position) {
-        await checkpointer.commit(groupName, category, batch.checkpoint)
+        await checkpointer.commit(checkpointGroupName, category, batch.checkpoint)
         position = batch.checkpoint
       }
       if (batch.isTail) await sleep(tailSleepIntervalMs, signal).catch(() => {})
