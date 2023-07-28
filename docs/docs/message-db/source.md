@@ -41,7 +41,6 @@ interface CreateOptions {
   consumerGroupSize?: number
 }
 type Options = Omit<CreateOptions, "pool">
-
 ```
 
 ## Consumer groups
@@ -57,5 +56,5 @@ is therefore not easily autoscaled. In order to expand or contract a consumer
 group you will need to wipe the checkpoints and have all of the consumers in the
 group start from the current lowest checkpoint.
 
-Using a hash of the ID guarantees that all messages for a particular entity will
-be handled by the same consumer.
+Using a hash of the ID guarantees that all messages for a particular stream will
+be handled in the correct order by the same consumer instance.
