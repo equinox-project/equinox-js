@@ -18,20 +18,11 @@ const FeatureList = [
   },
   {
     title: "Transparent caching",
-    description: <>Equinox supports caching aggregate state using an LRU cache in a completely transparent way</>,
+    description: <>Equinox supports caching aggregate state using an LRU cache in an optimized and transparent way</>,
   },
   {
     title: "Concurrency Control",
     description: <>Equinox automates optimistic concurrency controls using a retry-loop.</>,
-  },
-  {
-    title: "Multiple stores",
-    description: (
-      <>
-        Equinox supports MessageDB, DynamoDB, and an in-memory store out of the box allowing you to use the same programming model while taking
-        advantage of the different trade-offs these stores have to offer
-      </>
-    ),
   },
   {
     title: "Not a framework",

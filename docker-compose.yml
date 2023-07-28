@@ -1,42 +1,12 @@
 version: '3.7'
 
 services:
-  jaeger:
-    image: jaegertracing/opentelemetry-all-in-one
-    environment:
-      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
-    ports:
-      - '13133:13133'
-      - '16686:16686'
-      - '4317:4317'
   messagedb:
     image: ethangarofolo/message-db
     volumes:
       - db-data:/var/lib/postgresql/data:cached
     ports:
       - "5432:5432"
-  dynamodb-local:
-    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
-    image: "amazon/dynamodb-local:latest"
-    container_name: dynamodb-local
-    ports:
-      - "8000:8000"
-    volumes:
-      - "./docker/dynamodb:/home/dynamodblocal/data"
-    working_dir: /home/dynamodblocal
-
-  dynamodb-admin:
-    image: aaronshaf/dynamodb-admin
-    ports:
-      - "8001:8001"
-    user: root
-    environment:
-      DYNAMO_ENDPOINT: "http://host.docker.internal:4566"
-      AWS_REGION: "us-east-2"
-      AWS_ACCESS_KEY_ID: local
-      AWS_SECRET_ACCESS_KEY: local
-
-
+  
 volumes:
   db-data:
-  dynamo-data:

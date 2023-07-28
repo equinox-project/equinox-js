@@ -1,6 +1,6 @@
 # Contact preferences 
 
-This decider is used in integration tests for MessageDb and DynamoStore
+This decider is used in integration tests for MessageDb
 
 ```ts
 import * as Mdb from "@equinox-js/message-db"
