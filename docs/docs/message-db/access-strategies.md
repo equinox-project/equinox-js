@@ -1,7 +1,8 @@
 # Access Strategies
 
-An access strategy controls how your category will _access_ events from the
-store.
+The access strategy allows you to opt into custom loading or reloading
+algorithms. For almost all categories in almost all most systems, `Unoptimized`
+is a good choice; you can always switch later.
 
 
 # Unoptimized
@@ -68,9 +69,9 @@ const access = AccessStrategy.AdjacentSnapshots(snapshotEventType, toSnapshot)
 
 With this in place Equinox will maintain and store a snapshot event in an
 adjacent stream `{category}:snapshot-{stream_id}`. When loading the current
-state we will firt load the latest event from the snapshot stream. The snapshot
+state we will first load the latest event from the snapshot stream. The snapshot
 event will have the version of the stream it was generated from, this version
-will be used to fetch "events after version" from the source stream. In practise
+will be used to fetch "events since version" from the source stream. In practise
 this guarantees that the state of a stream can be reconstructed in 2 round-trips
 (aside from some interactions with the cache that can cause it to need an extra
 round trip in exceedingly rare cases).

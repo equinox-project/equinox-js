@@ -1,9 +1,9 @@
 # Source
 
 The MessageDB source continuously fetches batches of messages and dispatches
-them to a supplied handler and dispatches them to a supplied handler. It
-supports reading from multiple categories at a time, server side filtering, and
-splitting processing into multiple parallel consumer groups.
+them to a supplied handler. It supports reading from multiple categories at a
+time, server side filtering, and splitting processing into multiple parallel
+consumer groups.
 
 ## Options
 
@@ -26,7 +26,7 @@ interface CreateOptions {
   checkpointer: ICheckpointer
   /** The handler to call for each batch of stream messages */
   handler: (streamName: string, events: ITimelineEvent<string>[]) => Promise<void>
-  /** The number of milliseconds to sleep between tail reads */
+  /** sleep time in ms between reads when at the end of the category */
   tailSleepIntervalMs: number
   /** The maximum number of concurrent streams to process, enforced via p-limit */
   maxConcurrentStreams: number

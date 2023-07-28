@@ -11,7 +11,8 @@ interface CreateOptions {
   pool: Pool
   /** The categories to read from */
   categories: string[]
-  /** The maximum number of messages to read from the category at a time
+  /**
+   * The maximum number of messages to read from the category at a time
    * @default 500
    */
   batchSize?: number
@@ -21,11 +22,12 @@ interface CreateOptions {
   checkpointer: ICheckpointer
   /** The handler to call for each batch of stream messages */
   handler: (streamName: string, events: ITimelineEvent<string>[]) => Promise<void>
-  /** The number of milliseconds to sleep between tail reads */
+  /** sleep time in ms between reads when at the end of the category */
   tailSleepIntervalMs: number
   /** The maximum number of concurrent streams to process, enforced via p-limit */
   maxConcurrentStreams: number
-  /** Apply a server side filter condition to the reading of messages
+  /**
+   * Apply a server side filter condition to the reading of messages
    * NOTE: you will need to set the `message_store.sql_condition` setting to `"on"` to use this feature
    */
   condition?: string
