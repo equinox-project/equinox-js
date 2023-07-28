@@ -18,6 +18,7 @@ import {
   CachingStrategy,
   ICachingStrategy,
   IReloadableCategory,
+  Tags,
 } from "@equinox-js/core"
 
 function keepMap<T, V>(arr: T[], fn: (v: T) => V | undefined): V[] {
@@ -88,9 +89,9 @@ export class MessageDbContext {
       version = lastVersion
     }
     trace.getActiveSpan()?.setAttributes({
-      "eqx.loaded_events": eventCount,
-      "eqx.loaded_batches": batches,
-      "eqx.last_version": Number(version),
+      [Tags.loaded_count]: eventCount,
+      [Tags.batches]: batches,
+      [Tags.read_version]: Number(version),
     })
     return [Token.create(version), state]
   }
@@ -104,8 +105,8 @@ export class MessageDbContext {
   ): Promise<[StreamToken, State]> {
     const [version, events] = await Read.loadLastEvent(this.conn.read, requireLeader, streamName)
     trace.getActiveSpan()?.setAttributes({
-      "eqx.loaded_events": 1,
-      "eqx.last_version": Number(version),
+      [Tags.loaded_count]: 1,
+      [Tags.read_version]: Number(version),
     })
     return [Token.create(version), fold(initial, keepMap(events, tryDecode))]
   }
@@ -126,7 +127,7 @@ export class MessageDbContext {
     )
     const decoded = await Snapshot.decode(tryDecode, events)
     trace.getActiveSpan()?.setAttributes({
-      "eqx.snapshot_version": decoded ? Number(decoded?.[0].version) : -1,
+      [Tags.snapshot_version]: decoded ? Number(decoded?.[0].version) : -1,
     })
     return decoded
   }
@@ -154,11 +155,11 @@ export class MessageDbContext {
       state = fold(state, keepMap(events, tryDecode))
       streamVersion = streamVersion > version ? streamVersion : version
       batches++
-      eventCount++
+      eventCount += events.length
     }
     trace.getActiveSpan()?.setAttributes({
-      "eqx.reloaded_events": eventCount,
-      "eqx.reloaded_batches": batches,
+      [Tags.loaded_count]: eventCount,
+      [Tags.batches]: batches,
     })
     return [Token.create(streamVersion), state]
   }
@@ -170,10 +171,10 @@ export class MessageDbContext {
   ): Promise<GatewaySyncResult> {
     const span = trace.getActiveSpan()
     const streamVersion = Token.streamVersion(token)
-    span?.setAttribute(
-      "eqx.append_types",
-      encodedEvents.map((x) => x.type),
-    )
+    const appendedTypes = new Set(encodedEvents.map((x) => x.type))
+    if (appendedTypes.size <= 10) {
+      span?.setAttribute(Tags.append_types, Array.from(appendedTypes))
+    }
     const result = await this.conn.write.writeMessages(streamName, encodedEvents, streamVersion)
 
     switch (result.type) {
@@ -190,7 +191,7 @@ export class MessageDbContext {
   async storeSnapshot(categoryName: string, streamId: string, event: IEventData<Format>) {
     const snapshotStream = Snapshot.streamName(categoryName, streamId)
     await this.conn.write.writeMessages(snapshotStream, [event], null)
-    trace.getActiveSpan()?.setAttribute("eqx.snapshot_written", true)
+    trace.getActiveSpan()?.setAttribute(Tags.snapshot_written, true)
   }
 
   static create({ pool, followerPool, batchSize, maxBatches }: ContextConfig) {
@@ -243,9 +244,9 @@ class InternalCategory<Event, State, Context>
     const streamName = Equinox.StreamName.compose(this.categoryName, streamId)
     const span = trace.getActiveSpan()
     span?.setAttributes({
-      "eqx.access_strategy": this.access.type,
-      "eqx.category": this.categoryName,
-      "eqx.stream_name": streamName,
+      [Tags.access_strategy]: this.access.type,
+      [Tags.category]: this.categoryName,
+      [Tags.stream_name]: streamName,
     })
     switch (this.access.type) {
       case "Unoptimized":
@@ -325,8 +326,8 @@ class InternalCategory<Event, State, Context>
     const span = trace.getActiveSpan()
     const streamName = Equinox.StreamName.compose(this.categoryName, streamId)
     span?.setAttributes({
-      "eqx.category": this.categoryName,
-      "eqx.stream_name": streamName,
+      [Tags.category]: this.categoryName,
+      [Tags.stream_name]: streamName,
     })
     const encode = (ev: Event) => this.codec.encode(ev, ctx)
     const encodedEvents = await Promise.all(events.map(encode))
@@ -346,7 +347,7 @@ class InternalCategory<Event, State, Context>
           case "AdjacentSnapshots": {
             const shapshotFrequency = this.access.frequency ?? this.context.batchSize
             const shouldSnapshot = Token.shouldSnapshot(shapshotFrequency, token, result.token)
-            span?.setAttribute("eqx.should_snapshot", shouldSnapshot)
+            span?.setAttribute(Tags.snapshot_written, shouldSnapshot)
             if (shouldSnapshot) {
               await this.storeSnapshot(
                 this.categoryName,

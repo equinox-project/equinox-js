@@ -1,5 +1,6 @@
 import { IStream, TokenAndState, StreamToken, SyncResult } from "./Core.js"
 import { trace } from "@opentelemetry/api"
+import { Tags } from "../index.js"
 
 /** Store-agnostic interface representing interactions an Application can have with a set of streams with a given pair of Event and State types */
 export interface ICategory<Event, State, Context = null> {
@@ -31,18 +32,17 @@ export class Category<Event, State, Context = null> {
       loadEmpty: () => this.empty,
       load: (allowStale, requireLeader) => {
         trace.getActiveSpan()?.setAttributes({
-          "eqx.stream_id": streamId,
-          "eqx.require_leader": requireLeader,
-          "eqx.allow_stale": allowStale,
+          [Tags.stream_id]: streamId,
+          [Tags.requires_leader]: requireLeader,
+          [Tags.allow_stale]: allowStale,
         })
         return this.inner.load(streamId, allowStale, requireLeader)
       },
       trySync: (attempt, origin, events) => {
         trace.getActiveSpan()?.setAttributes({
-          "eqx.stream_id": streamId,
-          "eqx.sync_attempts": attempt,
-          "eqx.expected_version": Number(origin.token.version),
-          "eqx.append_count": events.length,
+          [Tags.stream_id]: streamId,
+          [Tags.sync_retries]: attempt > 1 ? attempt - 1 : undefined,
+          [Tags.append_count]: events.length,
         })
         return this.inner.trySync(streamId, context, origin.token, origin.state, events)
       },

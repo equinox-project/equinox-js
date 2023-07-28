@@ -1,6 +1,6 @@
 import { MessageDbCategoryReader } from "./MessageDbClient.js"
 import { ICheckpointer } from "./Checkpoints.js"
-import { ITimelineEvent } from "@equinox-js/core"
+import { ITimelineEvent, Tags } from "@equinox-js/core"
 import { Pool } from "pg"
 import { SpanKind, SpanStatusCode, trace } from "@opentelemetry/api"
 import { sleep } from "./Sleep.js"
@@ -61,14 +61,14 @@ export class MessageDbSource {
       {
         kind: SpanKind.CONSUMER,
         attributes: {
-          "eqx.category": category,
+          [Tags.category]: category,
+          [Tags.stream_name]: streamName,
           "eqx.consumer_group": this.options.groupName,
-          "eqx.stream_name": streamName,
           "eqx.tail_sleep_interval_ms": this.options.tailSleepIntervalMs,
           "eqx.max_concurrent_streams": this.options.maxConcurrentStreams,
-          "eqx.batch_size": this.options.batchSize ?? defaultBatchSize,
+          [Tags.batch_size]: this.options.batchSize ?? defaultBatchSize,
           "eqx.stream_version": Number(events[events.length - 1]!.index),
-          "eqx.count": events.length,
+          [Tags.loaded_count]: events.length,
         },
       },
       (span) =>

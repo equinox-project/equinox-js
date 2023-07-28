@@ -2,6 +2,7 @@ import { StreamToken, SyncResult, TokenAndState } from "./Core.js"
 import LRUCache from "lru-cache"
 import { ICategory } from "./Category.js"
 import { trace } from "@opentelemetry/api"
+import { Tags } from "../index.js"
 
 type Expiration = { absolute: number } | { relative: number }
 
@@ -175,7 +176,7 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
   ): Promise<TokenAndState<State>> {
     const cachedValue = await this.strategy.load<State>(this.cacheKey(streamId))
     trace.getActiveSpan()?.setAttributes({
-      "eqx.cache_hit": cachedValue != null,
+      [Tags.cache_hit]: cachedValue != null,
     })
     if (cachedValue && allowStale) return cachedValue
     if (cachedValue) {

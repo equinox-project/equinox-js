@@ -1,6 +1,7 @@
 import { ITimelineEvent } from "@equinox-js/core"
 import { Format, MessageDbReader } from "./MessageDbClient.js"
-import { context, SpanKind, trace } from "@opentelemetry/api"
+import { trace } from "@opentelemetry/api"
+import { Tags } from "@equinox-js/core"
 
 type StreamEventsSlice = {
   messages: ITimelineEvent<Format>[]
@@ -55,9 +56,9 @@ async function* readBatches(
   } while (!slice.isEnd)
 
   span?.setAttributes({
-    "eqx.batches": batchCount,
-    "eqx.count": eventCount,
-    "eqx.version": Number(slice.lastVersion),
+    [Tags.batches]: batchCount,
+    [Tags.loaded_count]: eventCount,
+    [Tags.read_version]: String(slice.lastVersion),
   })
 }
 
@@ -71,10 +72,10 @@ export function loadForwardsFrom(
 ) {
   const span = trace.getActiveSpan()
   span?.setAttributes({
-    "eqx.batch_size": batchSize,
-    "eqx.start_position": Number(startPosition),
-    "eqx.load_method": "BatchForward",
-    "eqx.require_leader": requiresLeader,
+    [Tags.batch_size]: batchSize,
+    [Tags.loaded_from_version]: String(startPosition),
+    [Tags.load_method]: "BatchForward",
+    [Tags.requires_leader]: requiresLeader,
   })
   const readSlice = (start: bigint) =>
     readSliceAsync(reader, streamName, batchSize, start, requiresLeader)
@@ -89,11 +90,11 @@ export async function loadLastEvent(
   eventType?: string,
 ) {
   const span = trace.getActiveSpan()
-  span?.setAttribute("eqx.load_method", "Last")
+  span?.setAttribute(Tags.load_method, "Last")
   const s = await readLastEventAsync(reader, streamName, requiresLeader, eventType)
   span?.setAttributes({
-    "eqx.last_version": Number(s.lastVersion),
-    "eqx.count": s.messages.length,
+    [Tags.read_version]: Number(s.lastVersion),
+    [Tags.loaded_count]: s.messages.length,
   })
   return [s.lastVersion, s.messages] as const
 }
