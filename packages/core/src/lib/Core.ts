@@ -8,7 +8,7 @@ export type SyncResult<State> =
   | { type: "Written"; data: TokenAndState<State> }
 
   /**
-   * The set of changes supplied to TrySync conflict with the present state of the underlying stream based on the configured policy for that store
+   * The set of changes supplied to sync conflict with the present state of the underlying stream based on the configured policy for that store
    * The inner is Async as some stores (and/or states) are such that determining the conflicting state (if, and only if, required) needs an extra trip to obtain
    */
   | { type: "Conflict"; resync: () => Promise<TokenAndState<State>> }
@@ -34,7 +34,7 @@ export interface IStream<Event, State> {
    * SyncResult.Written: implies the state is now the value represented by the Result's value
    * SyncResult.Conflict: implies the `events` were not synced; if desired the consumer can use the included resync workflow in order to retry
    */
-  trySync(
+  sync(
     attempt: number,
     originTokenAndState: TokenAndState<State>,
     events: Event[],
@@ -52,7 +52,7 @@ function run<Event, State, Result, V = Result>(
     const [result, events] = await decide(tokenAndState)
     if (events.length === 0) return mapResult(result, tokenAndState)
 
-    const syncResult = await stream.trySync(attempt, tokenAndState, events)
+    const syncResult = await stream.sync(attempt, tokenAndState, events)
 
     switch (syncResult.type) {
       case "Written":

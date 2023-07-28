@@ -2,7 +2,7 @@
 
 /** The full stream name */
 export const stream_name = "eqx.stream_name"
-/** The <c>id</c> of the stream */
+/** The `id` of the stream */
 export const stream_id = "eqx.stream_id"
 /** The category of the stream */
 export const category = "eqx.category"

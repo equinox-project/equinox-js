@@ -12,7 +12,7 @@ export interface ICategory<Event, State, Context = null> {
    * SyncResult.Written: implies the state is now the value represented by the Result's value
    * SyncResult.Conflict: implies the `events` were not synced; if desired the consumer can use the included resync workflow in order to retry
    */
-  trySync(
+  sync(
     streamId: string,
     context: Context,
     originToken: StreamToken,
@@ -38,13 +38,13 @@ export class Category<Event, State, Context = null> {
         })
         return this.inner.load(streamId, allowStale, requireLeader)
       },
-      trySync: (attempt, origin, events) => {
+      sync: (attempt, origin, events) => {
         trace.getActiveSpan()?.setAttributes({
           [Tags.stream_id]: streamId,
           [Tags.sync_retries]: attempt > 1 ? attempt - 1 : undefined,
           [Tags.append_count]: events.length,
         })
-        return this.inner.trySync(streamId, context, origin.token, origin.state, events)
+        return this.inner.sync(streamId, context, origin.token, origin.state, events)
       },
     }
   }

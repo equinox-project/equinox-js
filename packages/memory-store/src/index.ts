@@ -24,7 +24,7 @@ export class VolatileStore<Format> {
     return this.streams.get(streamName) ?? []
   }
 
-  trySync(
+  sync(
     streamName: string,
     categoryName: string,
     streamId: string,
@@ -105,7 +105,7 @@ class Category<Event, State, Context, Format>
     return encoded
   }
 
-  async trySync(
+  async sync(
     streamId: string,
     context: Context,
     originToken: StreamToken,
@@ -115,7 +115,7 @@ class Category<Event, State, Context, Format>
     const streamName = StreamName.compose(this.categoryName, streamId)
     const eventCount = Token.unpack(originToken)
     const encoded = await this.encodeEvents(eventCount, context, events)
-    const res = this.store.trySync(streamName, this.categoryName, streamId, eventCount, encoded)
+    const res = this.store.sync(streamName, this.categoryName, streamId, eventCount, encoded)
     if (res.success) {
       return {
         type: "Written",

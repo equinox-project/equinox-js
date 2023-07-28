@@ -164,7 +164,7 @@ export class MessageDbContext {
     return [Token.create(streamVersion), state]
   }
 
-  async trySync(
+  async sync(
     streamName: string,
     token: StreamToken,
     encodedEvents: IEventData<Format>[],
@@ -316,7 +316,7 @@ class InternalCategory<Event, State, Context>
     return { token, state }
   }
 
-  async trySync(
+  async sync(
     streamId: string,
     ctx: Context,
     token: StreamToken,
@@ -331,7 +331,7 @@ class InternalCategory<Event, State, Context>
     })
     const encode = (ev: Event) => this.codec.encode(ev, ctx)
     const encodedEvents = await Promise.all(events.map(encode))
-    const result = await this.context.trySync(streamName, token, encodedEvents)
+    const result = await this.context.sync(streamName, token, encodedEvents)
     switch (result.type) {
       case "ConflictUnknown":
         return {

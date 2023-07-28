@@ -60,7 +60,7 @@ describe("MessageDbCategoryReader", () => {
       for (let i = 0; i < 100; i++) {
         const streamId = randomUUID().replace(/-/g, "")
         const streamName = StreamName.compose(category, streamId)
-        await conn.write.writeSingleMessage(streamName, ({ type: "TestEvent" }), -1n)
+        await conn.write.writeSingleMessage(streamName, { type: "TestEvent" }, -1n)
       }
     })
 

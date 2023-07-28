@@ -1,14 +1,6 @@
 import * as Cart from "./domain/Cart.js"
 import * as ContactPreferences from "./domain/ContactPreferences.js"
-import {
-  Decider,
-  ICache,
-  MemoryCache,
-  Codec,
-  CachingStrategy,
-  ICachingStrategy,
-  Tags,
-} from "@equinox-js/core"
+import { Decider, MemoryCache, Codec, CachingStrategy, Tags } from "@equinox-js/core"
 import { describe, test, expect, afterEach, afterAll } from "vitest"
 import { Pool } from "pg"
 import { randomUUID } from "crypto"
@@ -81,35 +73,6 @@ namespace CartService {
   }
 }
 
-namespace ContactPreferencesService {
-  const fold = ContactPreferences.fold
-  const initial = ContactPreferences.initial
-  const codec = ContactPreferences.codec
-
-  const createWithLatestKnownEvent = (
-    context: MessageDbContext,
-    cachingStrategy: ICachingStrategy,
-  ) => {
-    const category = Category.create(
-      context,
-      ContactPreferences.Category,
-      codec,
-      fold,
-      initial,
-      cachingStrategy,
-      AccessStrategy.LatestKnownEvent(),
-    )
-    return ContactPreferences.Service.create(category)
-  }
-
-  export const createWithoutCaching = (context: MessageDbContext) =>
-    createWithLatestKnownEvent(context, CachingStrategy.noCache())
-  export const createWithCaching = (context: MessageDbContext, cache: ICache) => {
-    const sliding20m = CachingStrategy.slidingWindow(cache, 20 * 60 * 1000)
-    return createWithLatestKnownEvent(context, sliding20m)
-  }
-}
-
 const client = MessageDbConnection.create(
   new Pool({ connectionString: "postgres://message_store:@127.0.0.1:5432/message_store" }),
 )
@@ -132,12 +95,6 @@ namespace SimplestThing {
 
 namespace ContactPreferencesService {
   const { fold, initial, codec } = ContactPreferences
-
-  export const createUnoptimized = (client: MessageDbConnection) => {
-    const context = createContext(client, defaultBatchSize)
-    const category = Category.create(context, ContactPreferences.Category, codec, fold, initial)
-    return ContactPreferences.Service.create(category)
-  }
 
   export const createService = (client: MessageDbConnection) => {
     const context = createContext(client, defaultBatchSize)
@@ -228,7 +185,7 @@ namespace CartHelpers {
   ) => addAndThenRemoveItems(true, true, context, cartId, skuId, service, count)
 }
 
-describe("Roundtrips against the store", () => {
+describe("Round-trips against the store", () => {
   test("batches the reads correctly [without any optimizations]", async () => {
     const batchSize = 3
     const context = createContext(client, batchSize)
@@ -397,7 +354,7 @@ describe("Caching", () => {
     })
     memoryExporter.reset()
 
-    // Add one more - the roundtrip should only incur a single read
+    // Add one more - the round-trip should only incur a single read
 
     const skuId2 = randomUUID() as Cart.SkuId
     await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(
@@ -426,7 +383,7 @@ describe("Caching", () => {
 
     // Optimistic transactions
     memoryExporter.reset()
-    // As the cache is up to date, we can transact against the cached value and do a null transaction without a roundtrip
+    // As the cache is up-to-date, we can transact against the cached value and do a null transaction without a round-trip
     await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(
       cartContext,
       cartId,
@@ -437,7 +394,7 @@ describe("Caching", () => {
     assertSpans({ name: "Transact", [Tags.cache_hit]: true, [Tags.allow_stale]: true })
     expect(getStoreSpans()[0].attributes).not.to.have.property(Tags.batches)
     memoryExporter.reset()
-    // As the cache is up to date, we can do an optimistic append, saving a Read roundtrip
+    // As the cache is up-to-date, we can do an optimistic append, saving a Read round-trip
     const skuId3 = randomUUID() as Cart.SkuId
     await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(
       cartContext,
@@ -469,7 +426,7 @@ describe("Caching", () => {
       [Tags.append_count]: 1,
     })
     // we've engineered a clash with the cache state (service3 doest participate in caching)
-    // Conflict with cached state leads to a read forward to resync; Then we'll idempotently decide not to do any append
+    // Conflict with cached state leads to a read forward to re-sync; Then we'll idempotently decide not to do any append
     memoryExporter.reset()
     await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(
       cartContext,
@@ -669,7 +626,7 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
       [Tags.snapshot_written]: true,
     })
 
-    // and we _could_ reload the 20 events with a single slice read. However we are using the cache, which last saw it with 10 events, which necessitates two reads
+    // and we _could_ reload the 20 events with a single slice read. However, we are using the cache, which last saw it with 10 events, which necessitates two reads
     memoryExporter.reset()
     await service2.read(cartId)
     assertSpans({ name: "Query", [Tags.loaded_count]: 12, [Tags.cache_hit]: true })

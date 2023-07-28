@@ -193,14 +193,14 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
     )
   }
 
-  async trySync(
+  async sync(
     streamId: string,
     context: Context,
     originToken: StreamToken,
     originState: State,
     events: Event[],
   ): Promise<SyncResult<State>> {
-    const result = await this.inner.trySync(streamId, context, originToken, originState, events)
+    const result = await this.inner.sync(streamId, context, originToken, originState, events)
     switch (result.type) {
       case "Conflict":
         return {
