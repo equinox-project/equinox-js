@@ -19,55 +19,6 @@ importers:
         specifier: latest
         version: 1.10.9
 
-  apps/docs:
-    dependencies:
-      '@algolia/client-search':
-        specifier: ^4.15.0
-        version: 4.15.0
-      '@docusaurus/core':
-        specifier: 2.3.1
-        version: 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@4.9.5)
-      '@docusaurus/preset-classic':
-        specifier: 2.3.1
-        version: 2.3.1(@algolia/client-search@4.15.0)(react-dom@17.0.2)(react@17.0.2)(typescript@4.9.5)
-      '@mdx-js/react':
-        specifier: ^1.6.22
-        version: 1.6.22(react@17.0.2)
-      clsx:
-        specifier: ^1.2.1
-        version: 1.2.1
-      prism-react-renderer:
-        specifier: ^1.3.5
-        version: 1.3.5(react@17.0.2)
-      react:
-        specifier: ^17.0.2
-        version: 17.0.2
-      react-dom:
-        specifier: ^17.0.2
-        version: 17.0.2(react@17.0.2)
-      zod:
-        specifier: ^3.20.2
-        version: 3.20.2
-    devDependencies:
-      '@docusaurus/module-type-aliases':
-        specifier: 2.3.1
-        version: 2.3.1(react-dom@17.0.2)(react@17.0.2)
-      '@equinox-js/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@equinox-js/memory-store':
-        specifier: workspace:*
-        version: link:../../packages/memory-store
-      '@equinox-js/message-db':
-        specifier: workspace:*
-        version: link:../../packages/message-db
-      tsconfig:
-        specifier: workspace:*
-        version: link:../../packages/tsconfig
-      typescript:
-        specifier: ^4.9.5
-        version: 4.9.5
-
   apps/example:
     dependencies:
       '@equinox-js/core':
@@ -186,6 +137,55 @@ importers:
       tsconfig:
         specifier: workspace:*
         version: link:../../packages/tsconfig
+
+  docs:
+    dependencies:
+      '@algolia/client-search':
+        specifier: ^4.15.0
+        version: 4.15.0
+      '@docusaurus/core':
+        specifier: 2.3.1
+        version: 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@4.9.5)
+      '@docusaurus/preset-classic':
+        specifier: 2.3.1
+        version: 2.3.1(@algolia/client-search@4.15.0)(react-dom@17.0.2)(react@17.0.2)(typescript@4.9.5)
+      '@mdx-js/react':
+        specifier: ^1.6.22
+        version: 1.6.22(react@17.0.2)
+      clsx:
+        specifier: ^1.2.1
+        version: 1.2.1
+      prism-react-renderer:
+        specifier: ^1.3.5
+        version: 1.3.5(react@17.0.2)
+      react:
+        specifier: ^17.0.2
+        version: 17.0.2
+      react-dom:
+        specifier: ^17.0.2
+        version: 17.0.2(react@17.0.2)
+      zod:
+        specifier: ^3.20.2
+        version: 3.20.2
+    devDependencies:
+      '@docusaurus/module-type-aliases':
+        specifier: 2.3.1
+        version: 2.3.1(react-dom@17.0.2)(react@17.0.2)
+      '@equinox-js/core':
+        specifier: workspace:*
+        version: link:../packages/core
+      '@equinox-js/memory-store':
+        specifier: workspace:*
+        version: link:../packages/memory-store
+      '@equinox-js/message-db':
+        specifier: workspace:*
+        version: link:../packages/message-db
+      tsconfig:
+        specifier: workspace:*
+        version: link:../packages/tsconfig
+      typescript:
+        specifier: ^4.9.5
+        version: 4.9.5
 
   packages/core:
     dependencies:
@@ -1895,7 +1895,7 @@ packages:
       react-router-config: 5.1.1(react-router@5.3.4)(react@17.0.2)
       react-router-dom: 5.3.4(react@17.0.2)
       rtl-detect: 1.0.4
-      semver: 7.3.8
+      semver: 7.5.4
       serve-handler: 6.1.5
       shelljs: 0.8.5
       terser-webpack-plugin: 5.3.7(webpack@5.76.1)
@@ -1989,7 +1989,7 @@ packages:
       '@docusaurus/react-loadable': 5.5.2(react@17.0.2)
       '@docusaurus/types': 2.3.1(react-dom@17.0.2)(react@17.0.2)
       '@types/history': 4.7.11
-      '@types/react': 18.0.28
+      '@types/react': 18.2.16
       '@types/react-router-config': 5.0.6
       '@types/react-router-dom': 5.3.3
       react: 17.0.2
@@ -2495,7 +2495,7 @@ packages:
       react-dom: ^16.8.4 || ^17.0.0
     dependencies:
       '@types/history': 4.7.11
-      '@types/react': 18.0.28
+      '@types/react': 18.2.16
       commander: 5.1.0
       joi: 17.7.0
       react: 17.0.2
@@ -4491,14 +4491,14 @@ packages:
     resolution: {integrity: sha512-db1mx37a1EJDf1XeX8jJN7R3PZABmJQXR8r28yUjVMFSjkmnQo6X6pOEEmNl+Tp2gYQOGPdYbFIipBtdElZ3Yg==}
     dependencies:
       '@types/history': 4.7.11
-      '@types/react': 18.0.28
+      '@types/react': 18.2.16
       '@types/react-router': 5.1.20
 
   /@types/react-router-dom@5.3.3:
     resolution: {integrity: sha512-kpqnYK4wcdm5UaWI3fLcELopqLrHgLqNsdpHauzlQktfkHL3npOSwtj1Uz9oKBAzs7lFtVkV8j83voAz2D8fhw==}
     dependencies:
       '@types/history': 4.7.11
-      '@types/react': 18.0.28
+      '@types/react': 18.2.16
       '@types/react-router': 5.1.20
 
   /@types/react-router@5.1.20:
@@ -4506,13 +4506,6 @@ packages:
     dependencies:
       '@types/history': 4.7.11
       '@types/react': 18.2.16
-
-  /@types/react@18.0.28:
-    resolution: {integrity: sha512-RD0ivG1kEztNBdoAK7lekI9M+azSnitIn85h4iOiaLjaTrMjzslhaqCGaI4IyCJ1RljWiLCEu4jyrLLgqxBTew==}
-    dependencies:
-      '@types/prop-types': 15.7.5
-      '@types/scheduler': 0.16.2
-      csstype: 3.1.1
 
   /@types/react@18.2.16:
     resolution: {integrity: sha512-LLFWr12ZhBJ4YVw7neWLe6Pk7Ey5R9OCydfuMsz1L8bZxzaawJj2p06Q8/EFEHDeTBQNFLF62X+CG7B2zIyu0Q==}
@@ -5005,7 +4998,7 @@ packages:
     dev: false
 
   /batch@0.6.1:
-    resolution: {integrity: sha1-3DQxT05nkxgJP8dgJyUl+UvyXBY=}
+    resolution: {integrity: sha512-x+VAiMRL6UPkx+kudNvxTl6hB2XNNCG2r+7wixVfIYwu/2HKRXimwQyaumLjMveWvT2Hkd/cAJw+QBMfJ/EKVw==}
     dev: false
 
   /big.js@5.2.2:
@@ -6525,7 +6518,7 @@ packages:
     resolution: {integrity: sha512-lhd/wF+Lk98HZoTCtlVraHtfh5XYijIjalXck7saUtuanSDyLMxnHhSXEDJqHxD7msR8D0uCmqlkwjCV8xvwHw==}
 
   /fast-url-parser@1.1.3:
-    resolution: {integrity: sha1-9K8+qfNNiicc9YrSs3WfQx8LMY0=}
+    resolution: {integrity: sha512-5jOCVXADYNuRkKFzNJ0dCCewsZiYo0dz8QNYljkOpFC6r2U4OBmKtvm/Tsuh4w1YYdDqDb31a8TVhBJ2OJKdqQ==}
     dependencies:
       punycode: 1.4.1
     dev: false
@@ -9600,14 +9593,6 @@ packages:
     hasBin: true
     dev: false
 
-  /semver@7.3.8:
-    resolution: {integrity: sha512-NB1ctGL5rlHrPJtFDVIVzTyQylMLu9N9VICA6HSFJo8MCGVTMW6gfpicwKmmK/dAjTOrqu5l63JJOpDSrAis3A==}
-    engines: {node: '>=10'}
-    hasBin: true
-    dependencies:
-      lru-cache: 6.0.0
-    dev: false
-
   /semver@7.5.4:
     resolution: {integrity: sha512-1bCSESV6Pv+i21Hvpxp3Dx+pSD8lIPt8uVjRrxAUt/nbswYc+tK6Y2btiULjd4+fnq15PX+nqQDC7Oft7WkwcA==}
     engines: {node: '>=10'}
@@ -10181,7 +10166,8 @@ packages:
     dev: false
 
   /trim@0.0.1:
-    resolution: {integrity: sha1-WFhUf2spB1fulczMZm+1AITEYN0=}
+    resolution: {integrity: sha512-YzQV+TZg4AxpKxaTHK3c3D+kRDCGVEE7LemdlQZoQXn0iennk10RsIoY6ikzAqJTc9Xjl9C1/waHom/J86ziAQ==}
+    deprecated: Use String.prototype.trim() instead
     dev: false
 
   /trough@1.0.5:
