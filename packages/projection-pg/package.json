@@ -29,7 +29,6 @@
   },
   "dependencies": {
     "@equinox-js/core": "workspace:*",
-    "@opentelemetry/api": "^1.4.0",
     "knex": "^2.5.1",
     "pg": "^8.8.0"
   }

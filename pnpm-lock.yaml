@@ -313,9 +313,6 @@ importers:
       '@equinox-js/core':
         specifier: workspace:*
         version: link:../core
-      '@opentelemetry/api':
-        specifier: ^1.4.0
-        version: 1.4.0
       knex:
         specifier: ^2.5.1
         version: 2.5.1(pg@8.8.0)
