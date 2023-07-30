@@ -1,14 +1,16 @@
 import { ITimelineEvent, StreamName } from "@equinox-js/core"
 import { Pool } from "pg"
 import { PayerId } from "../domain/identifiers.js"
-import { Payer } from "../domain//index.js"
-import { Upsert, Delete, Change, createProjection } from "@equinox-js/projection-pg"
+import { Payer } from "../domain/index.js"
+import { forEntity, Change, createProjection } from "@equinox-js/projection-pg"
 
 type Payer = { id: PayerId; name: string; email: string }
 
+const { Delete, Upsert } = forEntity<Payer, "id">()
+
 export const projection = { table: "payer", id: ["id"] }
 
-function changes(stream: string, events: ITimelineEvent<string>[]): Change<Payer>[] {
+function changes(stream: string, events: ITimelineEvent<string>[]): Change[] {
   const id = PayerId.parse(StreamName.parseId(stream))
   const event = Payer.codec.tryDecode(events[events.length - 1])
   if (!event) return []
@@ -17,7 +19,7 @@ function changes(stream: string, events: ITimelineEvent<string>[]): Change<Payer
       const data = event.data
       return [Upsert({ id: id, name: data.name, email: data.email })]
     case "PayerDeleted":
-      return [Delete<Payer>({ id: id })]
+      return [Delete({ id: id })]
   }
 }
 

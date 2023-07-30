@@ -4,16 +4,14 @@ sidebar_position: 3
 
 # PG Projections
 
-As discussed in the previous section, projections are a form of reaction that
-can be expressed as a function from `Event` to `Sql[]`. In the previous section
-we showed how you could write raw SQL to create a read model but we also supply
-a utility library for creating projections.
-
-Read models composed of `Insert`, `Update`, `Delete` and `Upsert` queries where
-each stream is represented by a single row in the table can be represented in
-the library. By representing the change as objects we're able to intelligently
-collapse a changeset to a single change (`Insert a + Update b = Insert (a +
-b)`).
+In the previous section, we explored the creation of read models via raw SQL
+queries, a method which, while effective, can be complicated and error-prone.  
+`@equinox-js/projection-pg` provides a higher level abstraction for creating
+event sourced projections. With it you can express your projections as a
+function `Event -> Change[]` where `Change` is an `Insert`, `Update`, `Delete`
+or `Upsert`. By representing changes this way we can intelligently
+collapse changesets into a single change, this is because in FP terms the change
+is a semigroup.
 
 The Payer read model from the previous section could be written as:
 
@@ -22,15 +20,16 @@ import { ITimelineEvent, StreamName } from "@equinox-js/core"
 import { Pool } from "pg"
 import { PayerId } from "../domain/identifiers.js"
 import { Payer } from "../domain/index.js"
-import { Upsert, Delete, Change, createProjection } from "@equinox-js/projection-pg"
+import { forEntity, Change, createProjection } from "@equinox-js/projection-pg"
 
 type Payer = { id: PayerId; name: string; email: string }
 
+const { Delete, Upsert } = forEntity<Payer, "id">()
+
 export const projection = { table: "payer", id: ["id"] }
 
-function changes(stream: string, events: ITimelineEvent<string>[]): Change<Payer>[] {
+function changes(stream: string, events: ITimelineEvent<string>[]): Change[] {
   const id = PayerId.parse(StreamName.parseId(stream))
-  // Payer is a LatestKnownEvent stream so we can construct the current state from the last event
   const event = Payer.codec.tryDecode(events[events.length - 1])
   if (!event) return []
   switch (event.type) {
@@ -38,12 +37,19 @@ function changes(stream: string, events: ITimelineEvent<string>[]): Change<Payer
       const data = event.data
       return [Upsert({ id: id, name: data.name, email: data.email })]
     case "PayerDeleted":
-      return [Delete<Payer>({ id: id })]
+      return [Delete({ id: id })]
   }
 }
 
 export const createHandler = (pool: Pool) => createProjection(projection, pool, changes)
 ```
+
+It's worth calling out the `forEntity` helper there. It takes two type
+parameters, the entity and the keys representing the id. If the payer projection
+was in a multi tenant system we might've represented it as 
+`forEntity<Payer, 'id' | 'tenant_id'>`. The resulting `Insert`, `Update`,
+`Delete`, and `Upsert` functions will allow the compiler to yell at you if you
+forget to supply part of the ID to `Delete` or `Update`.
 
 To wire it up we would do
 
@@ -52,7 +58,7 @@ import "./tracing.js"
 import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-consumer"
 import pg from "pg"
 import { Payer } from "../domain/index.js"
-import * as PayerReadModel from '../read-models/PayerReadModel.js'
+import * as PayerReadModel from "../read-models/PayerReadModel.js"
 
 const createPool = (connectionString?: string) =>
   connectionString ? new pg.Pool({ connectionString, max: 10 }) : undefined
@@ -63,7 +69,7 @@ const checkpointer = new PgCheckpoints(pool)
 checkpointer.ensureTable().then(() => console.log("table created"))
 
 const source = MessageDbSource.create({
-  pool: messageDbPool, 
+  pool: messageDbPool,
   batchSize: 500,
   categories: [Payer.CATEGORY],
   groupName: "PayerReadModel",
@@ -80,4 +86,3 @@ process.on("SIGTERM", () => ctrl.abort())
 
 source.start(ctrl.signal)
 ```
-
