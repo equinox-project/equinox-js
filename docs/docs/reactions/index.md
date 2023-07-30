@@ -53,7 +53,7 @@ inefficent. Instead we let the notifier decide for itself whether the
 notification should be sent based on its own current state. This means we'll 
 only attempt to send notifications when we haven't already tried before.
 
-> IMPORTANT: there is still a change a notification is sent twice. If the 
+> IMPORTANT: there is still a chance a notification is sent twice. If the 
 > power goes out between sending the notifications and recording the fact that 
 > we did, a double notification can happen
 
