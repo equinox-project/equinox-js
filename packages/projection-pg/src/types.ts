@@ -5,23 +5,16 @@ export enum Action {
   Upsert,
 }
 
-export type Change<T extends Record<string, any>, Ids extends keyof T> =
-  | { type: Action.Update; data: Pick<T, Ids> & Partial<T> }
+type Item = Record<string, any>
+
+export type Change<T extends Item = Item> =
   | { type: Action.Insert; data: T }
-  | { type: Action.Delete; data: Pick<T, Ids> }
+  | { type: Action.Update; data: Partial<T> }
+  | { type: Action.Delete; data: Partial<T> }
   | { type: Action.Upsert; data: T }
 
-export const Update = <T extends Record<string, any>, Ids extends keyof T>(
-  data: Pick<T, Ids> & Partial<T>,
-): Change<T, Ids> => ({ type: Action.Update, data })
-export const Insert = <T extends Record<string, any>>(data: T): Change<T, keyof T> => ({
-  type: Action.Insert,
-  data,
-})
-export const Delete = <T extends Record<string, any>, Ids extends keyof T>(
-  data: Pick<T, Ids>,
-): Change<T, Ids> => ({ type: Action.Delete, data })
-export const Upsert = <T extends Record<string, any>>(data: T): Change<T, keyof T> => ({
-  type: Action.Upsert,
-  data,
-})
+export const Insert = <T extends Item>(data: T): Change<T> => ({ type: Action.Insert, data })
+export const Update = <T extends Item>(data: Partial<T>): Change<T> => ({ type: Action.Update, data })
+export const Delete = <T extends Item>(data: Partial<T>): Change<T> => ({ type: Action.Delete, data })
+export const Upsert = <T extends Item>(data: T): Change<T> => ({ type: Action.Upsert, data })
+
