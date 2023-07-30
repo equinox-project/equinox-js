@@ -27,7 +27,7 @@ function concat(a: Change, b: Change): Change | undefined {
       }
     case Action.Delete:
       switch (b.type) {
-        case Action.Insert: return Update(b.data)
+        case Action.Insert: return Upsert(b.data)
         case Action.Update: throw new Error("Cannot update after deleting the same record, use Upsert")
         case Action.Upsert:
         case Action.Delete: return b

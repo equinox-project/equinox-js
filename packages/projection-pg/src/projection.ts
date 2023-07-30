@@ -19,7 +19,9 @@ function addVersion(
   qb: Knex.QueryBuilder<any, any>,
 ) {
   if (!projection.version) return qb
-  const fullTableName = projection.schema ? `${projection.schema}.${projection.table}` : projection.table
+  const fullTableName = projection.schema
+    ? `${projection.schema}.${projection.table}`
+    : projection.table
   const fullColumnName = `${fullTableName}.${projection.version}`
   return qb.andWhere(fullColumnName, "<", data[projection.version])
 }
@@ -37,15 +39,18 @@ function changeToQuery(projection: Projection, change: Change) {
           .update(change.data),
       )
     case Action.Insert:
-      return qb.insert(change.data).onConflict(projection.id).ignore()
-    case Action.Delete:
-      return qb.where(change.data).delete()
+      if (!projection.version) {
+        return qb.insert(change.data).onConflict(projection.id).ignore()
+      }
+    // intentional fallthrough in case of versioned entity
     case Action.Upsert:
       return addVersion(
         projection,
         change.data,
         qb.insert(change.data).onConflict(projection.id).merge(),
       )
+    case Action.Delete:
+      return qb.where(change.data).delete()
   }
 }
 
