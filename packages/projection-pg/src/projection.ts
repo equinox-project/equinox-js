@@ -34,28 +34,19 @@ export class Projection<T extends Record<string, any>, Ids extends keyof T> {
     }
   }
 
-  async execute(pool: Pool, changes: Change<T, Ids>[]) {
-    const conn = await pool.connect()
-    try {
-      await conn.query("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE")
-      for (const change of changes) {
-        const query = this.changeToQuery(change)
-        const native = query.toSQL().toNative()
-        await conn.query(native.sql, native.bindings as any[])
-      }
-      await conn.query("COMMIT")
-    } finally {
-      conn.release()
-    }
+  execute(pool: Pool, change: Change<T, Ids>) {
+    const query = this.changeToQuery(change)
+    const native = query.toSQL().toNative()
+    return pool.query(native.sql, native.bindings as any[])
   }
 
-  createHandler(
+  createHandler<T1,T2>(
     pool: Pool,
-    changes: (stream: string, events: ITimelineEvent<string>) => Change<T, Ids>[],
+    changes: (stream: T1, events: T2[]) => Change<T, Ids>[],
   ) {
-    return (stream: string, events: ITimelineEvent<string>[]) => {
-      const changeset = collapseChanges(events.flatMap((event) => changes(stream, event)))
-      return this.execute(pool, changeset)
+    return async (stream: T1, events: T2[]) => {
+      const changeset = collapseChanges(changes(stream, events))
+      if (changeset != null) await this.execute(pool, changeset)
     }
   }
 }

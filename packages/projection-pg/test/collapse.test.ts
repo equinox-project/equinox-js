@@ -9,7 +9,7 @@ describe("Collapsing changesets", () => {
       Update({ id: 1, name: "bob", age: 31 }),
       Delete({ id: 1 }),
     ]
-    expect(collapseChanges(changes)).toEqual([])
+    expect(collapseChanges(changes)).toEqual(undefined)
   })
 
   test("Inserting with updates", () => {
@@ -18,7 +18,7 @@ describe("Collapsing changesets", () => {
       Update({ id: 1, name: "bobby", age: 31 }),
       Update({ id: 1, age: 32 }),
     ]
-    expect(collapseChanges(changes)).toEqual([Insert({ id: 1, name: "bobby", age: 32 })])
+    expect(collapseChanges(changes)).toEqual(Insert({ id: 1, name: "bobby", age: 32 }))
   })
 
   test("Inserting with delete and another insert", () => {
@@ -27,7 +27,7 @@ describe("Collapsing changesets", () => {
       Delete({ id: 1 }),
       Insert({ id: 1, name: "bobby", age: 31 }),
     ]
-    expect(collapseChanges(changes)).toEqual([Insert({ id: 1, name: "bobby", age: 31 })])
+    expect(collapseChanges(changes)).toEqual(Insert({ id: 1, name: "bobby", age: 31 }))
   })
 
   test("Upserts", () => {
@@ -35,7 +35,7 @@ describe("Collapsing changesets", () => {
       Upsert({ id: 1, name: "bob", age: 30 }),
       Upsert({ id: 1, name: "bobby", age: 31 }),
     ]
-    expect(collapseChanges(changes)).toEqual([Upsert({ id: 1, name: "bobby", age: 31 })])
+    expect(collapseChanges(changes)).toEqual(Upsert({ id: 1, name: "bobby", age: 31 }))
   })
 
   test("Upsert with deletes", () => {
@@ -44,7 +44,7 @@ describe("Collapsing changesets", () => {
       Delete({ id: 1 }),
       Upsert({ id: 1, name: "bobby", age: 31 }),
     ]
-    expect(collapseChanges(changes)).toEqual([Upsert({ id: 1, name: "bobby", age: 31 })])
+    expect(collapseChanges(changes)).toEqual(Upsert({ id: 1, name: "bobby", age: 31 }))
   })
 
   test("The whole shebang", () => {
@@ -56,6 +56,6 @@ describe("Collapsing changesets", () => {
       Upsert({ id: 1, name: "bobby", age: 33 }),
       Update({ id: 1, name: "blob" }),
     ]
-    expect(collapseChanges(changes)).toEqual([Insert({ id: 1, name: "blob", age: 33 })])
+    expect(collapseChanges(changes)).toEqual(Insert({ id: 1, name: "blob", age: 33 }))
   })
 })

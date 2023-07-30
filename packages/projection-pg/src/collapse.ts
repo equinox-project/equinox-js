@@ -2,8 +2,8 @@ import { Action, Change, Insert, Update, Upsert } from "./types"
 
 export function collapseChanges<T extends Record<string, any>, Ids extends keyof T>(
   changes: Change<T, Ids>[],
-): Change<T, Ids>[] {
-  if (changes.length <= 1) return changes
+): Change<T, Ids> | undefined {
+  if (changes.length <= 1) return changes[0]
 
   const first = changes[0]
   const second = changes[1]
