@@ -46,7 +46,7 @@ export const createHandler = (pool: Pool) => createProjection(projection, pool, 
 
 It's worth calling out the `forEntity` helper there. It takes two type
 parameters, the entity and the keys representing the id. If the payer projection
-was in a multi tenant system we might've represented it as 
+was in a multi tenant system we might've represented it as
 `forEntity<Payer, 'id' | 'tenant_id'>`. The resulting `Insert`, `Update`,
 `Delete`, and `Upsert` functions will allow the compiler to yell at you if you
 forget to supply part of the ID to `Delete` or `Update`.
@@ -86,3 +86,67 @@ process.on("SIGTERM", () => ctrl.abort())
 
 source.start(ctrl.signal)
 ```
+
+# Version numbers
+
+It's possible to configure the projection with a version number column. In most
+cases you can use the stream version as the version seamlessly. As an example
+let's imagine an Appointment model.
+
+```ts
+type AppointmentModel = {
+  id: string
+  title: string
+  start: Date
+  duration_ms: number
+  is_cancelled: boolean
+  version: bigint
+}
+
+const projection = {
+  schema: "view_models",
+  table: "appointment",
+  id: ["id"],
+  version: "version",
+}
+
+const { Insert, Update } = forEntity<AppointmentModel, "id" | "version">()
+
+function change(id: AppointmentId, version: bigint, event: Appointment.Event) {
+  switch (event.type) {
+    case "AppointmentScheduled":
+      return Insert({
+        id,
+        version,
+        title: event.data.title,
+        start: event.data.start,
+        duration_ms: event.data.duration_ms,
+        is_cancelled: false,
+      })
+    case "AppointmentRescheduled":
+      return Update({ id, version, start: event.data.start })
+    case "AppointmentCancelled":
+      return Update({ id, version, is_cancelled: true })
+  }
+}
+
+function changes(streamName: string, events: ITimelineEvent<string>[]): Change[] {
+  const id = AppointmentId.parse(StreamName.parseId(streamName))
+  const version = events[events.length - 1].index
+  return keepMap(events, Appointment.codec.tryDecode).map((ev) => change(id, version, ev))
+}
+
+export const createHandler = (pool: Pool) => createProjection(projection, pool, changes)
+```
+
+The second type argument to `forEntity` represents the "required keys." That is,
+for actions that don't contain the full entity, like Deletes and Updates, these
+keys MUST be provided. This helps us catch some issues in the type system rather
+than at runtime.
+
+When `version` is provided the behaviour of the projection changes slightly
+
+- Insert: No change
+- Update: adds `where version < $version`
+- Delete: adds `where version < $version`
+- Upsert: add `where version < $version` to the conflict branch of the query
