@@ -1,3 +1,6 @@
+---
+sidebar_position: 1
+---
 # Considerations
 
 In the previous section we learned about reactions but we omitted some important
