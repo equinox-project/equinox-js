@@ -47,7 +47,7 @@ describe("PayerReadModel", () => {
   scenario("deleted in a different batch").given([updated], payerId).given([deleted], payerId)
 })
 
-function scenario(name: string, batches: [string, ITimelineEvent<string>[]][] = []) {
+function scenario(name: string, batches: [string, ITimelineEvent<string>[]][] = [], version = 0) {
   return {
     given: (events: Payer.Event[], payerId = PayerId.create()) => {
       const streamName = StreamName.compose(Payer.CATEGORY, payerId)
@@ -56,9 +56,14 @@ function scenario(name: string, batches: [string, ITimelineEvent<string>[]][] = 
         batches.concat([
           [
             streamName,
-            events.map((event) => Payer.codec.encode(event, null) as ITimelineEvent<string>),
+            events.map((event) => {
+              const encoded = Payer.codec.encode(event, null) as ITimelineEvent<string>
+              encoded.index = BigInt(version++)
+              return encoded
+            }),
           ],
         ]),
+        version + events.length,
       )
     },
     then(table: any[]) {
