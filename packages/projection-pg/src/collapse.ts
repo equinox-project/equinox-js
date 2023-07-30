@@ -2,40 +2,46 @@ import { Action, Change, Insert, Update, Upsert } from "./types"
 
 // Note: do not run prettier over this file, it does a bad job and makes it harder to read
 
+function concat(a: Change, b: Change): Change {
+  switch (a.type) {
+    case Action.Insert:
+      switch (b.type) {
+        case Action.Insert: throw new Error("Cannot insert the same record twice, use Upsert")
+        case Action.Update:
+        case Action.Upsert: return Insert({ ...a.data, ...b.data })
+        case Action.Delete: return b
+      }
+    case Action.Update:
+      switch (b.type) {
+        case Action.Insert: throw new Error("Cannot insert after updating the same record, use Upsert")
+        case Action.Update: return Update({ ...a.data, ...b.data })
+        case Action.Upsert:
+        case Action.Delete: return b
+      }
+    case Action.Upsert:
+      switch (b.type) {
+        case Action.Insert: throw new Error("Cannot insert after upserting the same record, use Upsert")
+        case Action.Update:
+        case Action.Upsert: return Upsert({ ...a.data, ...b.data })
+        case Action.Delete: return b
+      }
+    case Action.Delete:
+      switch (b.type) {
+        case Action.Insert: return Update(b.data)
+        case Action.Update: throw new Error("Cannot update after deleting the same record, use Upsert")
+        case Action.Upsert:
+        case Action.Delete: return b
+      }
+  }
+}
+
 export function collapseChanges(changes: Change[]): Change | undefined {
   if (changes.length <= 1) return changes[0]
 
-  const first = changes[0]
-  const second = changes[1]
+  let result = changes[0]
 
-  switch (first.type) {
-    case Action.Insert:
-      switch (second.type) {
-        case Action.Insert: throw new Error("Cannot insert the same record twice, use Upsert")
-        case Action.Update: return collapseChanges([Insert({ ...first.data, ...second.data }), ...changes.slice(2)])
-        case Action.Upsert: return collapseChanges([Insert({ ...first.data, ...second.data }), ...changes.slice(2)])
-        case Action.Delete: return collapseChanges(changes.slice(2))
-      }
-    case Action.Update:
-      switch (second.type) {
-        case Action.Insert: throw new Error("Cannot insert after updating the same record, use Upsert")
-        case Action.Update: return collapseChanges([Update({ ...first.data, ...second.data }), ...changes.slice(2)])
-        case Action.Upsert: return collapseChanges([second, ...changes.slice(2)])
-        case Action.Delete: return collapseChanges(changes.slice(1))
-      }
-    case Action.Upsert:
-      switch (second.type) {
-        case Action.Insert: throw new Error("Cannot insert after upserting the same record, use Upsert")
-        case Action.Update: return collapseChanges([Upsert({ ...first.data, ...second.data }), ...changes.slice(2)])
-        case Action.Upsert: return collapseChanges([Upsert({ ...first.data, ...second.data }), ...changes.slice(2)])
-        case Action.Delete: return collapseChanges(changes.slice(1))
-      }
-    case Action.Delete:
-      switch (second.type) {
-        case Action.Insert: return collapseChanges([Update(second.data), ...changes.slice(2)])
-        case Action.Update: throw new Error("Cannot update after deleting the same record, use Upsert")
-        case Action.Upsert: return collapseChanges(changes.slice(1))
-        case Action.Delete: return collapseChanges(changes.slice(1))
-      }
+  for (let i = 1; i < changes.length; i++) {
+    result = concat(result, changes[i])
   }
+  return result
 }
