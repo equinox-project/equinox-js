@@ -1,6 +1,6 @@
 export enum Action {
-  Update,
   Insert,
+  Update,
   Delete,
   Upsert,
 }

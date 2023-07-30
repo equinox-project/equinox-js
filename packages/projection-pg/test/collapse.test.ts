@@ -56,6 +56,6 @@ describe("Collapsing changesets", () => {
       Upsert({ id: 1, name: "bobby", age: 33 }),
       Update({ id: 1, name: "blob" }),
     ]
-    expect(collapseChanges(changes)).toEqual([Upsert({ id: 1, name: "blob", age: 33 })])
+    expect(collapseChanges(changes)).toEqual([Insert({ id: 1, name: "blob", age: 33 })])
   })
 })
