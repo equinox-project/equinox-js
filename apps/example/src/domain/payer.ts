@@ -4,7 +4,7 @@ import z from "zod"
 import { equals } from "ramda"
 import * as Config from "../config/equinox.js"
 
-const CATEGORY = "Payer"
+export const CATEGORY = "Payer"
 const streamId = StreamId.gen(PayerId.toString)
 
 export const PayerProfileSchema = z.object({

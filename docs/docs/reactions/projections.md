@@ -1,3 +1,6 @@
+---
+sidebar_position: 2
+---
 # Projections
 
 As discussed, Projections are a form of reaction, and a fairly generalisable one
