@@ -45,7 +45,7 @@ In functional languages like OCaml, and F# this concept is not called `reduce`. 
 implement fold in javascript like so:
 
 ```ts
-const fold = <Acc, T>(folder: (acc: Acc, value: T) => Acc) => (initial: T, items: T[]) => {
+const fold = <Acc, T>(folder: (acc: Acc, value: T) => Acc) => (initial: Acc, items: T[]) => {
   let result = initial
   for (let i = 0; i < items.length; ++i) {
     result = folder(result, items[i])
