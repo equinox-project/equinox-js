@@ -48,10 +48,10 @@ namespace CartService {
     return Cart.Service.create(category)
   }
 
-  const sliding20m = CachingStrategy.Cache(cache)
+  const caching = CachingStrategy.Cache(cache)
 
   export function createWithCaching(context: MessageDbContext) {
-    const category = Category.create(context, Cart.Category, codec, fold, initial, sliding20m)
+    const category = Category.create(context, Cart.Category, codec, fold, initial, caching)
     return Cart.Service.create(category)
   }
 
@@ -66,7 +66,7 @@ namespace CartService {
       codec,
       fold,
       initial,
-      sliding20m,
+      caching,
       access,
     )
     return Cart.Service.create(category)
