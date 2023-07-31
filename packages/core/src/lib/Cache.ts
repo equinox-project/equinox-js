@@ -90,7 +90,6 @@ export class MemoryCache implements ICache {
     const now = Date.now()
     const age = now - current.cachedAt
     span?.setAttribute(Tags.cache_age, age)
-    current.updateCachedAt(now)
     if (age < skipReloadIfYoungerThanMs) {
       return current.value()
     }
@@ -98,10 +97,10 @@ export class MemoryCache implements ICache {
   }
 
   updateIfNewer<State>(key: string, entry: CacheEntry<State>): void {
-    if (!this.cache.has(key)) {
+    const current = this.cache.get(key)
+    if (!current) {
       this.cache.set(key, entry)
     } else {
-      const current = this.cache.get(key)!
       current.updateIfNewer(entry)
     }
   }
