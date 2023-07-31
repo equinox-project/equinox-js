@@ -5,7 +5,7 @@ sidebar_position: 4
 # Codec
 
 It is common in TypeScript applications to use `JSON.stringify` and `JSON.parse`
-indiscriminately. In the context of event sourced applications this practise has
+indiscriminately. In the context of event sourced applications this practice has
 a couple of problems. Firstly, these APIs are untyped, there's no guarantee that
 what you get from the store is what you expected. Secondly, it is common to
 evolve event schemas through upcasting. `JSON.parse` doesn't offer any way to
@@ -58,7 +58,7 @@ const codec = Codec.zod<Event>({
 ```
 
 Codecs are also where we control the metadata we add onto events. It is common
-practise to record metadata like which user performed the action that led to the
+practice to record metadata like which user performed the action that led to the
 event, as well as correlation and causation identifiers. The zod codec accepts a
 second argument which transforms the context into metadata.
 
