@@ -56,7 +56,7 @@ export class Service {
 
   readProfile(id: PayerId) {
     const decider = this.resolve(id)
-    return decider.query((state) => state, LoadOption.AllowStale)
+    return decider.query((state) => state)
   }
 
   static resolveCategory(config: Config.Config) {

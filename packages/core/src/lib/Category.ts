@@ -5,7 +5,7 @@ import { Tags } from "../index.js"
 /** Store-agnostic interface representing interactions an Application can have with a set of streams with a given pair of Event and State types */
 export interface ICategory<Event, State, Context = null> {
   /** Obtain the state from the target stream */
-  load(streamId: string, allowStale: boolean, requireLeader: boolean): Promise<TokenAndState<State>>
+  load(streamId: string, maxStaleMs: number, requireLeader: boolean): Promise<TokenAndState<State>>
 
   /**
    * Given the supplied `token` [and related `originState`], attempt to move to state `state'` by appending the supplied `events` to the underlying stream
@@ -30,13 +30,14 @@ export class Category<Event, State, Context = null> {
   stream(context: Context, streamId: string): IStream<Event, State> {
     return {
       loadEmpty: () => this.empty,
-      load: (allowStale, requireLeader) => {
+      load: (maxStaleMs, requireLeader) => {
         trace.getActiveSpan()?.setAttributes({
           [Tags.stream_id]: streamId,
           [Tags.requires_leader]: requireLeader,
-          [Tags.allow_stale]: allowStale,
+          [Tags.cache_hit]: false,
+          [Tags.allow_stale]: maxStaleMs == Number.MAX_SAFE_INTEGER,
         })
-        return this.inner.load(streamId, allowStale, requireLeader)
+        return this.inner.load(streamId, maxStaleMs, requireLeader)
       },
       sync: (attempt, origin, events) => {
         trace.getActiveSpan()?.setAttributes({

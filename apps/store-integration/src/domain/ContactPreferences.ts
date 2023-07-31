@@ -64,7 +64,7 @@ export class Service {
 
   readStale(email: ClientId) {
     const decider = this.resolve(email)
-    return decider.query((x) => x, LoadOption.AllowStale)
+    return decider.query((x) => x, LoadOption.AnyCachedValue)
   }
 
   static create(category: Equinox.Category<Event, State>) {

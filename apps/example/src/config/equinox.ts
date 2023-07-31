@@ -19,7 +19,7 @@ export const MessageDb = {
     access: AccessStrategy<E, S>,
     { context, cache }: { context: MessageDbContext; cache: ICache },
   ) {
-    const caching = CachingStrategy.slidingWindow(cache, 12e5)
+    const caching = CachingStrategy.Cache(cache)
     // prettier-ignore
     return MessageDbCategory.create(context, name, codec, fold, initial, caching, access);
   },

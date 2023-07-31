@@ -15,7 +15,6 @@ import { Format, MessageDbReader, MessageDbWriter } from "./MessageDbClient.js"
 import { Pool } from "pg"
 import {
   CachingCategory,
-  CachingStrategy,
   ICachingStrategy,
   IReloadableCategory,
   Tags,
@@ -298,7 +297,7 @@ class InternalCategory<Event, State, Context>
 
   supersedes = Token.supersedes
 
-  async load(streamId: string, requireLeader: boolean) {
+  async load(streamId: string, _maxStaleMs: number, requireLeader: boolean) {
     const [token, state] = await this.loadAlgorithm(streamId, requireLeader)
     return { token, state }
   }
@@ -384,7 +383,7 @@ export class MessageDbCategory {
     codec: ICodec<Event, Format, Context>,
     fold: (state: State, events: Event[]) => State,
     initial: State,
-    caching: ICachingStrategy = CachingStrategy.noCache(),
+    caching?: ICachingStrategy,
     access?: AccessStrategy<Event, State>,
   ) {
     const inner = new InternalCategory(context, categoryName, codec, fold, initial, access)

@@ -4,158 +4,121 @@ import { ICategory } from "./Category.js"
 import { trace } from "@opentelemetry/api"
 import { Tags } from "../index.js"
 
-type Expiration = { absolute: number } | { relative: number }
-
-export class CacheEntry<State> {
+export class CacheEntry<T> {
   constructor(
     public token: StreamToken,
-    public state: State,
+    public state: T,
+    public cachedAt: number,
   ) {}
 
-  updateIfNewer(supersedes: (a: StreamToken, b: StreamToken) => boolean, other: CacheEntry<State>) {
+  updateIfNewer(other: CacheEntry<T>) {
     if (supersedes(this.token, other.token)) {
       this.token = other.token
       this.state = other.state
+      this.cachedAt = Date.now()
     }
   }
-  value(): TokenAndState<State> {
+  value(): TokenAndState<T> {
     return { token: this.token, state: this.state }
   }
 
   static ofTokenAndState<S>(x: TokenAndState<S>) {
-    return new CacheEntry(x.token, x.state)
+    return new CacheEntry(x.token, x.state, Date.now())
   }
 }
 
 export interface ICache {
-  updateIfNewer<State>(
+  readThrough<State>(
     key: string,
-    expiration: Expiration,
-    supersedes: (a: StreamToken, b: StreamToken) => boolean,
-    entry: CacheEntry<State>,
-  ): Promise<void>
+    skipReloadIfYoungerThanMs: number,
+    read: (tokenAndState?: TokenAndState<State>) => Promise<TokenAndState<State>>,
+  ): Promise<TokenAndState<State>>
 
-  tryGet<State>(key: string): Promise<TokenAndState<State> | undefined>
+  updateIfNewer<State>(key: string, entry: CacheEntry<State>): void
 }
 
-type Supersedes = (a: StreamToken, b: StreamToken) => boolean
+export const supersedes = (current: StreamToken, x: StreamToken) => x.version > current.version
 
 export class MemoryCache implements ICache {
   private readonly cache: LRUCache<string, CacheEntry<any>>
-  constructor(max = 1_000_000, ttlInMs = 1000 * 60 * 20) {
-    this.cache = new LRUCache({
-      max,
-      ttl: ttlInMs,
-    })
+  /**
+   * It's not possible to know the size of a JS object in bytes at runtime,
+   * as such we cannot provide a sensible default for the cache that limits
+   * the actual memory usage of your process. You'll need to fine tune it to your
+   * requirements. By default we allow 1 million entries in the cache.
+   * If each entry is 50 bytes that's 50MB of memory.
+   *
+   * @param max Maximum number of entries to cache
+   */
+  constructor(max = 1_000_000) {
+    this.cache = new LRUCache({ max, ttl: 0 })
   }
 
-  async tryGet<State>(key: string): Promise<TokenAndState<State> | undefined> {
-    return this.cache.get(key)?.value()
+  fetchers: Map<string, Promise<any>> = new Map()
+
+  private readWithExactlyOneFetch<State>(key: string, read: () => Promise<TokenAndState<State>>) {
+    const fetcher = this.fetchers.get(key)
+    if (fetcher) return fetcher
+    const p = read()
+      .then((tns) => {
+        this.updateIfNewer(key, CacheEntry.ofTokenAndState(tns))
+        return tns
+      })
+      .finally(() => {
+        this.fetchers.delete(key)
+      })
+    this.fetchers.set(key, p)
+    return p
   }
 
-  async updateIfNewer<State>(
+  async readThrough<State>(
     key: string,
-    expiration: Expiration,
-    supersedes: Supersedes,
-    entry: CacheEntry<State>,
-  ): Promise<void> {
-    const ttl = "absolute" in expiration ? expiration.absolute - Date.now() : expiration.relative
+    skipReloadIfYoungerThanMs: number,
+    read: (tns?: TokenAndState<State>) => Promise<TokenAndState<State>>,
+  ): Promise<TokenAndState<State>> {
+    const span = trace.getActiveSpan()
+    const current = this.cache.get(key)
+    span?.setAttribute(Tags.cache_hit, !!current)
+    span?.setAttribute(Tags.max_staleness, skipReloadIfYoungerThanMs)
+    if (!current) {
+      return this.readWithExactlyOneFetch(key, () => read())
+    }
+    const now = Date.now()
+    const age = now - current.cachedAt
+    span?.setAttribute(Tags.cache_age, age)
+    if (age < skipReloadIfYoungerThanMs) {
+      return current.value()
+    }
+    const tns = await this.readWithExactlyOneFetch(key, () => read(current.value()))
+    this.updateIfNewer(key, CacheEntry.ofTokenAndState(tns))
+    return tns
+  }
+
+  updateIfNewer<State>(key: string, entry: CacheEntry<State>): void {
     if (!this.cache.has(key)) {
-      this.cache.set(key, entry, { ttl })
+      this.cache.set(key, entry)
     } else {
       const current = this.cache.get(key)!
-      current.updateIfNewer(supersedes, entry)
+      current.updateIfNewer(entry)
     }
   }
 }
 
 export interface IReloadableCategory<E, S, C> extends ICategory<E, S, C> {
   reload(streamName: string, requireLeader: boolean, t: TokenAndState<S>): Promise<TokenAndState<S>>
-  supersedes: Supersedes
 }
 
 export interface ICachingStrategy {
-  load<S>(streamName: string): Promise<TokenAndState<S> | undefined>
-  store<S>(
-    supersedes: Supersedes,
-    streamName: string,
-    value: Promise<TokenAndState<S>>,
-  ): Promise<TokenAndState<S>>
-}
-
-class NoCaching implements ICachingStrategy {
-  async load<S>(): Promise<TokenAndState<S> | undefined> {
-    return undefined
-  }
-  store<S>(
-    _supersedes: Supersedes,
-    _streamName: string,
-    value: Promise<TokenAndState<S>>,
-  ): Promise<TokenAndState<S>> {
-    return value
-  }
-}
-
-class SlidingWindow implements ICachingStrategy {
-  constructor(
-    private readonly cache: ICache,
-    private readonly windowInMs: number,
-    private readonly prefix = "",
-  ) {}
-
-  load<S>(streamName: string): Promise<TokenAndState<S> | undefined> {
-    return this.cache.tryGet(this.prefix + streamName)
-  }
-
-  async store<S>(
-    supersedes: Supersedes,
-    streamName: string,
-    value: Promise<TokenAndState<S>>,
-  ): Promise<TokenAndState<S>> {
-    const v = await value
-    const key = this.prefix + streamName
-    const expiration = { relative: this.windowInMs }
-    await this.cache.updateIfNewer(key, expiration, supersedes, CacheEntry.ofTokenAndState(v))
-    return v
-  }
-}
-
-class FixedTimeSpan implements ICachingStrategy {
-  constructor(
-    private readonly cache: ICache,
-    private readonly timeSpanInMs: number,
-    private readonly prefix = "",
-  ) {}
-
-  load<S>(streamName: string): Promise<TokenAndState<S> | undefined> {
-    return this.cache.tryGet(this.prefix + streamName)
-  }
-
-  async store<S>(
-    supersedes: Supersedes,
-    streamName: string,
-    value: Promise<TokenAndState<S>>,
-  ): Promise<TokenAndState<S>> {
-    const v = await value
-    const key = this.prefix + streamName
-    const expiration = { absolute: Date.now() + this.timeSpanInMs }
-    await this.cache.updateIfNewer(key, expiration, supersedes, CacheEntry.ofTokenAndState(v))
-    return v
-  }
+  cache: ICache
+  cacheKey: (streamName: string) => string
 }
 
 export namespace CachingStrategy {
-  export const slidingWindow = (
-    cache: ICache,
-    windowInMs: number,
-    prefix?: string,
-  ): ICachingStrategy => new SlidingWindow(cache, windowInMs, prefix)
-  export const noCache = (): ICachingStrategy => new NoCaching()
-  export const fixedTimeSpan = (
-    cache: ICache,
-    periodInMs: number,
-    prefix?: string,
-  ): ICachingStrategy => new FixedTimeSpan(cache, periodInMs, prefix)
+  export const Cache = (cache: ICache, prefix?: string): ICachingStrategy => ({
+    cache,
+    cacheKey: (streamName: string) => (prefix || "") + streamName,
+  })
+  export const NoCache = (): ICachingStrategy | undefined => undefined
 }
 
 export class CachingCategory<Event, State, Context> implements ICategory<Event, State, Context> {
@@ -166,31 +129,19 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
   ) {}
 
   private cacheKey(streamId: string) {
-    return `${this.categoryName}/${streamId}`
+    return this.strategy.cacheKey(`${this.categoryName}/${streamId}`)
   }
 
-  async load(
+  load(
     streamId: string,
-    allowStale: boolean,
+    maxStaleMs: number,
     requireLeader: boolean,
   ): Promise<TokenAndState<State>> {
-    const cachedValue = await this.strategy.load<State>(this.cacheKey(streamId))
-    trace.getActiveSpan()?.setAttributes({
-      [Tags.cache_hit]: cachedValue != null,
-    })
-    if (cachedValue && allowStale) return cachedValue
-    if (cachedValue) {
-      return this.strategy.store(
-        this.inner.supersedes,
-        this.cacheKey(streamId),
-        this.inner.reload(streamId, requireLeader, cachedValue),
-      )
-    }
-    return this.strategy.store(
-      this.inner.supersedes,
-      this.cacheKey(streamId),
-      this.inner.load(streamId, allowStale, requireLeader),
-    )
+    const reload = (tns?: TokenAndState<State>) =>
+      tns
+        ? this.inner.reload(streamId, requireLeader, tns)
+        : this.inner.load(streamId, maxStaleMs, requireLeader)
+    return this.strategy.cache.readThrough(this.cacheKey(streamId), maxStaleMs, reload)
   }
 
   async sync(
@@ -205,14 +156,19 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
       case "Conflict":
         return {
           type: "Conflict",
-          resync: () =>
-            this.strategy.store(this.inner.supersedes, this.cacheKey(streamId), result.resync()),
+          resync: async () => {
+            const res = await result.resync()
+            this.strategy.cache.updateIfNewer(
+              this.cacheKey(streamId),
+              CacheEntry.ofTokenAndState(res),
+            )
+            return res
+          },
         }
       case "Written":
-        await this.strategy.store(
-          this.inner.supersedes,
+        this.strategy.cache.updateIfNewer(
           this.cacheKey(streamId),
-          Promise.resolve(result.data),
+          CacheEntry.ofTokenAndState(result.data),
         )
         return { type: "Written", data: result.data }
     }
@@ -221,8 +177,9 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
   static apply<E, S, C>(
     categoryName: string,
     inner: IReloadableCategory<E, S, C>,
-    strategy: ICachingStrategy,
-  ) {
+    strategy?: ICachingStrategy,
+  ): ICategory<E, S, C> {
+    if (!strategy) return inner
     return new CachingCategory(categoryName, inner, strategy)
   }
 }
