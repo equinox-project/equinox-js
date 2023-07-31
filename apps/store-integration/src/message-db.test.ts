@@ -24,7 +24,7 @@ namespace CartService {
   const fold = Cart.Fold.fold
   const initial = Cart.Fold.initial
   const cache = new MemoryCache()
-  const noCache = CachingStrategy.noCache()
+  const noCache = CachingStrategy.NoCache()
 
   export function createWithoutOptimization(context: MessageDbContext) {
     const category = Category.create(
@@ -48,7 +48,7 @@ namespace CartService {
     return Cart.Service.create(category)
   }
 
-  const sliding20m = CachingStrategy.slidingWindow(cache, 20 * 60 * 1000)
+  const sliding20m = CachingStrategy.Cache(cache)
 
   export function createWithCaching(context: MessageDbContext) {
     const category = Category.create(context, Cart.Category, codec, fold, initial, sliding20m)

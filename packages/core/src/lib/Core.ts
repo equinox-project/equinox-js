@@ -1,5 +1,4 @@
 import { tracer } from "./Tracing"
-import { SpanKind } from "@opentelemetry/api"
 
 export type TokenAndState<State> = { token: StreamToken; state: State }
 
@@ -27,7 +26,7 @@ export interface IStream<Event, State> {
   loadEmpty(): TokenAndState<State>
 
   /** Obtain the state from the target stream */
-  load(allowStale: boolean, requireLeader: boolean): Promise<TokenAndState<State>>
+  load(maxStaleMs: number, requireLeader: boolean): Promise<TokenAndState<State>>
 
   /**
    * Given the supplied `token` [and related `originState`], attempt to move to state `state'` by appending the supplied `events` to the underlying stream

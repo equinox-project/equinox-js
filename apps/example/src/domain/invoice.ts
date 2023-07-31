@@ -170,7 +170,7 @@ export class Service {
 
   readInvoice(id: InvoiceId) {
     const decider = this.resolve(id)
-    return decider.query(summary, LoadOption.AllowStale)
+    return decider.query(summary)
   }
 
   static resolveCategory(config: Config.Config) {

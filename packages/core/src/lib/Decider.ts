@@ -1,37 +1,34 @@
 import { IStream, queryAsync, TokenAndState, transactAsync } from "./Core.js"
 import { Category } from "./Category.js"
 
-export enum LoadOption {
+type LoadOption = { requireLoad?: boolean, requireLeader?: boolean, maxStaleMs?: number, assumeEmpty?: boolean }
+
+export namespace LoadOption {
   /** Default policy; Obtain the latest state from store based on consistency level configured */
-  RequireLoad,
+  export const RequireLoad: LoadOption = { requireLoad: true }
+
   /** Request that data be read with a quorum read / from a Leader connection */
-  RequireLeader,
-  /**
-   * If the Cache holds any state, use that without checking the backing store for updates, implying:
-   * - maximizing how much we lean on Optimistic Concurrency Control when doing a `Transact` (you're still guaranteed a consistent outcome)
-   * - enabling stale reads [in the face of multiple writers (either in this process or in other processes)] when doing a `Query`
-   */
-  AllowStale,
+  export const RequireLeader: LoadOption = { requireLeader: true }
+
+  /** Allow stale reads */
+  export const AnyCachedValue: LoadOption = { maxStaleMs: Number.MAX_SAFE_INTEGER }
+  /** Allow stale reads up to the specified number of milliseconds */
+  export const MaxStale = (maxStaleMs: number): LoadOption => ({ maxStaleMs })
+
   /** Inhibit load from database based on the fact that the stream is likely not to have been initialized yet, and we will be generating events */
-  AssumeEmpty,
+  export const AssumeEmpty: LoadOption = { assumeEmpty: true }
 }
+
 
 namespace LoadPolicy {
   export function fetch<State, Event>(
     x?: LoadOption,
   ): (stream: IStream<Event, State>) => Promise<TokenAndState<State>> {
-    switch (x) {
-      case LoadOption.RequireLoad:
-      case undefined:
-      case null:
-        return (stream) => stream.load(false, false)
-      case LoadOption.RequireLeader:
-        return (stream) => stream.load(false, true)
-      case LoadOption.AllowStale:
-        return (stream) => stream.load(true, false)
-      case LoadOption.AssumeEmpty:
-        return (stream) => Promise.resolve(stream.loadEmpty())
-    }
+    if (x == null || x.requireLoad) return (stream) => stream.load(0, false)
+    if (x.requireLeader) return (stream) => stream.load(0, true)
+    if (x.maxStaleMs != null) return (stream) => stream.load(x.maxStaleMs!, false)
+    if (x.assumeEmpty) return (stream) => Promise.resolve(stream.loadEmpty())
+    return (stream) => stream.load(0, false)
   }
 }
 

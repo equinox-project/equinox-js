@@ -1,5 +1,4 @@
 import {
-  ICategory,
   StreamToken,
   SyncResult,
   ITimelineEvent,
@@ -70,7 +69,7 @@ class Category<Event, State, Context, Format>
 
   async load(
     streamId: string,
-    _allowStale: boolean,
+    _maxStaleMs: number,
     _requireLeader: boolean,
   ): Promise<TokenAndState<State>> {
     const streamName = StreamName.compose(this.categoryName, streamId)

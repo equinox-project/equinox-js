@@ -147,7 +147,7 @@ export class Service {
       if (prepare) await prepare()
       return interpretMany(Fold.fold, commands.map(interpret))(state)
     }
-    const opt = optimistic ? LoadOption.AllowStale : LoadOption.RequireLoad
+    const opt = optimistic ? LoadOption.AnyCachedValue: LoadOption.RequireLoad
     return decider.transactResultAsync(interpretCommands, opt)
   }
 
@@ -171,7 +171,7 @@ export class Service {
 
   readStale(cartId: CartId) {
     const decider = this.resolve(cartId)
-    return decider.query((x) => x, LoadOption.AllowStale)
+    return decider.query((x) => x, LoadOption.AnyCachedValue)
   }
 
   static create(category: Equinox.Category<Events.Event, Fold.State>) {
