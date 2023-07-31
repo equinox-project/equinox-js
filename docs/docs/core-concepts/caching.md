@@ -8,7 +8,7 @@ the actual memory usage of your process. You'll need to fine tune it to your
 actual requirements. As an example if you have 1 million states, each of which
 is 50 bytes that's 50MB of memory.
 
-The cache acts as a concurrency limiter on stream loads and guarantees that
+The cache doubles as a concurrency limiter on stream loads and guarantees that
 for each stream at most one load is happening concurrently.
 
 For performance reasons we do not offer TTL functionality on the cache. Doing
@@ -25,7 +25,7 @@ import { CachingStrategy } from "@equinox-js/core"
 const strategy = CachingStrategy.NoCache()
 ```
 
-No caching is applied. This necessitates a fresh load of the entire stream for every interaction with the
+No caching is applied. This triggers a fresh load of the entire stream for every interaction with the
 store.
 
 ## `Cache(cache, ?prefix)`
@@ -49,13 +49,13 @@ opt into different load guarantees.
 
 This is the default load option, always obtaining the latest state from the store
 
-## `RequireLader`
+## `RequireLeader`
 
 Request that the stream be loaded with a quorum read / from a leader connection
 
 ## MaxStale(ms)
 
-If the cache contains a state from the stream that was stored less than `ms`
+If the cache contains a state from the stream that was read less than `ms`
 milliseconds ago that state will be used without fetching more events from the
 stream.
 
@@ -67,4 +67,6 @@ fetching more events from the stream.
 ## `AssumeEmpty`
 
 Instead of loading the stream, the empty state is supplied to the handler.
-Useful when you're fairly certain the stream does not exist yet.
+Useful to avoid a read roundtrip if you believe there is a good chance that
+the value in the cache will be correct (if not, the append will trigger a
+reload due to a concurrency conflict during the sync)

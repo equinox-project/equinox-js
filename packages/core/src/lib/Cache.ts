@@ -15,8 +15,12 @@ export class CacheEntry<T> {
     if (supersedes(this.token, other.token)) {
       this.token = other.token
       this.state = other.state
-      this.cachedAt = Date.now()
     }
+    this.updateCachedAt(Date.now())
+  }
+
+  updateCachedAt(now: number) {
+     this.cachedAt = now
   }
   value(): TokenAndState<T> {
     return { token: this.token, state: this.state }
@@ -54,10 +58,10 @@ export class MemoryCache implements ICache {
     this.cache = new LRUCache({ max, ttl: 0 })
   }
 
-  fetchers: Map<string, Promise<any>> = new Map()
+  loadsInProgress: Map<string, Promise<any>> = new Map()
 
   private readWithExactlyOneFetch<State>(key: string, read: () => Promise<TokenAndState<State>>) {
-    const fetcher = this.fetchers.get(key)
+    const fetcher = this.loadsInProgress.get(key)
     if (fetcher) return fetcher
     const p = read()
       .then((tns) => {
@@ -65,9 +69,9 @@ export class MemoryCache implements ICache {
         return tns
       })
       .finally(() => {
-        this.fetchers.delete(key)
+        this.loadsInProgress.delete(key)
       })
-    this.fetchers.set(key, p)
+    this.loadsInProgress.set(key, p)
     return p
   }
 
@@ -86,12 +90,11 @@ export class MemoryCache implements ICache {
     const now = Date.now()
     const age = now - current.cachedAt
     span?.setAttribute(Tags.cache_age, age)
+    current.updateCachedAt(now)
     if (age < skipReloadIfYoungerThanMs) {
       return current.value()
     }
-    const tns = await this.readWithExactlyOneFetch(key, () => read(current.value()))
-    this.updateIfNewer(key, CacheEntry.ofTokenAndState(tns))
-    return tns
+    return this.readWithExactlyOneFetch(key, () => read(current.value()))
   }
 
   updateIfNewer<State>(key: string, entry: CacheEntry<State>): void {
