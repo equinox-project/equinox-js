@@ -13,9 +13,10 @@ export class MessageDbWriter {
     expectedVersion: bigint | null,
   ): Promise<MdbWriteResult> {
     try {
-      const results = await this.pool.query(
-        `select message_store.write_message($1, $2, $3, $4, $5, $6)`,
-        [
+      const results = await this.pool.query({
+        text: `select message_store.write_message($1, $2, $3, $4, $5, $6)`,
+        name: "write_message",
+        values: [
           message.id || randomUUID(),
           streamName,
           message.type,
@@ -23,7 +24,7 @@ export class MessageDbWriter {
           message.meta || null,
           expectedVersion == null ? null : Number(expectedVersion++),
         ],
-      )
+      })
       const position = BigInt(results.rows[0].write_message)
       return { type: "Written", position }
     } catch (err: any) {
@@ -45,9 +46,10 @@ export class MessageDbWriter {
 
       for (let i = 0; i < messages.length; ++i) {
         const message = messages[i]
-        const results = await client.query(
-          `select message_store.write_message($1, $2, $3, $4, $5, $6)`,
-          [
+        const results = await client.query({
+          text: `select message_store.write_message($1, $2, $3, $4, $5, $6)`,
+          name: "write_message",
+          values: [
             message.id || randomUUID(),
             streamName,
             message.type,
@@ -55,7 +57,7 @@ export class MessageDbWriter {
             message.meta || null,
             expectedVersion == null ? null : Number(expectedVersion++),
           ],
-        )
+        })
 
         position = BigInt(results.rows[0].write_message)
       }
@@ -83,10 +85,11 @@ export class MessageDbReader {
   }
 
   async readLastEvent(streamName: string, requiresLeader: boolean, eventType?: string) {
-    const result = await this.getPool(requiresLeader).query(
-      "select * from message_store.get_last_stream_message($1, $2)",
-      [streamName, eventType ?? null],
-    )
+    const result = await this.getPool(requiresLeader).query({
+      text: "select * from message_store.get_last_stream_message($1, $2)",
+      name: "get_last_stream_message",
+      values: [streamName, eventType ?? null],
+    })
     return result.rows.map(fromDb)[0]
   }
 
@@ -96,11 +99,12 @@ export class MessageDbReader {
     batchSize: number,
     requiresLeader: boolean,
   ): Promise<ITimelineEvent<Format>[]> {
-    const result = await this.getPool(requiresLeader).query(
-      `select position, type, data, metadata, id, time
+    const result = await this.getPool(requiresLeader).query({
+      text: `select position, type, data, metadata, id, time
          from get_stream_messages($1, $2, $3)`,
-      [streamName, String(fromPosition), batchSize],
-    )
+      name: "get_stream_messages",
+      values: [streamName, String(fromPosition), batchSize],
+    })
     return result.rows.map(fromDb)
   }
 }

@@ -27,10 +27,11 @@ export class MessageDbCategoryReader {
   }
 
   async readCategoryMessages(params: ReadCategoryParams) {
-    const result = await this.pool.query(
-      "select * from get_category_messages($1, $2, $3, null, $4, $5, $6)",
-      this.paramsToArray(params),
-    )
+    const result = await this.pool.query({
+      text: "select * from get_category_messages($1, $2, $3, null, $4, $5, $6)",
+      name: "get_category_messages",
+      values: this.paramsToArray(params),
+    })
     const messages = result.rows.map(fromDb)
     const isTail = messages.length < params.batchSize
     const checkpoint = result.rows.length
