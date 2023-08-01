@@ -8,7 +8,7 @@ const darkCodeTheme = require("prism-react-renderer/themes/dracula")
 const config = {
   title: "EquinoxJS",
   tagline: "Lightweight event sourcing library",
-  favicon: "img/favicon.ico",
+  favicon: "img/Equinox-favicon.png",
 
   // Set the production url of your site here
   url: "https://nordfjord.github.io",
@@ -57,10 +57,10 @@ const config = {
       image: "img/docusaurus-social-card.jpg",
       navbar: {
         title: "EquinoxJS",
-        // logo: {
-        //   alt: 'My Site Logo',
-        //   src: 'img/logo.svg',
-        // },
+        logo: {
+          alt: 'EquinoxJS Logo',
+          src: './img/Equinox-favicon.png',
+        },
         items: [
           {
             type: "doc",
@@ -110,7 +110,7 @@ const config = {
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+        copyright: `Copyright © ${new Date().getFullYear()} Einar Norðfjörð. Built with Docusaurus.`,
       },
       prism: {
         theme: lightCodeTheme,
