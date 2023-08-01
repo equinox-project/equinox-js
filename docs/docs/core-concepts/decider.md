@@ -59,7 +59,7 @@ class Service {
   static create(store: VolatileStore<string>) {
     const fold = (state: State, events: Event[]) => events.reduce(evolve, state)
     const category = MemoryStoreCategory.create(store, 'Counter', codec, fold, initial)
-    const resolve = (id: string) => Decider.resolve(category, id, null)
+    const resolve = (id: string) => Decider.forStream(category, id, null)
     return new Service(resolve)
   }
 }
@@ -184,7 +184,7 @@ class Service {
   // wire up to memory store category
   static create(store: VolatileStore<string>) {
     const category = MemoryStoreCategory.create(store, 'Counter', codec, fold, initial)
-    const resolve = (id: string) => Decider.resolve(category, id, null)
+    const resolve = (id: string) => Decider.forStream(category, id, null)
     return new Service(resolve)
   }
 }

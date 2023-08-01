@@ -83,5 +83,5 @@ const codec = Codec.zod<Event, Context>({
 This `Context` is then supplied at decider resolution time
 
 ```ts
-Decider.resolve(category, streamId, context)
+Decider.forStream(category, streamId, context)
 ```

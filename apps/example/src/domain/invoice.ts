@@ -184,7 +184,7 @@ export class Service {
 
   static create(config: Config.Config) {
     const category = Service.resolveCategory(config)
-    const resolve = (id: InvoiceId) => Decider.resolve(category, streamId(id), null)
+    const resolve = (id: InvoiceId) => Decider.forStream(category, streamId(id), null)
     return new Service(resolve)
   }
 }

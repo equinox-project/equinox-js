@@ -60,15 +60,7 @@ namespace CartService {
       Cart.Fold.snapshotEventType,
       Cart.Fold.snapshot,
     )
-    const category = Category.create(
-      context,
-      Cart.Category,
-      codec,
-      fold,
-      initial,
-      caching,
-      access,
-    )
+    const category = Category.create(context, Cart.Category, codec, fold, initial, caching, access)
     return Cart.Service.create(category)
   }
 }
@@ -89,7 +81,7 @@ namespace SimplestThing {
   export const categoryName = "SimplestThing"
   export const resolve = (context: MessageDbContext, categoryName: string, streamId: string) => {
     const category = Category.create(context, categoryName, codec, fold, initial)
-    return Decider.resolve(category, streamId, undefined)
+    return Decider.forStream(category, streamId, undefined)
   }
 }
 

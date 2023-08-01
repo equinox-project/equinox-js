@@ -69,13 +69,13 @@ export class Service {
   static createMessageDb(context: Mdb.MessageDbContext, caching: ICachingStrategy) {
     const access = Mdb.AccessStrategy.LatestKnownEvent<Event, State>()
     const category = Mdb.MessageDbCategory.create(context, codec, fold, initial, caching, access)
-    const resolve = (clientId: ClientId) => Decider.resolve(category, Category, streamId(clientId), null)
+    const resolve = (clientId: ClientId) => Decider.forStream(category, Category, streamId(clientId), null)
     return new Service(resolve)
   }
 
   static createMem(store: Mem.VolatileStore<string>) {
     const category = Mem.MemoryStoreCategory.create(store, codec, fold, initial)
-    const resolve = (clientId: ClientId) => Decider.resolve(category, Category, streamId(clientId), null)
+    const resolve = (clientId: ClientId) => Decider.forStream(category, Category, streamId(clientId), null)
     return new Service(resolve)
   }
 }
