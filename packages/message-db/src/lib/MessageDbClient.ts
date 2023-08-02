@@ -101,7 +101,7 @@ export class MessageDbReader {
   ): Promise<ITimelineEvent<Format>[]> {
     const result = await this.getPool(requiresLeader).query({
       text: `select position, type, data, metadata, id, time
-         from get_stream_messages($1, $2, $3)`,
+         from message_store.get_stream_messages($1, $2, $3)`,
       name: "get_stream_messages",
       values: [streamName, String(fromPosition), batchSize],
     })
