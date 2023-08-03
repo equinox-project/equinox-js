@@ -7,7 +7,7 @@ import * as Config from "../config/equinox.js"
 export namespace Stream {
   export const CATEGORY = "Payer"
   export const streamId = StreamId.gen(PayerId.toString)
-  export const parseId = StreamName.dec(CATEGORY, PayerId.parse)
+  export const tryParseId = StreamName.dec(CATEGORY, PayerId.parse)
 }
 
 export namespace Events {
