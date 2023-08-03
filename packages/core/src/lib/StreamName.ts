@@ -51,7 +51,7 @@ export function dec2<A, B>(category: string, f: (id: string) => A, g: (id: strin
   return (streamName: string) => {
     const [cat, ids] = parseCategoryAndIds(streamName)
     if (cat !== category) return
-    if (ids.length !== 2) return
+    if (ids.length !== 2) throw new Error("StreamName: Expected 2 IDs")
     return [f(ids[0]), g(ids[1])]
   }
 }
@@ -65,7 +65,7 @@ export function dec3<A, B, C>(
   return (streamName: string) => {
     const [cat, ids] = parseCategoryAndIds(streamName)
     if (cat !== category) return
-    if (ids.length !== 3) return
+    if (ids.length !== 3) throw new Error("StreamName: Expected 3 IDs") 
     return [f(ids[0]), g(ids[1]), h(ids[2])]
   }
 }
@@ -80,7 +80,7 @@ export function dec4<A, B, C, D>(
   return (streamName: string) => {
     const [cat, ids] = parseCategoryAndIds(streamName)
     if (cat !== category) return
-    if (ids.length !== 4) return
+    if (ids.length !== 4) throw new Error("StreamName: Expected 4 IDs") 
     return [f(ids[0]), g(ids[1]), h(ids[2]), i(ids[3])]
   }
 }
