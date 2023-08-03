@@ -6,27 +6,47 @@ import { randomUUID } from "crypto"
 describe("Codec", () => {
   describe("json", () => {
     test("roundtrips", () => {
-      const codec = Codec.json<any>(() => ({ hello: "world" }))
+      const codec = Codec.create<any>(Codec.Decode.json, Codec.Encode.stringify)
       const event = { type: "Hello", data: { world: "hello" } }
-      expect(codec.encode(event, null)).toEqual({
+      expect(codec.encode(event, undefined)).toEqual({
         type: "Hello",
         data: '{"world":"hello"}',
-        meta: '{"hello":"world"}',
+        meta: undefined,
+        id: undefined,
       })
       expect(
         codec.tryDecode({
           type: "Hello",
           data: '{"world":"hello"}',
-          meta: '{"hello":"world"}',
         } as any),
       ).toEqual(event)
     })
   })
 
-  describe("zod", () => {
+  describe("Codec.Encode.stringify", () => {
+    test("ignores meta on the event", () => {
+      const event = { type: "Hello", data: { world: "hello" }, meta: { hello: "hi" } }
+      expect(Codec.Encode.stringify(event, null)).toMatchObject({ meta: undefined })
+    })
+    test("forwards the id on the event", () => {
+      const event = { type: "Hello", data: { world: "hello" }, id: "123" }
+      expect(Codec.Encode.stringify(event, null)).toMatchObject({ id: "123" })
+    })
+    test("forwards the meta on the context", () => {
+      const event = { type: "Hello", data: { world: "hello" } }
+      expect(Codec.Encode.stringify(event, { hello: "hi" })).toMatchObject({
+        meta: '{"hello":"hi"}',
+      })
+    })
+  })
+
+  describe("Codec.Decode.from", () => {
+    const HelloSchema = z.object({ hello: z.string().uuid() })
+    const codec = Codec.create(
+      Codec.Decode.from({ Hello: HelloSchema.parse }),
+      Codec.Encode.stringify,
+    )
     test("decoding", () => {
-      const HelloSchema = z.object({ hello: z.string().uuid() })
-      const codec = Codec.zod({ Hello: HelloSchema.parse })
       expect(codec.tryDecode({ type: "Hello", data: '{"world":"hello"}' } as any)).toEqual(
         undefined,
       )
@@ -38,42 +58,70 @@ describe("Codec", () => {
         },
       )
     })
+  })
 
-    test("encoding an invalid event throws", () => {
-      const HelloSchema = z.object({ hello: z.string().uuid() })
-      const codec = Codec.zod({ Hello: HelloSchema.parse })
-      expect(() => codec.encode({ type: "Hello", data: { hello: "1234" } }, null)).toThrow(ZodError)
-    })
-    test("encoding a valid event", () => {
-      const HelloSchema = z.object({ hello: z.string().uuid() })
-      const codec = Codec.zod({ Hello: HelloSchema.parse })
-      const event = { type: "Hello" as const, data: { hello: randomUUID() } }
-      expect(codec.encode(event, null)).toEqual({
-        type: "Hello",
-        data: JSON.stringify(event.data),
-      })
-    })
-
-    const schema = z.object({ amount: z.number() })
-    type Amount = z.infer<typeof schema>
+  describe("Codec.Encode.from", () => {
+    type Amount = { amount: number }
     type Event = { type: "Increment"; data: Amount } | { type: "Decrement"; data: Amount }
-    const codec = Codec.zod<Event, { hello: string }>(
-      {
-        Increment: schema.parse,
-        Decrement: schema.parse,
-      },
-      (ctx) => ctx,
-    )
-    test("Encoding with meta", () => {
+    const encode = Codec.Encode.from<Event>({
+      Increment: (e) => ({ type: e.type, data: { amount: String(e.data.amount) } }),
+      Decrement: (e) => ({ type: e.type, data: { amount: String(e.data.amount) } }),
+    })
+
+    test("encoding", () => {
       const event: Event = { type: "Increment", data: { amount: 3 } }
-      const meta = { hello: "hi" }
       const expected = {
         type: "Increment",
-        data: '{"amount":3}',
-        meta: '{"hello":"hi"}',
+        data: '{"amount":"3"}',
       }
-      expect(codec.encode(event, meta)).toEqual(expected)
-      expect(codec.tryDecode(expected as any)).toEqual(event)
+      expect(encode(event, null)).toEqual(expected)
     })
+  })
+
+  describe("Codec.create", () => {
+    const Amount = z.object({ amount: z.string().regex(/^\d+$/).transform(Number) })
+    type Amount = z.infer<typeof Amount>
+    type Event = { type: "Increment"; data: Amount } | { type: "Decrement"; data: Amount }
+    const encode = Codec.Encode.from<Event>({
+      Increment: (e) => ({ type: e.type, data: { amount: String(e.data.amount) } }),
+      Decrement: (e) => ({ type: e.type, data: { amount: String(e.data.amount) } }),
+    })
+    const decode = Codec.Decode.from<Event>({
+      Increment: Amount.parse,
+      Decrement: Amount.parse,
+    })
+    const codec = Codec.create(decode, encode)
+    test("round trips", () => {
+      const event: Event = { type: "Increment", data: { amount: 3 } }
+      const encoded = codec.encode(event, null)
+      expect(encoded).toEqual({
+        type: "Increment",
+        data: '{"amount":"3"}',
+      })
+      expect(codec.tryDecode(encoded as any)).toEqual(event)
+    })
+  })
+})
+
+describe("Codec.createEx", () => {
+  type Context = { correlationId: string; causationId: string; userId: string }
+  const mapCausation = (_ev: any, ctx: Context) => ({
+    // matches ESDB conventions
+    $correlationId: ctx.correlationId,
+    $causationId: ctx.causationId,
+    userId: ctx.userId,
+  })
+
+  const codec = Codec.createEx(() => ({ type: "Hello" }), Codec.Encode.stringify, mapCausation)
+  test("mapping causation to get metadata", () => {
+    const ctx = { correlationId: "123", causationId: "456", userId: "789" }
+    const encoded = codec.encode({ type: "Hello" }, ctx)
+    expect(encoded.meta).toEqual(
+      JSON.stringify({
+        $correlationId: "123",
+        $causationId: "456",
+        userId: "789",
+      }),
+    )
   })
 })

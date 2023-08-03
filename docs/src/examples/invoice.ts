@@ -24,11 +24,14 @@ type Event =
   | { type: "PaymentReceived"; data: Payment }
   | { type: "InvoiceFinalized" }
 
-const codec = Codec.zod<Event>({
-  InvoiceRaised: RaisedSchema.parse,
-  PaymentReceived: PaymentSchema.parse,
-  InvoiceFinalized: () => undefined,
-})
+const codec = Codec.create<Event>(
+  Codec.Decode.from({
+    InvoiceRaised: RaisedSchema.parse,
+    PaymentReceived: PaymentSchema.parse,
+    InvoiceFinalized: () => undefined,
+  }),
+  Codec.Encode.stringify,
+)
 
 export type InvoiceState = {
   amount: number
@@ -171,15 +174,13 @@ export class Service {
 
   static createMessageDb(context: Mdb.MessageDbContext, caching: ICachingStrategy) {
     const category = Mdb.MessageDbCategory.create(context, Category, codec, fold, initial, caching)
-    const resolve = (invoiceId: InvoiceId) =>
-      Decider.forStream(category, streamId(invoiceId), null)
+    const resolve = (invoiceId: InvoiceId) => Decider.forStream(category, streamId(invoiceId), null)
     return new Service(resolve)
   }
 
   static createMem(store: Mem.VolatileStore<string>) {
     const category = Mem.MemoryStoreCategory.create(store, Category, codec, fold, initial)
-    const resolve = (invoiceId: InvoiceId) =>
-      Decider.forStream(category, streamId(invoiceId), null)
+    const resolve = (invoiceId: InvoiceId) => Decider.forStream(category, streamId(invoiceId), null)
     return new Service(resolve)
   }
 }

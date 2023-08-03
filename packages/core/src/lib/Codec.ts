@@ -5,7 +5,9 @@ export interface ICodec<E, F, C = undefined> {
   encode(event: E, ctx: C): IEventData<F>
 }
 
-export const json = <E extends { type: string; data?: Record<string, any> }, C = null>(
+type DomainEvent = IEventData<Record<string, any>>
+
+export const json = <E extends DomainEvent, C = null>(
   ctxToMeta: (ctx: C) => Record<string, any> | undefined = () => undefined,
 ): ICodec<E, string, C> => {
   return {
@@ -18,12 +20,17 @@ export const json = <E extends { type: string; data?: Record<string, any> }, C =
   }
 }
 
-export const zod = <E extends { type: string; data?: Record<string, any> }, C = null>(
-  mapping: { [P in E["type"]]: (obj: unknown) => Extract<E, { type: P }>["data"] | undefined },
-  ctxToMeta: (ctx: C) => Record<string, any> | undefined = () => undefined,
-): ICodec<E, string, C> => {
-  return {
-    tryDecode(event: ITimelineEvent): E | undefined {
+export namespace Decode {
+  export function json<E extends DomainEvent>(e: ITimelineEvent): E {
+    const data = e.data ? JSON.parse(e.data) : undefined
+    const meta = e.meta ? JSON.parse(e.meta) : undefined
+    return { type: e.type, data, meta, id: e.id } as E
+  }
+  export const from =
+    <E extends DomainEvent>(mapping: {
+      [P in E["type"]]: (obj: unknown) => Extract<E, { type: P }>["data"] | undefined
+    }) =>
+    (event: ITimelineEvent): E | undefined => {
       const decode = mapping[event.type as E["type"]]
       if (!decode) return
       if (!event.data) return { type: event.type } as E
@@ -33,14 +40,43 @@ export const zod = <E extends { type: string; data?: Record<string, any> }, C = 
       } catch (err) {
         return undefined
       }
-    },
-    encode: (e, ctx) => {
-      const data = e.data ? JSON.stringify(e.data) : undefined
-      return {
-        type: e.type,
-        data,
-        meta: JSON.stringify(ctxToMeta(ctx)),
-      }
-    },
-  }
+    }
 }
+
+export namespace Encode {
+  export function stringify<E extends DomainEvent, M>(e: E, maybeMeta: M): IEventData<string> {
+    const data = e.data ? JSON.stringify(e.data) : undefined
+    const meta = maybeMeta? JSON.stringify(maybeMeta) : undefined
+    return { type: e.type, data, meta, id: e.id }
+  }
+
+  export const from =
+    <E extends DomainEvent>(mapping: {
+      [P in E["type"]]: (
+        obj: Extract<E, { type: P }>,
+      ) => IEventData<Record<string, any>>
+    }) =>
+    <M>(e: E, meta: M) => {
+      const encode = mapping[e.type as E["type"]]
+      if (!encode) throw new Error(`No encoder for event type ${e.type}`)
+      return stringify(encode(e as any), meta)
+    }
+}
+
+export const createEx = <E extends DomainEvent, Meta, Context, Format = string>(
+  up: (e: ITimelineEvent<Format>) => E | undefined,
+  down: (e: E, meta: Meta) => IEventData<Format>,
+  mapCausation: (e: E, ctx: Context) => Meta,
+): ICodec<E, Format, Context> => ({
+  tryDecode: up,
+  encode(e, ctx) {
+    const meta = mapCausation(e, ctx)
+    return down(e, meta)
+  },
+})
+
+export const create = <Event extends DomainEvent>(
+  up: (e: ITimelineEvent) => Event | undefined,
+  down: (e: Event, meta: undefined) => IEventData,
+): ICodec<Event, string, undefined | null> =>
+  createEx<Event, undefined, undefined, string>(up, down, () => undefined)

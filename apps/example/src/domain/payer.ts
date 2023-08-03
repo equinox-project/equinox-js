@@ -19,10 +19,13 @@ export namespace Events {
 
   export type Event = { type: "PayerProfileUpdated"; data: PayerProfile } | { type: "PayerDeleted" }
 
-  export const codec = Codec.zod<Event>({
-    PayerProfileUpdated: PayerProfile.parse,
-    PayerDeleted: () => undefined,
-  })
+  export const codec = Codec.create<Event>(
+    Codec.Decode.from({
+      PayerProfileUpdated: PayerProfile.parse,
+      PayerDeleted: () => undefined,
+    }),
+    Codec.Encode.stringify,
+  )
 }
 
 export namespace Fold {
@@ -74,9 +77,21 @@ export class Service {
   static resolveCategory(config: Config.Config) {
     switch (config.store) {
       case Config.Store.Memory:
-        return Config.MemoryStore.create(Stream.CATEGORY, Events.codec, Fold.fold, Fold.initial, config)
+        return Config.MemoryStore.create(
+          Stream.CATEGORY,
+          Events.codec,
+          Fold.fold,
+          Fold.initial,
+          config,
+        )
       case Config.Store.MessageDb:
-        return Config.MessageDb.createLatestKnown(Stream.CATEGORY, Events.codec, Fold.fold, Fold.initial, config)
+        return Config.MessageDb.createLatestKnown(
+          Stream.CATEGORY,
+          Events.codec,
+          Fold.fold,
+          Fold.initial,
+          config,
+        )
     }
   }
 

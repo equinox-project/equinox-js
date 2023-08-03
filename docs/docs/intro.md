@@ -29,10 +29,10 @@ export namespace Events {
   export type Event =
     | { type: "Deposited"; data: { amount: number } }
     | { type: "Withdrawn"; data: { amount: number } }
-  export const codec = Codec.zod({
-    Deposited: Amount.parse,
-    Withdrawn: Amount.parse,
-  })
+  export const codec = Codec.create(
+    Codec.Decode.from({ Deposited: Amount.parse, Withdrawn: Amount.parse }),
+    Codec.Encode.stringify,
+  )
 }
 
 export namespace Fold {

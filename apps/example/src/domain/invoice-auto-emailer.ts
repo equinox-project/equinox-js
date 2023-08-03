@@ -23,10 +23,13 @@ type EmailFailure = z.infer<typeof EmailFailureSchema>
 export type Event =
   | { type: "EmailSent"; data: EmailSent }
   | { type: "EmailSendingFailed"; data: EmailFailure }
-export const codec = Codec.zod<Event>({
-  EmailSent: EmailSentSchema.parse,
-  EmailSendingFailed: EmailFailureSchema.parse,
-})
+export const codec = Codec.create<Event>(
+  Codec.Decode.from({
+    EmailSent: EmailSentSchema.parse,
+    EmailSendingFailed: EmailFailureSchema.parse,
+  }),
+  Codec.Encode.stringify,
+)
 
 export type State = null | Event
 const initial: State = null

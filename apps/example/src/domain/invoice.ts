@@ -25,11 +25,14 @@ export namespace Events {
     | { type: "PaymentReceived"; data: Payment }
     | { type: "InvoiceFinalized" }
 
-  export const codec = Codec.zod<Event>({
-    InvoiceRaised: InvoiceRaised.parse,
-    PaymentReceived: Payment.parse,
-    InvoiceFinalized: () => undefined,
-  })
+  export const codec = Codec.create<Event>(
+    Codec.Decode.from({
+      InvoiceRaised: InvoiceRaised.parse,
+      PaymentReceived: Payment.parse,
+      InvoiceFinalized: () => undefined,
+    }),
+    Codec.Encode.stringify,
+  )
 }
 
 export namespace Fold {
