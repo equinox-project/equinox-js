@@ -6,7 +6,7 @@ type ScenarioState<Event, State> = {
   error?: unknown
 }
 
-export function createBDD<Event, State>({
+export function createTester<Event, State>({
   fold,
   initial,
 }: {
