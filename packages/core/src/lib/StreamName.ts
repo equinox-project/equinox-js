@@ -48,6 +48,7 @@ export function match(category: string, ...fs: ((x: string) => unknown)[]) {
     const [cat, ids] = parseCategoryAndIds(streamName)
     if (cat !== category) return
     if (ids.length !== fs.length) throw new Error("StreamName: Expected " + fs.length + " IDs")
+      if (fs.length === 1) return fs[0](ids[0])
     const result = new Array(fs.length)
     for (let i = 0; i < fs.length; i++) {
       result[i] = fs[i](ids[i])
