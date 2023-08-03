@@ -21,7 +21,7 @@ interface CreateOptions {
   /** The checkpointer to use for checkpointing */
   checkpointer: ICheckpointer
   /** The handler to call for each batch of stream messages */
-  handler: (streamName: string, events: ITimelineEvent<string>[]) => Promise<void>
+  handler: (streamName: string, events: ITimelineEvent[]) => Promise<void>
   /** sleep time in ms between reads when at the end of the category */
   tailSleepIntervalMs: number
   /** The maximum number of concurrent streams to process, enforced via p-limit */
@@ -54,7 +54,7 @@ export class MessageDbSource {
   private runHandlerWithTrace(
     category: string,
     streamName: string,
-    events: ITimelineEvent<string>[],
+    events: ITimelineEvent[],
     handler: () => Promise<void>,
   ) {
     const firstEventTimeStamp = events[events.length - 1]!.time.getTime()
@@ -113,7 +113,7 @@ export class MessageDbSource {
     while (!signal.aborted) {
       const batch = await readBatch(position)
       if (signal.aborted) return
-      const byStreamName = new Map<string, ITimelineEvent<string>[]>()
+      const byStreamName = new Map<string, ITimelineEvent[]>()
       for (let i = 0; i < batch.messages.length; ++i) {
         const [streamName, msg] = batch.messages[i]
         if (!byStreamName.has(streamName)) byStreamName.set(streamName, [])

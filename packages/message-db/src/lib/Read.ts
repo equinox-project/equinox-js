@@ -40,7 +40,7 @@ async function* readBatches(
   readSlice: (start: bigint) => Promise<StreamEventsSlice>,
   maxPermittedReads: number | undefined,
   startPosition: bigint,
-): AsyncIterable<[bigint, ITimelineEvent<string>[]]> {
+): AsyncIterable<[bigint, ITimelineEvent[]]> {
   const span = trace.getActiveSpan()
   let batchCount = 0
   let eventCount = 0

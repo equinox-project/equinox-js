@@ -40,7 +40,7 @@ function change(payerId: PayerId, event: Payer.Event): Sql {
   }
 }
 
-function changes(streamName: string, events: ITimelineEvent<string>[]): Sql[] {
+function changes(streamName: string, events: ITimelineEvent[]): Sql[] {
   const payerId = PayerId.parse(StreamName.parseId(streamName))
   const decodedEvents = keepMap(events, Payer.codec.tryDecode)
   const changes: Sql[] = []
@@ -62,7 +62,7 @@ import pg from "pg"
 const checkpointer = new PgCheckpoints(new pg.Pool({ connectionString: "..." }), "public")
 const pool = new pg.Pool({ connectionString: "..." })
 
-async function handler(streamName: string, events: ITimelineEvent<string>[]) {
+async function handler(streamName: string, events: ITimelineEvent[]) {
   const statements = changes(streamName, events)
   if (statements.length === 0) return
   const client = await pool.connect()

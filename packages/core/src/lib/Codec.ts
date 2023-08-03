@@ -23,7 +23,7 @@ export const zod = <E extends { type: string; data?: Record<string, any> }, C = 
   ctxToMeta: (ctx: C) => Record<string, any> | undefined = () => undefined,
 ): ICodec<E, string, C> => {
   return {
-    tryDecode(event: ITimelineEvent<string>): E | undefined {
+    tryDecode(event: ITimelineEvent): E | undefined {
       const decode = mapping[event.type as E["type"]]
       if (!decode) return
       if (!event.data) return { type: event.type } as E

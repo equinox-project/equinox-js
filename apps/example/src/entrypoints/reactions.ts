@@ -5,7 +5,6 @@ import { Config, Store } from "../config/equinox.js"
 import { ITimelineEvent, MemoryCache } from "@equinox-js/core"
 import { Invoice, InvoiceAutoEmailer } from "../domain/index.js"
 import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-consumer"
-import { InvoiceId } from "../domain/identifiers.js"
 
 const createPool = (connectionString?: string) =>
   connectionString ? new pg.Pool({ connectionString, max: 10 }) : undefined
@@ -21,15 +20,18 @@ const invoiceEmailer = InvoiceAutoEmailer.Service.create(config)
 const checkpointer = new PgCheckpoints(createPool(process.env.CP_CONN_STR)!)
 checkpointer.ensureTable().then(() => console.log("table created"))
 
-async function handle(streamName: string, events: ITimelineEvent<string>[]) {
-  const id = Invoice.Stream.match(streamName)
+function impliesInvoiceEmailRequired(streamName: string, events: ITimelineEvent[]) {
+  const id = Invoice.Stream.tryMatch(streamName)
   if (!id) return
   const ev = Invoice.Events.codec.tryDecode(events[0])
-  if (!ev) return
-  if (ev.type !== "InvoiceRaised") return
-  const payerId = ev.data.payer_id
-  const amount = ev.data.amount
-  await invoiceEmailer.sendEmail(InvoiceId.parse(id), payerId, amount)
+  if (ev?.type !== "InvoiceRaised") return
+  return { id, payer_id: ev.data.payer_id, amount: ev.data.amount }
+}
+
+async function handle(streamName: string, events: ITimelineEvent[]) {
+  const req = impliesInvoiceEmailRequired(streamName, events)
+  if (!req) return
+  await invoiceEmailer.sendEmail(req.id, req.payer_id, req.amount)
 }
 
 const source = MessageDbSource.create({

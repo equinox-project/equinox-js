@@ -61,7 +61,7 @@ Now that we have a notifier, we need something to actuate it when a message is
 sent.
 
 ```ts
-async function react(streamName: string, events: ITimelineEvent<string>[]) {
+async function react(streamName: string, events: ITimelineEvent[]) {
   const [category, streamId] = StreamName.parseCategoryAndId(streamName)
   if (category !== Message.CATEGORY) return
   const messageId = MessageId.parse(streamId)

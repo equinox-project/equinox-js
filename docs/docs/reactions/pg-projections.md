@@ -28,7 +28,7 @@ const { Delete, Upsert } = forEntity<Payer, "id">()
 
 export const projection = { table: "payer", id: ["id"] }
 
-function changes(stream: string, events: ITimelineEvent<string>[]): Change[] {
+function changes(stream: string, events: ITimelineEvent[]): Change[] {
   const id = PayerId.parse(StreamName.parseId(stream))
   const event = Payer.codec.tryDecode(events[events.length - 1])
   if (!event) return []
@@ -130,7 +130,7 @@ function change(id: AppointmentId, version: bigint, event: Appointment.Event) {
   }
 }
 
-function changes(streamName: string, events: ITimelineEvent<string>[]): Change[] {
+function changes(streamName: string, events: ITimelineEvent[]): Change[] {
   const id = AppointmentId.parse(StreamName.parseId(streamName))
   const version = events[events.length - 1].index
   return keepMap(events, Appointment.codec.tryDecode).map((ev) => change(id, version, ev))

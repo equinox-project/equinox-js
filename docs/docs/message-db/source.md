@@ -25,7 +25,7 @@ interface CreateOptions {
   /** The checkpointer to use for checkpointing */
   checkpointer: ICheckpointer
   /** The handler to call for each batch of stream messages */
-  handler: (streamName: string, events: ITimelineEvent<string>[]) => Promise<void>
+  handler: (streamName: string, events: ITimelineEvent[]) => Promise<void>
   /** sleep time in ms between reads when at the end of the category */
   tailSleepIntervalMs: number
   /** The maximum number of concurrent streams to process, enforced via p-limit */
