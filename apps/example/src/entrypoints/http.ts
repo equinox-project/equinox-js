@@ -30,7 +30,7 @@ app.get("/payer/:id", async (req, res) => {
 })
 
 app.put("/payer/:id", async (req, res) => {
-  const body = Payer.PayerProfileSchema.parse(req.body)
+  const body = Payer.Events.PayerProfile.parse(req.body)
   await payerService.updateProfile(PayerId.parse(req.params.id), body)
   res.status(200).json(body)
 })
@@ -42,7 +42,7 @@ app.delete("/payer/:id", async (req, res) => {
 
 app.post("/invoice", async (req, res) => {
   const id = InvoiceId.create()
-  const body = Invoice.RaisedSchema.parse(req.body)
+  const body = Invoice.Events.InvoiceRaised.parse(req.body)
   await invoiceService.raise(id, body)
   res.status(200).json({ id })
 })

@@ -5,14 +5,14 @@ import { PayerId } from "../../src/domain/identifiers.js"
 import * as Payer from "../../src/domain/payer.js"
 import * as PayerReadModel from "../../src/read-models/PayerReadModel.js"
 
-const updated: Payer.Event = {
+const updated: Payer.Events.Event = {
   type: "PayerProfileUpdated",
   data: {
     name: "Test",
     email: "test@example.com",
   },
 }
-const updated2: Payer.Event = {
+const updated2: Payer.Events.Event = {
   type: "PayerProfileUpdated",
   data: {
     name: "Test 2",
@@ -20,7 +20,7 @@ const updated2: Payer.Event = {
   },
 }
 
-const deleted: Payer.Event = { type: "PayerDeleted" }
+const deleted: Payer.Events.Event = { type: "PayerDeleted" }
 
 describe("PayerReadModel", () => {
   scenario("empty").then([])
@@ -49,15 +49,15 @@ describe("PayerReadModel", () => {
 
 function scenario(name: string, batches: [string, ITimelineEvent<string>[]][] = [], version = 0) {
   return {
-    given: (events: Payer.Event[], payerId = PayerId.create()) => {
-      const streamName = StreamName.compose(Payer.CATEGORY, payerId)
+    given: (events: Payer.Events.Event[], payerId = PayerId.create()) => {
+      const streamName = StreamName.create(Payer.Stream.CATEGORY, payerId)
       return scenario(
         name,
         batches.concat([
           [
             streamName,
             events.map((event) => {
-              const encoded = Payer.codec.encode(event, null) as ITimelineEvent<string>
+              const encoded = Payer.Events.codec.encode(event, null) as ITimelineEvent<string>
               encoded.index = BigInt(version++)
               return encoded
             }),

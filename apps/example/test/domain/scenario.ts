@@ -6,10 +6,13 @@ type ScenarioState<Event, State> = {
   error?: unknown
 }
 
-export function createBDD<Event, State>(
-  fold: (state: State, events: Event[]) => State,
-  initial: State,
-) {
+export function createTester<Event, State>({
+  fold,
+  initial,
+}: {
+  fold: (state: State, events: Event[]) => State
+  initial: State
+}) {
   const scenario = (
     title: string,
     { state, events, error }: ScenarioState<Event, State> = { state: initial, events: [] },

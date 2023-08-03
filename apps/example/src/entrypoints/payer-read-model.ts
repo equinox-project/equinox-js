@@ -15,7 +15,7 @@ checkpointer.ensureTable().then(() => console.log("table created"))
 const source = MessageDbSource.create({
   pool: messageDbPool, 
   batchSize: 500,
-  categories: [Payer.CATEGORY],
+  categories: [Payer.Stream.CATEGORY],
   groupName: "PayerReadModel",
   checkpointer,
   handler: PayerReadModel.createHandler(pool),

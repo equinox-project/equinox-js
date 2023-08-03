@@ -1,10 +1,10 @@
 import { describe, test, expect } from "vitest"
 import * as Payer from "../../src/domain/payer.js"
-import { createBDD, expectEventsMatching, expectNoEvents } from "./scenario.js"
+import { createTester, expectEventsMatching, expectNoEvents } from "./scenario.js"
 
-const { scenario } = createBDD(Payer.fold, Payer.initial)
+const { scenario } = createTester(Payer.Fold)
 
-const updated: Payer.Event = {
+const updated: Payer.Events.Event = {
   type: "PayerProfileUpdated",
   data: {
     name: "Test",
@@ -14,13 +14,13 @@ const updated: Payer.Event = {
 
 describe("Codec", () => {
   test("roundtrips", () => {
-    const encoded = Payer.codec.encode(updated, null)
-    const decoded = Payer.codec.tryDecode(encoded as any)
+    const encoded = Payer.Events.codec.encode(updated, null)
+    const decoded = Payer.Events.codec.tryDecode(encoded as any)
     expect(decoded).toEqual(updated)
   })
 })
 
-const deleted: Payer.Event = { type: "PayerDeleted" }
+const deleted: Payer.Events.Event = { type: "PayerDeleted" }
 
 describe("Payer", () => {
   scenario("Updating profile")

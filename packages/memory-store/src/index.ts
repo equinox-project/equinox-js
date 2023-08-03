@@ -72,7 +72,7 @@ class Category<Event, State, Context, Format>
     _maxStaleMs: number,
     _requireLeader: boolean,
   ): Promise<TokenAndState<State>> {
-    const streamName = StreamName.compose(this.categoryName, streamId)
+    const streamName = StreamName.create(this.categoryName, streamId)
     const result = this.store.load(streamName)
     const token = Token.ofValue(result)
     const events = this.decodeEvents(result)
@@ -111,7 +111,7 @@ class Category<Event, State, Context, Format>
     originState: State,
     events: Event[],
   ): Promise<SyncResult<State>> {
-    const streamName = StreamName.compose(this.categoryName, streamId)
+    const streamName = StreamName.create(this.categoryName, streamId)
     const eventCount = Token.unpack(originToken)
     const encoded = await this.encodeEvents(eventCount, context, events)
     const res = this.store.sync(streamName, this.categoryName, streamId, eventCount, encoded)
