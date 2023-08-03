@@ -12,7 +12,7 @@ describe("MessageDbCategoryReader", () => {
   const conn = MessageDbConnection.create(pool)
   const category = randomUUID().replace(/-/g, "")
   const streamId = randomUUID().replace(/-/g, "")
-  const streamName = StreamName.compose(category, streamId)
+  const streamName = StreamName.create(category, streamId)
   beforeAll(async () => {
     await conn.write.writeMessages(streamName, Array(100).fill({ type: "TestEvent" }), -1n)
     await conn.write.writeSingleMessage(streamName, { type: "ExclusiveEvent" }, null)
@@ -59,7 +59,7 @@ describe("MessageDbCategoryReader", () => {
     beforeAll(async () => {
       for (let i = 0; i < 100; i++) {
         const streamId = randomUUID().replace(/-/g, "")
-        const streamName = StreamName.compose(category, streamId)
+        const streamName = StreamName.create(category, streamId)
         await conn.write.writeSingleMessage(streamName, { type: "TestEvent" }, -1n)
       }
     })

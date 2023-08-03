@@ -240,7 +240,7 @@ class InternalCategory<Event, State, Context>
     streamId: string,
     requireLeader: boolean,
   ): Promise<[StreamToken, State]> {
-    const streamName = Equinox.StreamName.compose(this.categoryName, streamId)
+    const streamName = Equinox.StreamName.create(this.categoryName, streamId)
     const span = trace.getActiveSpan()
     span?.setAttributes({
       [Tags.access_strategy]: this.access.type,
@@ -303,7 +303,7 @@ class InternalCategory<Event, State, Context>
   }
 
   async reload(streamId: string, requireLeader: boolean, t: TokenAndState<State>) {
-    const streamName = Equinox.StreamName.compose(this.categoryName, streamId)
+    const streamName = Equinox.StreamName.create(this.categoryName, streamId)
     const [token, state] = await this.context.reload(
       streamName,
       requireLeader,
@@ -323,7 +323,7 @@ class InternalCategory<Event, State, Context>
     events: Event[],
   ): Promise<SyncResult<State>> {
     const span = trace.getActiveSpan()
-    const streamName = Equinox.StreamName.compose(this.categoryName, streamId)
+    const streamName = Equinox.StreamName.create(this.categoryName, streamId)
     span?.setAttributes({
       [Tags.category]: this.categoryName,
       [Tags.stream_name]: streamName,
