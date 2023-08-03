@@ -39,49 +39,20 @@ export function parseCategoryAndIds(streamName: string) {
   return [parseCategoryPart(category), ids.split(ID_SEPARATOR).map(parseIdPart)]
 }
 
-export function dec<A>(category: string, f: (id: string) => A) {
-  return (streamName: string) => {
-    const [cat, id] = parseCategoryAndId(streamName)
-    if (cat !== category) return
-    return f(id)
-  }
-}
-
-export function dec2<A, B>(category: string, f: (id: string) => A, g: (id: string) => B) {
+export function match<A>(category: string, f: (id: string) => A): (streamName: string) => A | undefined
+export function match<A, B>(category: string, f: (id: string) => A, g: (id: string) => B): (streamName: string) => [A, B] | undefined
+export function match<A, B, C>(category: string, f: (id: string) => A, g: (id: string) => B, h: (id: string) => C): (streamName: string) => [A, B, C] | undefined
+export function match<A, B, C, D>(category: string, f: (id: string) => A, g: (id: string) => B, h: (id: string) => C, i: (id: string) => D): (streamName: string) => [A, B, C, D] | undefined
+export function match(category: string, ...fs: ((x: string) => unknown)[]) {
   return (streamName: string) => {
     const [cat, ids] = parseCategoryAndIds(streamName)
     if (cat !== category) return
-    if (ids.length !== 2) throw new Error("StreamName: Expected 2 IDs")
-    return [f(ids[0]), g(ids[1])]
-  }
-}
-
-export function dec3<A, B, C>(
-  category: string,
-  f: (id: string) => A,
-  g: (id: string) => B,
-  h: (id: string) => C,
-) {
-  return (streamName: string) => {
-    const [cat, ids] = parseCategoryAndIds(streamName)
-    if (cat !== category) return
-    if (ids.length !== 3) throw new Error("StreamName: Expected 3 IDs") 
-    return [f(ids[0]), g(ids[1]), h(ids[2])]
-  }
-}
-
-export function dec4<A, B, C, D>(
-  category: string,
-  f: (id: string) => A,
-  g: (id: string) => B,
-  h: (id: string) => C,
-  i: (id: string) => D,
-) {
-  return (streamName: string) => {
-    const [cat, ids] = parseCategoryAndIds(streamName)
-    if (cat !== category) return
-    if (ids.length !== 4) throw new Error("StreamName: Expected 4 IDs") 
-    return [f(ids[0]), g(ids[1]), h(ids[2]), i(ids[3])]
+    if (ids.length !== fs.length) throw new Error("StreamName: Expected " + fs.length + " IDs")
+    const result = new Array(fs.length)
+    for (let i = 0; i < fs.length; i++) {
+      result[i] = fs[i](ids[i])
+    }
+    return result
   }
 }
 
