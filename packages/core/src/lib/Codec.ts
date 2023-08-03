@@ -35,8 +35,7 @@ export const zod = <E extends { type: string; data?: Record<string, any> }, C = 
       }
     },
     encode: (e, ctx) => {
-      const parse = mapping[e.type as E["type"]]
-      const data = e.data ? JSON.stringify(parse(e.data)) : undefined
+      const data = e.data ? JSON.stringify(e.data) : undefined
       return {
         type: e.type,
         data,
