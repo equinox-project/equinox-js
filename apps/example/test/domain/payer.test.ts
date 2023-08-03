@@ -1,8 +1,8 @@
 import { describe, test, expect } from "vitest"
 import * as Payer from "../../src/domain/payer.js"
-import { createBDD, expectEventsMatching, expectNoEvents } from "./scenario.js"
+import { createTester, expectEventsMatching, expectNoEvents } from "./scenario.js"
 
-const { scenario } = createBDD(Payer.Fold)
+const { scenario } = createTester(Payer.Fold)
 
 const updated: Payer.Events.Event = {
   type: "PayerProfileUpdated",

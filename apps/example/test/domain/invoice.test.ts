@@ -1,9 +1,9 @@
 import { describe, test, expect } from "vitest"
 import { Fold, Decide, Events } from "../../src/domain/invoice.js"
 import { PayerId } from "../../src/domain/identifiers.js"
-import { createBDD, expectError, expectEventsMatching } from "./scenario.js"
+import { createTester, expectError, expectEventsMatching } from "./scenario.js"
 
-const { scenario } = createBDD(Fold)
+const { scenario } = createTester(Fold)
 
 const raised: Events.Event = {
   type: "InvoiceRaised",
