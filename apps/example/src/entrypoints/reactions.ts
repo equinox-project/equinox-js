@@ -22,7 +22,7 @@ const checkpointer = new PgCheckpoints(createPool(process.env.CP_CONN_STR)!)
 checkpointer.ensureTable().then(() => console.log("table created"))
 
 async function handle(streamName: string, events: ITimelineEvent<string>[]) {
-  const id = Invoice.Stream.parseId(streamName)
+  const id = Invoice.Stream.tryParseId(streamName)
   if (!id) return
   const ev = Invoice.Events.codec.tryDecode(events[0])
   if (!ev) return
