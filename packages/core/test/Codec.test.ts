@@ -1,6 +1,6 @@
 import { describe, test, expect } from "vitest"
 import { Codec } from "../src"
-import { z, ZodError } from "zod"
+import { z } from "zod"
 import { randomUUID } from "crypto"
 
 describe("Codec", () => {
