@@ -9,10 +9,10 @@ import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-consumer"
 const createPool = (connectionString?: string) =>
   connectionString ? new pg.Pool({ connectionString, max: 10 }) : undefined
 
-const pool = createPool(process.env.MDB_CONN_STR)!
+const leaderPool = createPool(process.env.MDB_CONN_STR)!
 const followerPool = createPool(process.env.MDB_RO_CONN_STR)
 
-const context = MessageDbContext.create({ pool, followerPool, batchSize: 500 })
+const context = MessageDbContext.create({ leaderPool, followerPool, batchSize: 500 })
 const config: Config = { store: Store.MessageDb, context, cache: new MemoryCache() }
 
 const invoiceEmailer = InvoiceAutoEmailer.Service.create(config)
@@ -35,7 +35,7 @@ async function handle(streamName: string, events: ITimelineEvent[]) {
 }
 
 const source = MessageDbSource.create({
-  pool: followerPool ?? pool,
+  pool: followerPool ?? leaderPool,
   batchSize: 500,
   categories: [Invoice.Stream.CATEGORY],
   groupName: "InvoiceAutoEmailer",

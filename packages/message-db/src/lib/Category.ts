@@ -48,7 +48,7 @@ export class MessageDbConnection {
 }
 
 type ContextConfig = {
-  pool: Pool
+  leaderPool: Pool
   followerPool?: Pool
   batchSize: number
   maxBatches?: number
@@ -193,8 +193,8 @@ export class MessageDbContext {
     trace.getActiveSpan()?.setAttribute(Tags.snapshot_written, true)
   }
 
-  static create({ pool, followerPool, batchSize, maxBatches }: ContextConfig) {
-    const connection = MessageDbConnection.create(pool, followerPool)
+  static create({ leaderPool, followerPool, batchSize, maxBatches }: ContextConfig) {
+    const connection = MessageDbConnection.create(leaderPool, followerPool)
     return new MessageDbContext(connection, batchSize, maxBatches)
   }
 }

@@ -11,10 +11,10 @@ import { InvoiceId, PayerId } from "../domain/identifiers.js"
 const createPool = (connectionString?: string) =>
   connectionString ? new pg.Pool({ connectionString, max: 10 }) : undefined
 
-const pool = createPool(process.env.MDB_CONN_STR)!
+const leaderPool = createPool(process.env.MDB_CONN_STR)!
 const followerPool = createPool(process.env.MDB_RO_CONN_STR)
 
-const context = MessageDbContext.create({ pool, followerPool, batchSize: 500 })
+const context = MessageDbContext.create({ leaderPool, followerPool, batchSize: 500 })
 const config: Config = { store: Store.MessageDb, context, cache: new MemoryCache() }
 
 const payerService = Payer.Service.create(config)
