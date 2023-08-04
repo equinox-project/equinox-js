@@ -40,12 +40,8 @@ export namespace Decode {
       const decode = mapping[event.type as E["type"]]
       if (!decode) return
       if (!event.data) return { type: event.type } as E
-      try {
-        const decoded = decode(JSON.parse(event.data))
-        return { type: event.type, data: decoded } as E
-      } catch (err) {
-        return undefined
-      }
+      const decoded = decode(JSON.parse(event.data))
+      return { type: event.type, data: decoded } as E
     }
 }
 

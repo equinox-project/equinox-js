@@ -47,9 +47,7 @@ describe("Codec", () => {
       Codec.Encode.stringify,
     )
     test("decoding", () => {
-      expect(codec.tryDecode({ type: "Hello", data: '{"world":"hello"}' } as any)).toEqual(
-        undefined,
-      )
+      expect(() => codec.tryDecode({ type: "Hello", data: '{"world":"hello"}' } as any)).toThrow()
       const correctEvent = { hello: randomUUID() }
       expect(codec.tryDecode({ type: "Hello", data: JSON.stringify(correctEvent) } as any)).toEqual(
         {
