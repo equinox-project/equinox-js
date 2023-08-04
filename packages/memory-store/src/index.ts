@@ -9,33 +9,34 @@ import {
 } from "@equinox-js/core"
 import * as Equinox from "@equinox-js/core"
 import { randomUUID } from "crypto"
-import { Subject } from "rxjs"
 
 export class VolatileStore<Format> {
   private readonly streams: Map<string, ITimelineEvent<Format>[]> = new Map()
-  private readonly $all = new Subject<{
-    category: string
-    streamId: string
-    events: ITimelineEvent<Format>[]
-  }>()
+  private readonly batches: [string, ITimelineEvent<Format>[]][] = []
 
   load(streamName: string) {
     return this.streams.get(streamName) ?? []
   }
 
-  sync(
-    streamName: string,
-    categoryName: string,
-    streamId: string,
-    expectedCount: number,
-    events: ITimelineEvent<Format>[],
-  ) {
+  sync(streamName: string, expectedCount: number, events: ITimelineEvent<Format>[]) {
     const currentValue = this.streams.get(streamName) ?? []
     if (currentValue.length !== expectedCount) return { success: false, events: currentValue }
     const newValue = [...currentValue, ...events]
     this.streams.set(streamName, newValue)
-    this.$all.next({ category: categoryName, streamId, events })
+    this.batches.push([streamName, newValue])
     return { success: true, events: events }
+  }
+
+  async handleFrom(
+    from: bigint,
+    callback: (streamName: string, events: ITimelineEvent<Format>[]) => Promise<void>,
+  ) {
+    const idx = Number(from)
+    const len = this.batches.length
+    for (let i = idx; i < len; ++i) {
+      await callback(this.batches[i][0], this.batches[i][1])
+    }
+    return BigInt(len)
   }
 }
 
@@ -114,7 +115,7 @@ class Category<Event, State, Context, Format>
     const streamName = StreamName.create(this.categoryName, streamId)
     const eventCount = Token.unpack(originToken)
     const encoded = await this.encodeEvents(eventCount, context, events)
-    const res = this.store.sync(streamName, this.categoryName, streamId, eventCount, encoded)
+    const res = this.store.sync(streamName, eventCount, encoded)
     if (res.success) {
       return {
         type: "Written",

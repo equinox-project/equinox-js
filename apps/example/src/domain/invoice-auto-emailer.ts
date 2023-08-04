@@ -1,9 +1,10 @@
-import { Codec, Decider, StreamId } from "@equinox-js/core"
+import { Codec, Decider, ITimelineEvent, StreamId } from "@equinox-js/core"
 import { InvoiceId, PayerId } from "./identifiers.js"
 import * as Payer from "./payer.js"
 import z from "zod"
 import { EmailSender, ISendEmails } from "./send-email.js"
 import * as Config from "../config/equinox.js"
+import * as Invoice from "./invoice.js"
 
 const CATEGORY = "InvoiceAutoEmail"
 const streamId = StreamId.gen(InvoiceId.toString)
@@ -92,5 +93,16 @@ export class Service {
     const category = Service.resolveCategory(config)
     const resolve = (id: InvoiceId) => Decider.forStream(category, streamId(id), null)
     return new Service(payerService, emailer, resolve)
+  }
+}
+
+export const createHandler = (config: Config.Config, emailSender?: ISendEmails) => {
+  const service = Service.create(config, emailSender)
+  return async (stream: string, events: ITimelineEvent[]) => {
+    const id = Invoice.Stream.tryMatch(stream)
+    if (!id) return
+    const ev = Invoice.Events.codec.tryDecode(events[0])
+    if (ev?.type !== "InvoiceRaised") return
+    await service.sendEmail(id, ev.data.payer_id, ev.data.amount)
   }
 }
