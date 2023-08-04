@@ -10,6 +10,7 @@ const raised: Events.Event = {
   data: {
     payer_id: PayerId.create(),
     amount: 100,
+    due_date: new Date('2021-01-01T12:00:00Z'),
   },
 }
 
