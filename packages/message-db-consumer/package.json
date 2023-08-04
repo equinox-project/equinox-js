@@ -31,6 +31,6 @@
     "@equinox-js/core": "workspace:*",
     "@opentelemetry/api": "^1.4.0",
     "pg": "^8.8.0",
-    "vitest": "^0.25.3"
+    "vitest": "^0.34.1"
   }
 }

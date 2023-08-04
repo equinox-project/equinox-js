@@ -21,6 +21,7 @@ export function create(category: string, id: string) {
 
 function splitCategoryAndId(streamName: string) {
   const idx = streamName.indexOf(CATEGORY_SEPARATOR)
+  if (idx === -1) throw new Error("StreamName: Expected category separator '" + CATEGORY_SEPARATOR + "'")
   return [streamName.slice(0, idx), streamName.slice(idx + 1)]
 }
 
@@ -31,6 +32,7 @@ export function parseCategoryAndId(streamName: string) {
 
 export function parseCategory(streamName: string) {
   const idx = streamName.indexOf(CATEGORY_SEPARATOR)
+  if (idx === -1) throw new Error("StreamName: Expected category separator '" + CATEGORY_SEPARATOR + "'")
   return parseCategoryPart(streamName.slice(0, idx))
 }
 

@@ -13,7 +13,7 @@ define the schema you want out or provide default values for missing properties.
 These deficiencies can lead to unexpected type errors and behaviours.
 
 In EquinoxJS codecs as a first class citizen. A naive implementation might look
-like this: 
+like this:
 
 ```ts
 const codec: Codec<Event, Record<string, any>> = {
@@ -24,9 +24,15 @@ const codec: Codec<Event, Record<string, any>> = {
       case "CheckedOut":
         return { type: ev.type, data: { at: new Date(ev.data.at) } }
       case "Charged":
-        return { type: ev.type, data: { chargeId: ev.data.chargeId, amount: ev.data.amount, at: new Date(ev.data.at) } }
+        return {
+          type: ev.type,
+          data: { chargeId: ev.data.chargeId, amount: ev.data.amount, at: new Date(ev.data.at) },
+        }
       case "Paid":
-        return { type: ev.type, data: { paymentId: ev.data.paymentId, amount: ev.data.amount, at: new Date(ev.data.at) } }
+        return {
+          type: ev.type,
+          data: { paymentId: ev.data.paymentId, amount: ev.data.amount, at: new Date(ev.data.at) },
+        }
     }
   },
   encode(ev) {
@@ -35,8 +41,9 @@ const codec: Codec<Event, Record<string, any>> = {
 }
 ```
 
-You might decide that this is too naive and that a library like `zod` is called
-for instead. We happen to expose a utility codec for zod. 
+While a perfectly valid way to develop applications, we sometimes want more
+guarantees. For these cases we allow you to construct a codec from mappings. A
+parsing library like zod can come in handy.
 
 ```ts
 const CheckedInSchema = z.object({ at: z.date() })
@@ -44,44 +51,76 @@ const CheckedOutSchema = z.object({ at: z.date() })
 const ChargedSchema = z.object({ chargeId: z.string().uuid(), amount: z.number(), at: z.date() })
 const PaidSchema = z.object({ paymentId: z.string().uuid(), amount: z.number(), at: z.date() })
 type Event =
-  | { type: "CheckedIn", data: z.infer<typeof CheckedInSchema> }
-  | { type: "CheckedOut", data: z.infer<typeof CheckedOutSchema> }
-  | { type: "Charged", data: z.infer<typeof ChargedSchema> }
-  | { type: "Paid", data: z.infer<typeof PaidSchema> }
+  | { type: "CheckedIn"; data: z.infer<typeof CheckedInSchema> }
+  | { type: "CheckedOut"; data: z.infer<typeof CheckedOutSchema> }
+  | { type: "Charged"; data: z.infer<typeof ChargedSchema> }
+  | { type: "Paid"; data: z.infer<typeof PaidSchema> }
 
-const codec = Codec.zod<Event>({
-  CheckedIn: CheckedInSchema.parse,
-  CheckedOut: CheckedOutSchema.parse,
-  Charged: ChargedSchema.parse,
-  Paid: PaidSchema.parse,
-})
+const codec = Codec.create(
+  Codec.Decode.from({
+    CheckedIn: CheckedInSchema.parse,
+    CheckedOut: CheckedOutSchema.parse,
+    Charged: ChargedSchema.parse,
+    Paid: PaidSchema.parse,
+  }),
+  Codec.Encode.stringify,
+)
 ```
 
 Codecs are also where we control the metadata we add onto events. It is common
 practice to record metadata like which user performed the action that led to the
-event, as well as correlation and causation identifiers. The zod codec accepts a
-second argument which transforms the context into metadata.
+event, as well as correlation and causation identifiers. An extended version of
+`Codec.create` called `Codec.createEx` allows you to access the context variable
+as well as the domain event to decide which metadata to record
 
 ```ts
-type Context = { correlationId: string, causationId: string, userId: string }
+type Context = { correlationId: string; causationId: string; userId: string }
 
-const contextToMeta = (ctx: Context) => ({
+const mapMeta = (ev: any, ctx: Context) => ({
   // matches ESDB conventions
   $correlationId: ctx.correlationId,
   $causationId: ctx.causationId,
-  userId: ctx.userId
+  userId: ctx.userId,
 })
 
-const codec = Codec.zod<Event, Context>({
+const codec = Codec.createEx<Event, Context>(
+  Codec.Decode.from({
+    CheckedIn: CheckedInSchema.parse,
+    CheckedOut: CheckedOutSchema.parse,
+    Charged: ChargedSchema.parse,
+    Paid: PaidSchema.parse,
+  }),
+  Codec.Encode.stringify,
+  mapMeta,
+)
+```
+
+The `Context` is supplied at decider resolution time
+
+```ts
+Decider.forStream(category, streamId, context)
+```
+
+# Encoding complicated types
+
+In some cases you might want to encode and decode complicated types like `@js-joda` `ZonedDateTime`s.
+
+```ts
+const ZonedDt = z.string().transform((x) => ZonedDateTime.of(x))
+const CheckedIn = z.object({ at: ZonedDt })
+type CheckedIn = z.infer<typeof CheckedIn>
+
+type Event = { type: "CheckedIn"; data: CheckedIn } | { type: "CheckedOut"; data: CheckedIn }
+
+const tryDecode = Codec.Decode.from({
   CheckedIn: CheckedInSchema.parse,
   CheckedOut: CheckedOutSchema.parse,
   Charged: ChargedSchema.parse,
   Paid: PaidSchema.parse,
-}, contextToMeta)
-```
-
-This `Context` is then supplied at decider resolution time
-
-```ts
-Decider.forStream(category, streamId, context)
+})
+const encode = Codec.Encode.from({
+  CheckedIn: (ev) => ({ type: ev.type, data: { at: ev.data.at.toString() } }),
+  CheckedOut: (ev) => ({ type: ev.type, data: { at: ev.data.at.toString() } }),
+})
+const codec = Codec.create(tryDecode, encode)
 ```

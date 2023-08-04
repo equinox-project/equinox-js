@@ -33,7 +33,8 @@ describe("Caching", () => {
   })
 
   test("only one reload of a stream is in flight at any given moment", async () => {
-    const reload = vi.fn()
+    const reload = vi
+      .fn()
       .mockImplementationOnce(async () => {
         await sleep(5)
         return read(1n)()
