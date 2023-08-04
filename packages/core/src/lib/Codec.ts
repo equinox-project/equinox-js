@@ -22,11 +22,13 @@ export const json = <E extends DomainEvent>(): ICodec<E, string, any> => {
 
 export namespace Decode {
   /** Trust that the body can be decoded an will match your domain event type */
-  export function json<E extends DomainEvent>(e: ITimelineEvent): E {
-    const data = e.data ? JSON.parse(e.data) : undefined
-    const meta = e.meta ? JSON.parse(e.meta) : undefined
-    return { type: e.type, data, meta, id: e.id } as E
-  }
+  export const json =
+    <E extends DomainEvent>() =>
+    (e: ITimelineEvent): E & { meta: never; id: never } => {
+      const data = e.data ? JSON.parse(e.data) : undefined
+      const meta = e.meta ? JSON.parse(e.meta) : undefined
+      return { type: e.type, data } as any
+    }
 
   /**
    * Given a mapping from event type to a decoder for that type
@@ -60,12 +62,13 @@ export namespace Encode {
    */
   export const from =
     <E extends DomainEvent>(mapping: {
-      [P in E["type"]]: (obj: Extract<E, { type: P }>) => IEventData<Record<string, any>>
+      [P in E["type"]]: (obj: Extract<E, { type: P }>["data"]) => Record<string, any> | undefined
     }) =>
     <M,>(e: E, meta: M) => {
       const encode = mapping[e.type as E["type"]]
       if (!encode) throw new Error(`No encoder for event type ${e.type}`)
-      return stringify(encode(e as any), meta)
+      const event = { type: e.type, data: encode(e.data), meta: e.meta, id: e.id }
+      return stringify(event, meta)
     }
 }
 
@@ -100,3 +103,57 @@ export const create = <Event extends DomainEvent>(
   down: (e: Event, meta: undefined) => IEventData,
 ): ICodec<Event, string, undefined | null> =>
   createEx<Event, undefined, undefined, string>(up, down, () => undefined)
+
+type StraightMapper<E> = (e: unknown) => E
+type SerdeMapper<E> = [(e: unknown) => E, (e: E) => Record<string, any>]
+
+const pickParse = <K extends string, E>(
+  e: Record<K, StraightMapper<E> | SerdeMapper<E>>,
+): Record<K, StraightMapper<E>> => {
+  const result: Record<K, StraightMapper<E>> = {} as any
+  for (const key of Object.keys(e) as K[]) {
+    const value: StraightMapper<E> | SerdeMapper<E> = e[key]
+    if (Array.isArray(value)) {
+      result[key] = value[0]
+    } else {
+      result[key] = value
+    }
+  }
+  return result
+}
+
+const pickEncode = <K extends string, E>(
+  e: Record<K, StraightMapper<E> | SerdeMapper<E>>,
+): Record<K, (e: E) => Record<string, any>> => {
+  const result: Record<K, (e: E) => Record<string, any>> = {} as any
+  for (const key of Object.keys(e) as K[]) {
+    const value: StraightMapper<E> | SerdeMapper<E> = e[key]
+    if (Array.isArray(value)) {
+      result[key] = value[1]
+    } else {
+      result[key] = value as any
+    }
+  }
+  return result
+}
+
+export type CodecMapping<E extends DomainEvent> = {
+  [P in E["type"]]:
+    | StraightMapper<Extract<E, { type: P }>["data"]>
+    | SerdeMapper<Extract<E, { type: P }>["data"]>
+}
+
+export function from<E extends DomainEvent>(mapping: CodecMapping<E>): ICodec<E, string, null>
+export function from<E extends DomainEvent, Context, Meta>(
+  mapping: CodecMapping<E>,
+  mapMeta: (e: E, ctx: Context) => Meta,
+): ICodec<E, string, Context>
+export function from<E extends DomainEvent>(
+  mapping: CodecMapping<E>,
+  mapMeta?: (e: E, ctx: any) => any,
+) {
+  const up = Decode.from(pickParse(mapping))
+  const down = Encode.from(pickEncode(mapping))
+  if (mapMeta === undefined) return create(up, down)
+  return createEx(up, down, mapMeta)
+}

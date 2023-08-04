@@ -6,7 +6,7 @@ import { randomUUID } from "crypto"
 describe("Codec", () => {
   describe("json", () => {
     test("roundtrips", () => {
-      const codec = Codec.create<any>(Codec.Decode.json, Codec.Encode.stringify)
+      const codec = Codec.create<any>(Codec.Decode.json(), Codec.Encode.stringify)
       const event = { type: "Hello", data: { world: "hello" } }
       expect(codec.encode(event, undefined)).toEqual({
         type: "Hello",
@@ -18,6 +18,8 @@ describe("Codec", () => {
         codec.tryDecode({
           type: "Hello",
           data: '{"world":"hello"}',
+          meta: undefined,
+          id: "123",
         } as any),
       ).toEqual(event)
     })
@@ -62,8 +64,8 @@ describe("Codec", () => {
     type Amount = { amount: number }
     type Event = { type: "Increment"; data: Amount } | { type: "Decrement"; data: Amount }
     const encode = Codec.Encode.from<Event>({
-      Increment: (e) => ({ type: e.type, data: { amount: String(e.data.amount) } }),
-      Decrement: (e) => ({ type: e.type, data: { amount: String(e.data.amount) } }),
+      Increment: (e) => ({ amount: String(e.amount) }),
+      Decrement: (e) => ({ amount: String(e.amount) }),
     })
 
     test("encoding", () => {
@@ -81,8 +83,8 @@ describe("Codec", () => {
     type Amount = z.infer<typeof Amount>
     type Event = { type: "Increment"; data: Amount } | { type: "Decrement"; data: Amount }
     const encode = Codec.Encode.from<Event>({
-      Increment: (e) => ({ type: e.type, data: { amount: String(e.data.amount) } }),
-      Decrement: (e) => ({ type: e.type, data: { amount: String(e.data.amount) } }),
+      Increment: (e) => ({ amount: String(e.amount) }),
+      Decrement: (e) => ({ amount: String(e.amount) }),
     })
     const decode = Codec.Decode.from<Event>({
       Increment: Amount.parse,
@@ -121,5 +123,43 @@ describe("Codec.createEx", () => {
         userId: "789",
       }),
     )
+  })
+})
+
+describe("Codec.from", () => {
+  const DateSchema = z.object({
+    date: z
+      .string()
+      .datetime()
+      .transform((x) => new Date(x)),
+  })
+  const DateStorageSchema = z.object({
+    date: z.date().transform((x) => x.toISOString()),
+  })
+  type Event = { type: "Date"; data: { date: Date } }
+
+  const codec = Codec.from<Event>({
+    Date: [DateSchema.parse, DateStorageSchema.parse],
+  })
+
+  test("encodes properly", () => {
+    const event: Event = { type: "Date", data: { date: new Date("2022-02-02T20:20:22Z") } }
+    const encoded = codec.encode(event, null)
+    expect(encoded).toMatchObject({
+      type: "Date",
+      data: '{"date":"2022-02-02T20:20:22.000Z"}',
+    })
+  })
+
+  test("decodes properly", () => {
+    expect(
+      codec.tryDecode({
+        type: "Date",
+        data: '{"date":"2022-02-02T20:20:22.000Z"}',
+      } as any),
+    ).toMatchObject({
+      type: "Date",
+      data: { date: new Date("2022-02-02T20:20:22Z") },
+    })
   })
 })
