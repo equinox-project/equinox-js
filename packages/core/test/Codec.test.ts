@@ -105,14 +105,14 @@ describe("Codec", () => {
 
 describe("Codec.createEx", () => {
   type Context = { correlationId: string; causationId: string; userId: string }
-  const mapCausation = (_ev: any, ctx: Context) => ({
+  const mapMeta = (_ev: any, ctx: Context) => ({
     // matches ESDB conventions
     $correlationId: ctx.correlationId,
     $causationId: ctx.causationId,
     userId: ctx.userId,
   })
 
-  const codec = Codec.createEx(() => ({ type: "Hello" }), Codec.Encode.stringify, mapCausation)
+  const codec = Codec.createEx(() => ({ type: "Hello" }), Codec.Encode.stringify, mapMeta)
   test("mapping causation to get metadata", () => {
     const ctx = { correlationId: "123", causationId: "456", userId: "789" }
     const encoded = codec.encode({ type: "Hello" }, ctx)

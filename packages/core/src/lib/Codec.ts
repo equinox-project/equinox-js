@@ -77,17 +77,17 @@ export namespace Encode {
  * create a Codec with Extended options
  * @param up a function that takes a timeline event and returns a domain event or undefined
  * @param down a function that takes a domain event and returns a timeline event
- * @param mapCausation a function that takes a domain event and a context and returns a meta
+ * @param mapMeta a function that takes a domain event and a context and returns a meta
  * @returns a Codec
  */
 export const createEx = <E extends DomainEvent, Meta, Context, Format = string>(
   up: (e: ITimelineEvent<Format>) => E | undefined,
   down: (e: E, meta: Meta) => IEventData<Format>,
-  mapCausation: (e: E, ctx: Context) => Meta,
+  mapMeta: (e: E, ctx: Context) => Meta,
 ): ICodec<E, Format, Context> => ({
   tryDecode: up,
   encode(e, ctx) {
-    const meta = mapCausation(e, ctx)
+    const meta = mapMeta(e, ctx)
     return down(e, meta)
   },
 })

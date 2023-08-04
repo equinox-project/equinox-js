@@ -76,7 +76,7 @@ as well as the domain event to decide which metadata to record
 ```ts
 type Context = { correlationId: string; causationId: string; userId: string }
 
-const mapCausation = (ev: any, ctx: Context) => ({
+const mapMeta = (ev: any, ctx: Context) => ({
   // matches ESDB conventions
   $correlationId: ctx.correlationId,
   $causationId: ctx.causationId,
@@ -91,7 +91,7 @@ const codec = Codec.createEx<Event, Context>(
     Paid: PaidSchema.parse,
   }),
   Codec.Encode.stringify,
-  mapCausation,
+  mapMeta,
 )
 ```
 
