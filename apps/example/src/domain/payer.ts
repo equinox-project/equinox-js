@@ -19,10 +19,13 @@ export namespace Events {
 
   export type Event = { type: "PayerProfileUpdated"; data: PayerProfile } | { type: "PayerDeleted" }
 
-  export const codec = Codec.from<Event>({
-    PayerProfileUpdated: PayerProfile.parse,
-    PayerDeleted: () => undefined,
-  })
+  export const codec = Codec.upcast<Event>(
+    Codec.json(),
+    Codec.Upcast.body({
+      PayerProfileUpdated: PayerProfile.parse,
+      PayerDeleted: () => undefined,
+    }),
+  )
 }
 
 export namespace Fold {

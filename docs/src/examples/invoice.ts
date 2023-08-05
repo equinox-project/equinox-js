@@ -24,9 +24,9 @@ type Event =
   | { type: "PaymentReceived"; data: Payment }
   | { type: "InvoiceFinalized" }
 
-const codec = Codec.create(
-  Codec.Decode.json<Event>(),
-  Codec.Encode.from({
+const codec = Codec.upcast<Event>(
+  Codec.json(),
+  Codec.Upcast.body({
     InvoiceRaised: RaisedSchema.parse,
     PaymentReceived: PaymentSchema.parse,
     InvoiceFinalized: () => undefined,

@@ -6,7 +6,7 @@ import { randomUUID } from "crypto"
 describe("Codec", () => {
   describe("json", () => {
     test("roundtrips", () => {
-      const codec = Codec.create<any>(Codec.Decode.json(), Codec.Encode.stringify)
+      const codec = Codec.json<any>()
       const event = { type: "Hello", data: { world: "hello" } }
       expect(codec.encode(event, undefined)).toEqual({
         type: "Hello",
@@ -23,143 +23,88 @@ describe("Codec", () => {
         } as any),
       ).toEqual(event)
     })
-  })
 
-  describe("Codec.Encode.stringify", () => {
-    test("ignores meta on the event", () => {
-      const event = { type: "Hello", data: { world: "hello" }, meta: { hello: "hi" } }
-      expect(Codec.Encode.stringify(event, null)).toMatchObject({ meta: undefined })
-    })
-    test("forwards the id on the event", () => {
-      const event = { type: "Hello", data: { world: "hello" }, id: "123" }
-      expect(Codec.Encode.stringify(event, null)).toMatchObject({ id: "123" })
-    })
-    test("forwards the meta on the context", () => {
-      const event = { type: "Hello", data: { world: "hello" } }
-      expect(Codec.Encode.stringify(event, { hello: "hi" })).toMatchObject({
+    test("Keeps metadata and id if they exist", () => {
+      const codec = Codec.json<any>()
+      const event = { id: "123", type: "Hello", data: { world: "hello" }, meta: { hello: "hi" } }
+      expect(codec.encode(event, undefined)).toEqual({
+        type: "Hello",
+        data: '{"world":"hello"}',
         meta: '{"hello":"hi"}',
+        id: "123",
       })
     })
   })
 
-  describe("Codec.Decode.from", () => {
-    const HelloSchema = z.object({ hello: z.string().uuid() })
-    const codec = Codec.create(
-      Codec.Decode.from({ Hello: HelloSchema.parse }),
-      Codec.Encode.stringify,
-    )
-    test("decoding", () => {
-      expect(() => codec.tryDecode({ type: "Hello", data: '{"world":"hello"}' } as any)).toThrow()
-      const correctEvent = { hello: randomUUID() }
-      expect(codec.tryDecode({ type: "Hello", data: JSON.stringify(correctEvent) } as any)).toEqual(
-        {
-          type: "Hello",
-          data: correctEvent,
-        },
-      )
-    })
-  })
+  describe("upcast", () => {
+    describe("with zod", () => {
+      const HelloSchema = z.object({
+        hello: z
+          .string()
+          .datetime()
+          .transform((x) => new Date(x)),
+      })
+      const codec = Codec.upcast(Codec.json(), Codec.Upcast.body({ Hello: HelloSchema.parse }))
 
-  describe("Codec.Encode.from", () => {
-    type Amount = { amount: number }
-    type Event = { type: "Increment"; data: Amount } | { type: "Decrement"; data: Amount }
-    const encode = Codec.Encode.from<Event>({
-      Increment: (e) => ({ amount: String(e.amount) }),
-      Decrement: (e) => ({ amount: String(e.amount) }),
+      test("roundtrips", () => {
+        const event = { type: "Hello", data: { hello: new Date() } }
+        const encoded = codec.encode(event, undefined)
+        const decoded = codec.tryDecode(encoded as any)
+        expect(decoded).toEqual(event)
+      })
+
+      test("fails if upcast fails", () => {
+        const event = { type: "Hello", data: { hello: "hello" } }
+        const encoded = codec.encode(event, undefined)
+        expect(() => codec.tryDecode(encoded as any)).toThrow()
+      })
+
+      test("does not roundtrip complex types", () => {
+        const HelloSchema = z.object({ hello: z.date() })
+        const codec = Codec.upcast(Codec.json(), Codec.Upcast.body({ Hello: HelloSchema.parse }))
+        const event = { type: "Hello", data: { hello: new Date() } }
+        const encoded = codec.encode(event, undefined)
+        // string is not a date
+        expect(() => codec.tryDecode(encoded as any)).toThrow()
+      })
     })
 
-    test("encoding", () => {
-      const event: Event = { type: "Increment", data: { amount: 3 } }
-      const expected = {
-        type: "Increment",
-        data: '{"amount":"3"}',
+    describe("with custom parser", () => {
+      const date = (x: unknown): Date => {
+        if (x instanceof Date) return x
+        if (typeof x === "string") {
+          const date = new Date(x)
+          if (isNaN(date.getTime())) throw new Error("unable to decode date")
+          return date
+        }
+        throw new Error("unable to decode date")
       }
-      expect(encode(event, null)).toEqual(expected)
-    })
-  })
 
-  describe("Codec.create", () => {
-    const Amount = z.object({ amount: z.string().regex(/^\d+$/).transform(Number) })
-    type Amount = z.infer<typeof Amount>
-    type Event = { type: "Increment"; data: Amount } | { type: "Decrement"; data: Amount }
-    const encode = Codec.Encode.from<Event>({
-      Increment: (e) => ({ amount: String(e.amount) }),
-      Decrement: (e) => ({ amount: String(e.amount) }),
-    })
-    const decode = Codec.Decode.from<Event>({
-      Increment: Amount.parse,
-      Decrement: Amount.parse,
-    })
-    const codec = Codec.create(decode, encode)
-    test("round trips", () => {
-      const event: Event = { type: "Increment", data: { amount: 3 } }
-      const encoded = codec.encode(event, null)
-      expect(encoded).toEqual({
-        type: "Increment",
-        data: '{"amount":"3"}',
+      const schema =
+        <T extends Record<string, any>>(mapping: { [P in keyof T]: (x: unknown) => T[P] }) =>
+        (e: Record<string, any>): T => {
+          return Object.fromEntries(
+            Object.entries(mapping).map(([k, decode]) => {
+              return [k, decode(e[k])]
+            }),
+          ) as T
+        }
+
+      const HelloSchema = schema({ at: date })
+
+      const codec = Codec.upcast(Codec.json(), Codec.Upcast.body({ Hello: HelloSchema }))
+      test("roundtrips", () => {
+        const event = { type: "Hello", data: { at: new Date() } }
+        const encoded = codec.encode(event, undefined)
+        const decoded = codec.tryDecode(encoded as any)
+        expect(decoded).toEqual(event)
       })
-      expect(codec.tryDecode(encoded as any)).toEqual(event)
-    })
-  })
-})
 
-describe("Codec.createEx", () => {
-  type Context = { correlationId: string; causationId: string; userId: string }
-  const mapMeta = (_ev: any, ctx: Context) => ({
-    // matches ESDB conventions
-    $correlationId: ctx.correlationId,
-    $causationId: ctx.causationId,
-    userId: ctx.userId,
-  })
-
-  const codec = Codec.createEx(() => ({ type: "Hello" }), Codec.Encode.stringify, mapMeta)
-  test("mapping causation to get metadata", () => {
-    const ctx = { correlationId: "123", causationId: "456", userId: "789" }
-    const encoded = codec.encode({ type: "Hello" }, ctx)
-    expect(encoded.meta).toEqual(
-      JSON.stringify({
-        $correlationId: "123",
-        $causationId: "456",
-        userId: "789",
-      }),
-    )
-  })
-})
-
-describe("Codec.from", () => {
-  const DateSchema = z.object({
-    date: z
-      .string()
-      .datetime()
-      .transform((x) => new Date(x)),
-  })
-  const DateStorageSchema = z.object({
-    date: z.date().transform((x) => x.toISOString()),
-  })
-  type Event = { type: "Date"; data: { date: Date } }
-
-  const codec = Codec.from<Event>({
-    Date: [DateSchema.parse, DateStorageSchema.parse],
-  })
-
-  test("encodes properly", () => {
-    const event: Event = { type: "Date", data: { date: new Date("2022-02-02T20:20:22Z") } }
-    const encoded = codec.encode(event, null)
-    expect(encoded).toMatchObject({
-      type: "Date",
-      data: '{"date":"2022-02-02T20:20:22.000Z"}',
-    })
-  })
-
-  test("decodes properly", () => {
-    expect(
-      codec.tryDecode({
-        type: "Date",
-        data: '{"date":"2022-02-02T20:20:22.000Z"}',
-      } as any),
-    ).toMatchObject({
-      type: "Date",
-      data: { date: new Date("2022-02-02T20:20:22Z") },
+      test('fails if upcast fails', () => {
+        const event = { type: "Hello", data: { at: "hello" } }
+        const encoded = codec.encode(event, undefined)
+        expect(() => codec.tryDecode(encoded as any)).toThrow()
+      })
     })
   })
 })

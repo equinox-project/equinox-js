@@ -14,7 +14,10 @@ export namespace Events {
   export const InvoiceRaised = z.object({
     payer_id: z.string().transform(PayerId.parse),
     amount: z.number(),
-    due_date: z.string().datetime().transform((x) => new Date(x)),
+    due_date: z
+      .string()
+      .datetime()
+      .transform((x) => new Date(x)),
   })
   export type InvoiceRaised = z.infer<typeof InvoiceRaised>
 
@@ -26,11 +29,14 @@ export namespace Events {
     | { type: "PaymentReceived"; data: Payment }
     | { type: "InvoiceFinalized" }
 
-  export const codec = Codec.from<Event>({
-    InvoiceRaised: [InvoiceRaised.parse, (x) => ({ ...x, due_date: x.due_date.toISOString() })],
-    PaymentReceived: Payment.parse,
-    InvoiceFinalized: () => undefined,
-  })
+  export const codec = Codec.upcast<Event>(
+    Codec.json(),
+    Codec.Upcast.body({
+      InvoiceRaised: InvoiceRaised.parse,
+      PaymentReceived: Payment.parse,
+      InvoiceFinalized: () => undefined,
+    }),
+  )
 }
 
 export namespace Fold {

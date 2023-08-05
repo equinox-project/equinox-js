@@ -12,60 +12,77 @@ evolve event schemas through upcasting. `JSON.parse` doesn't offer any way to
 define the schema you want out or provide default values for missing properties.
 These deficiencies can lead to unexpected type errors and behaviours.
 
-In EquinoxJS codecs as a first class citizen. A naive implementation might look
+In EquinoxJS codecs as a first class citizen. A codec implementation might look
 like this:
 
 ```ts
-const codec: Codec<Event, Record<string, any>> = {
+const codec: Codec<Event, string> = {
   tryDecode(ev): Event | undefined {
+    const data = JSON.parse(ev.data || "{}")
     switch (ev.type) {
       case "CheckedIn":
-        return { type: ev.type, data: { at: new Date(ev.data.at) } }
+        return { type: ev.type, data: { at: new Date(data.at) } }
       case "CheckedOut":
-        return { type: ev.type, data: { at: new Date(ev.data.at) } }
+        return { type: ev.type, data: { at: new Date(data.at) } }
       case "Charged":
         return {
           type: ev.type,
-          data: { chargeId: ev.data.chargeId, amount: ev.data.amount, at: new Date(ev.data.at) },
+          data: { chargeId: data.chargeId, amount: data.amount, at: new Date(data.at) },
         }
       case "Paid":
         return {
           type: ev.type,
-          data: { paymentId: ev.data.paymentId, amount: ev.data.amount, at: new Date(ev.data.at) },
+          data: { paymentId: data.paymentId, amount: data.amount, at: new Date(data.at) },
         }
     }
   },
   encode(ev) {
-    return ev
+    const data = "data" in ev ? JSON.stringify(ev.data) : undefined
+    return { type: ev.type, data }
   },
 }
 ```
 
-While a perfectly valid way to develop applications, we sometimes want more
-guarantees. For these cases we allow you to construct a codec from mappings. A
-parsing library like zod can come in handy.
+While a perfectly valid and safe way to develop applications it can be tedious
+to write these transformations and as such many will skip it in favour of using
+the default `Codec.json`. This will work great as long as you limit yourself to
+event bodies that have the same representation in JavaScript as they do in
+JSON. That is, you cannot use complex types such as `Date` or `BigInt` in your
+event bodies.
+
+In order to make it easier for you to use such types in your domain we do offer
+utilities for upcasting events.
+
 
 ```ts
-const CheckedInSchema = z.object({ at: z.date() })
-const CheckedOutSchema = z.object({ at: z.date() })
-const ChargedSchema = z.object({ chargeId: z.string().uuid(), amount: z.number(), at: z.date() })
-const PaidSchema = z.object({ paymentId: z.string().uuid(), amount: z.number(), at: z.date() })
+const date = z.string().datetime().transform(x => new Date(x))
+const CheckedInSchema = z.object({ at: date })
+const CheckedOutSchema = z.object({ at: date })
+const ChargedSchema = z.object({ chargeId: z.string().uuid(), amount: z.number(), at: date })
+const PaidSchema = z.object({ paymentId: z.string().uuid(), amount: z.number(), at: date })
 type Event =
   | { type: "CheckedIn"; data: z.infer<typeof CheckedInSchema> }
   | { type: "CheckedOut"; data: z.infer<typeof CheckedOutSchema> }
   | { type: "Charged"; data: z.infer<typeof ChargedSchema> }
   | { type: "Paid"; data: z.infer<typeof PaidSchema> }
 
-const codec = Codec.create(
-  Codec.Decode.from({
+const codec = Codec.map(
+  Codec.json,
+  Codec.Upcast.body({
     CheckedIn: CheckedInSchema.parse,
     CheckedOut: CheckedOutSchema.parse,
     Charged: ChargedSchema.parse,
     Paid: PaidSchema.parse,
   }),
-  Codec.Encode.stringify,
 )
 ```
+
+:::caution
+
+When utilising something like the above transformation it is essential that the complex types
+implement a `toJSON` to ensure successful round-tripping of your data.
+
+:::
 
 Codecs are also where we control the metadata we add onto events. It is common
 practice to record metadata like which user performed the action that led to the
