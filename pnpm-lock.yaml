@@ -291,9 +291,6 @@ importers:
       pg:
         specifier: ^8.8.0
         version: 8.8.0
-      vitest:
-        specifier: ^0.34.1
-        version: 0.34.1
     devDependencies:
       '@equinox-js/message-db':
         specifier: workspace:*
@@ -316,6 +313,9 @@ importers:
       typescript:
         specifier: ^4.7.4
         version: 4.9.5
+      vitest:
+        specifier: ^0.34.1
+        version: 0.34.1
 
   packages/projection-pg:
     dependencies:
