@@ -53,9 +53,11 @@ event bodies.
 In order to make it easier for you to use such types in your domain we do offer
 utilities for upcasting events.
 
-
 ```ts
-const date = z.string().datetime().transform(x => new Date(x))
+const date = z
+  .string()
+  .datetime()
+  .transform((x) => new Date(x))
 const CheckedInSchema = z.object({ at: date })
 const CheckedOutSchema = z.object({ at: date })
 const ChargedSchema = z.object({ chargeId: z.string().uuid(), amount: z.number(), at: date })
@@ -84,32 +86,37 @@ implement a `toJSON` to ensure successful round-tripping of your data.
 
 :::
 
-Codecs are also where we control the metadata we add onto events. It is common
-practice to record metadata like which user performed the action that led to the
-event, as well as correlation and causation identifiers. An extended version of
-`Codec.create` called `Codec.createEx` allows you to access the context variable
-as well as the domain event to decide which metadata to record
+# Metadata
+
+It is common to record metadata about events such as correlation and causation
+ids, user id, and more. See [Savvas's
+list](https://github.com/ylorph/The-Inevitable-Event-Centric-Book/issues/42) for
+inspiration. We have a few ways to achieve this in EquinoxJS. Firstly, we could
+record this information on our domain event type.
 
 ```ts
-type Context = { correlationId: string; causationId: string; userId: string }
+type Meta = { userId: string }
+type Event =
+  | {type: 'SomethingHappened', data: { what: string }, meta: Meta }
+```
 
-const mapMeta = (ev: any, ctx: Context) => ({
+The second and preferred option is to use the `Context` variable. You can
+map the event and context to a metadata type.
+
+```ts
+type Context = { tenantId: string, correlationId: string; causationId: string; userId: string }
+type Event =
+  | {type: 'SomethingHappened', data: { what: string } }
+
+const mapMeta = (ev: Event, ctx: Context) => ({ 
   // matches ESDB conventions
   $correlationId: ctx.correlationId,
   $causationId: ctx.causationId,
   userId: ctx.userId,
+  // ignore tenant as that's going to be on the stream id
 })
 
-const codec = Codec.createEx<Event, Context>(
-  Codec.Decode.from({
-    CheckedIn: CheckedInSchema.parse,
-    CheckedOut: CheckedOutSchema.parse,
-    Charged: ChargedSchema.parse,
-    Paid: PaidSchema.parse,
-  }),
-  Codec.Encode.stringify,
-  mapMeta,
-)
+const codec = Codec.json<Event, Context>(mapMeta)
 ```
 
 The `Context` is supplied at decider resolution time
@@ -118,26 +125,3 @@ The `Context` is supplied at decider resolution time
 Decider.forStream(category, streamId, context)
 ```
 
-# Encoding complicated types
-
-In some cases you might want to encode and decode complicated types like `@js-joda` `ZonedDateTime`s.
-
-```ts
-const ZonedDt = z.string().transform((x) => ZonedDateTime.of(x))
-const CheckedIn = z.object({ at: ZonedDt })
-type CheckedIn = z.infer<typeof CheckedIn>
-
-type Event = { type: "CheckedIn"; data: CheckedIn } | { type: "CheckedOut"; data: CheckedIn }
-
-const tryDecode = Codec.Decode.from({
-  CheckedIn: CheckedInSchema.parse,
-  CheckedOut: CheckedOutSchema.parse,
-  Charged: ChargedSchema.parse,
-  Paid: PaidSchema.parse,
-})
-const encode = Codec.Encode.from({
-  CheckedIn: (ev) => ({ type: ev.type, data: { at: ev.data.at.toString() } }),
-  CheckedOut: (ev) => ({ type: ev.type, data: { at: ev.data.at.toString() } }),
-})
-const codec = Codec.create(tryDecode, encode)
-```
