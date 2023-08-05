@@ -6,12 +6,12 @@ import { forEntity, Change, createProjection } from "@equinox-js/projection-pg"
 
 type Payer = { id: PayerId; version: bigint; name: string; email: string }
 
-const { Delete, Upsert } = forEntity<Payer, "id"| "version">()
+const { Delete, Upsert } = forEntity<Payer, "id" | "version">()
 
-export const projection = { table: "payer", id: ["id"], version: "version"}
+export const projection = { table: "payer", id: ["id"], version: "version" }
 
 function changes(stream: string, events: ITimelineEvent[]): Change[] {
-  const id = Payer.Stream.tryMatch(stream) 
+  const id = Payer.Stream.tryMatch(stream)
   if (!id) return []
   const event = Payer.Events.codec.tryDecode(events[events.length - 1])
   if (!event) return []

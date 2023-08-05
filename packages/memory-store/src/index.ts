@@ -10,6 +10,8 @@ import {
 import * as Equinox from "@equinox-js/core"
 import { randomUUID } from "crypto"
 
+type StreamId = Equinox.StreamId.StreamId
+
 export class VolatileStore<Format> {
   private readonly streams: Map<string, ITimelineEvent<Format>[]> = new Map()
   private readonly batches: [string, ITimelineEvent<Format>[]][] = []
@@ -69,7 +71,7 @@ class Category<Event, State, Context, Format>
   supersedes = Token.supersedes
 
   async load(
-    streamId: string,
+    streamId: StreamId,
     _maxStaleMs: number,
     _requireLeader: boolean,
   ): Promise<TokenAndState<State>> {
@@ -106,7 +108,7 @@ class Category<Event, State, Context, Format>
   }
 
   async sync(
-    streamId: string,
+    streamId: StreamId,
     context: Context,
     originToken: StreamToken,
     originState: State,

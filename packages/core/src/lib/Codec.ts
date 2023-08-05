@@ -64,7 +64,7 @@ export namespace Encode {
     <E extends DomainEvent>(mapping: {
       [P in E["type"]]: (obj: Extract<E, { type: P }>["data"]) => Record<string, any> | undefined
     }) =>
-    <M,>(e: E, meta: M) => {
+    <M>(e: E, meta: M) => {
       const encode = mapping[e.type as E["type"]]
       if (!encode) throw new Error(`No encoder for event type ${e.type}`)
       const event = { type: e.type, data: encode(e.data), meta: e.meta, id: e.id }

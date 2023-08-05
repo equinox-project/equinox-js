@@ -1,4 +1,4 @@
-import { ITimelineEvent, StreamName } from "@equinox-js/core"
+import { ITimelineEvent } from "@equinox-js/core"
 import { Pool } from "pg"
 import { describe, test, expect } from "vitest"
 import { PayerId } from "../../src/domain/identifiers.js"
@@ -50,7 +50,7 @@ describe("PayerReadModel", () => {
 function scenario(name: string, batches: [string, ITimelineEvent[]][] = [], version = 0) {
   return {
     given: (events: Payer.Events.Event[], payerId = PayerId.create()) => {
-      const streamName = StreamName.create(Payer.Stream.CATEGORY, payerId)
+      const streamName = Payer.Stream.name(payerId)
       return scenario(
         name,
         batches.concat([

@@ -1,7 +1,12 @@
 import { IStream, queryAsync, TokenAndState, transactAsync } from "./Core.js"
 import { Category } from "./Category.js"
 
-type LoadOption = { requireLoad?: boolean, requireLeader?: boolean, maxStaleMs?: number, assumeEmpty?: boolean }
+type LoadOption = {
+  requireLoad?: boolean
+  requireLeader?: boolean
+  maxStaleMs?: number
+  assumeEmpty?: boolean
+}
 
 export namespace LoadOption {
   /** Default policy; Obtain the latest state from store based on consistency level configured */
@@ -18,7 +23,6 @@ export namespace LoadOption {
   /** Inhibit load from database based on the fact that the stream is likely not to have been initialized yet, and we will be generating events */
   export const AssumeEmpty: LoadOption = { assumeEmpty: true }
 }
-
 
 namespace LoadPolicy {
   export function fetch<State, Event>(

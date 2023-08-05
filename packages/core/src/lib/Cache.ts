@@ -20,7 +20,7 @@ export class CacheEntry<T> {
   }
 
   updateCachedAt(now: number) {
-     this.cachedAt = now
+    this.cachedAt = now
   }
   value(): TokenAndState<T> {
     return { token: this.token, state: this.state }

@@ -13,12 +13,9 @@ import * as Read from "./Read.js"
 import { trace } from "@opentelemetry/api"
 import { Format, MessageDbReader, MessageDbWriter } from "./MessageDbClient.js"
 import { Pool } from "pg"
-import {
-  CachingCategory,
-  ICachingStrategy,
-  IReloadableCategory,
-  Tags,
-} from "@equinox-js/core"
+import { CachingCategory, ICachingStrategy, IReloadableCategory, Tags } from "@equinox-js/core"
+
+type StreamId = Equinox.StreamId.StreamId
 
 function keepMap<T, V>(arr: T[], fn: (v: T) => V | undefined): V[] {
   const result: V[] = []
@@ -237,7 +234,7 @@ class InternalCategory<Event, State, Context>
   ) {}
 
   private async loadAlgorithm(
-    streamId: string,
+    streamId: StreamId,
     requireLeader: boolean,
   ): Promise<[StreamToken, State]> {
     const streamName = Equinox.StreamName.create(this.categoryName, streamId)
@@ -297,12 +294,12 @@ class InternalCategory<Event, State, Context>
 
   supersedes = Token.supersedes
 
-  async load(streamId: string, _maxStaleMs: number, requireLeader: boolean) {
+  async load(streamId: StreamId, _maxStaleMs: number, requireLeader: boolean) {
     const [token, state] = await this.loadAlgorithm(streamId, requireLeader)
     return { token, state }
   }
 
-  async reload(streamId: string, requireLeader: boolean, t: TokenAndState<State>) {
+  async reload(streamId: StreamId, requireLeader: boolean, t: TokenAndState<State>) {
     const streamName = Equinox.StreamName.create(this.categoryName, streamId)
     const [token, state] = await this.context.reload(
       streamName,
@@ -316,7 +313,7 @@ class InternalCategory<Event, State, Context>
   }
 
   async sync(
-    streamId: string,
+    streamId: StreamId,
     ctx: Context,
     token: StreamToken,
     state: State,
