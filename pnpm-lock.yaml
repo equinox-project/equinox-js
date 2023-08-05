@@ -232,9 +232,6 @@ importers:
       '@equinox-js/core':
         specifier: workspace:*
         version: link:../core
-      rxjs:
-        specifier: ^7.8.0
-        version: 7.8.0
     devDependencies:
       '@types/node':
         specifier: ^18.11.18

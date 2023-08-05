@@ -22,7 +22,6 @@
     "vitest": "^0.34.1"
   },
   "dependencies": {
-    "@equinox-js/core": "workspace:*",
-    "rxjs": "^7.8.0"
+    "@equinox-js/core": "workspace:*"
   }
 }
