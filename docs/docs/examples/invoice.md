@@ -4,37 +4,20 @@
 import { PayerId, InvoiceId } from "./types"
 import * as Mdb from "@equinox-js/message-db"
 import * as Mem from "@equinox-js/memory-store"
-import z from "zod"
 import { Codec, Decider, ICachingStrategy, StreamId } from "@equinox-js/core"
 
 export const Category = "Invoice"
 export const streamId = StreamId.gen(InvoiceId.toString)
 
-const RaisedSchema = z.object({
-  payer_id: z.string().uuid().transform(PayerId.parse),
-  amount: z.number(),
-})
-const PaymentSchema = z.object({
-  reference: z.string(),
-  amount: z.number(),
-})
-
-type InvoiceRaised = z.infer<typeof RaisedSchema>
-type Payment = z.infer<typeof PaymentSchema>
+type Payment = { reference: string; amount: number }
+type InvoiceRaised = { payer_id: PayerId; amount: number }
 
 type Event =
   | { type: "InvoiceRaised"; data: InvoiceRaised }
   | { type: "PaymentReceived"; data: Payment }
   | { type: "InvoiceFinalized" }
 
-const codec = Codec.create<Event>(
-  Codec.Decode.from({
-    InvoiceRaised: RaisedSchema.parse,
-    PaymentReceived: PaymentSchema.parse,
-    InvoiceFinalized: () => undefined,
-  }),
-  Codec.Encode.stringify,
-)
+const codec = Codec.json<Event>()
 
 export type InvoiceState = {
   amount: number

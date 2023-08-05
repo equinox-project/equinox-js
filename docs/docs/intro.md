@@ -23,16 +23,11 @@ export namespace Stream {
 }
 
 export namespace Events {
-  export const Amount = z.object({ amount: z.number().positive() })
-  export type Amount = z.infer<typeof Amount>
-
-  export type Event =
-    | { type: "Deposited"; data: { amount: number } }
-    | { type: "Withdrawn"; data: { amount: number } }
-  export const codec = Codec.create(
-    Codec.Decode.from({ Deposited: Amount.parse, Withdrawn: Amount.parse }),
-    Codec.Encode.stringify,
-  )
+  export type Amount = { amount: number }
+  export type Event = 
+    | { type: "Deposited"; data: Amount } 
+    | { type: "Withdrawn"; data: Amount }
+  export const codec = Codec.json<Event>()
 }
 
 export namespace Fold {
