@@ -46,22 +46,20 @@ export class Service {
       if (state?.type === "EmailSent") return []
       const payer = await this.payerService.readProfile(payerId)
       if (!payer)
-        return [
-          { type: "EmailSendingFailed", data: { payer_id: payerId, reason: "Payer not found" } },
-        ]
+        return [Event.EmailSendingFailed({ payer_id: payerId, reason: "Payer not found" })]
       try {
         await this.mailer.sendEmail(
           payer.email,
           `Invoice for ${amount}`,
           `Please pay ${amount} by tuesday`,
         )
-        return [{ type: "EmailSent", data: { email: payer.email, payer_id: payerId } }]
+        return [Event.EmailSent({ email: payer.email, payer_id: payerId })]
       } catch (err: any) {
         return [
-          {
-            type: "EmailSendingFailed",
-            data: { reason: err?.message ?? "Unknown failure", payer_id: payerId },
-          },
+          Event.EmailSendingFailed({
+            payer_id: payerId,
+            reason: err?.message ?? "Unknown failure",
+          }),
         ]
       }
     })

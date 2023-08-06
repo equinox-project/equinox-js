@@ -17,9 +17,9 @@ export namespace Events {
   })
   export type PayerProfile = s.infer<typeof PayerProfile>
 
-  const Event = s.variant({
+  export const Event = s.variant({
     PayerProfileUpdated: PayerProfile,
-    PayerDeleted: undefined
+    PayerDeleted: undefined,
   })
   export type Event = s.infer<typeof Event>
 
@@ -38,6 +38,7 @@ export namespace Fold {
 }
 
 export namespace Decide {
+  const { PayerProfileUpdated, PayerDeleted } = Events.Event
   import Event = Events.Event
   import State = Fold.State
 
@@ -45,12 +46,12 @@ export namespace Decide {
     (data: Events.PayerProfile) =>
     (state: State): Event[] => {
       if (state && equals(data, state)) return []
-      return [{ type: "PayerProfileUpdated", data }]
+      return [PayerProfileUpdated(data)]
     }
 
   export const deletePayer = (state: State): Event[] => {
     if (state == null) return []
-    return [{ type: "PayerDeleted" }]
+    return [PayerDeleted]
   }
 }
 

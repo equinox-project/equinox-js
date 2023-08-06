@@ -21,7 +21,7 @@ export namespace Events {
   export const Payment = s.schema({ reference: s.string, amount: s.number })
   export type Payment = s.infer<typeof Payment>
 
-  const Event = s.variant({
+  export const Event = s.variant({
     InvoiceRaised,
     PaymentReceived: Payment,
     InvoiceFinalized: undefined
@@ -97,15 +97,16 @@ export namespace Fold {
 }
 
 export namespace Decide {
-  import Event = Events.Event
   import State = Fold.State
+  import Event = Events.Event
+  const { InvoiceRaised, PaymentReceived, InvoiceFinalized } = Events.Event
 
   export const raiseInvoice =
     (data: Events.InvoiceRaised) =>
     (state: State): Event[] => {
       switch (state.type) {
         case "Initial":
-          return [{ type: "InvoiceRaised", data }]
+          return [Event.InvoiceRaised(data)]
         case "Raised":
           if (state.state.amount === data.amount && state.state.payer_id === data.payer_id)
             return []
@@ -125,7 +126,7 @@ export namespace Decide {
           throw new Error("Invoice is finalized")
         case "Raised":
           if (state.state.payments.has(data.reference)) return []
-          return [{ type: "PaymentReceived", data }]
+          return [PaymentReceived(data)]
       }
     }
 
@@ -136,7 +137,7 @@ export namespace Decide {
       case "Finalized":
         return []
       case "Raised":
-        return [{ type: "InvoiceFinalized" }]
+        return [InvoiceFinalized]
     }
   }
 }

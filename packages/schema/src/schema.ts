@@ -193,17 +193,37 @@ type EventOfMapping<Mapping extends { [key: string]: Codec<any> | undefined }> =
   [P in keyof Mapping]: Mapping[P] extends Codec<infer T> ? { type: P; data: T } : { type: P }
 }[keyof Mapping]
 
+type Creators<Mapping extends { [key: string]: Codec<any> | undefined }> = {
+  [P in keyof Mapping]: Mapping[P] extends Codec<infer T>
+    ? (data: T) => { type: P; data: T }
+    : { type: P }
+}
+
 export function variant<
   K extends string,
   Mapping extends {
     [P in K]: Codec<any> | undefined
   },
->(mapping: Mapping): Codec<EventOfMapping<Mapping>> {
+>(mapping: Mapping): Codec<EventOfMapping<Mapping>> & Creators<Mapping> {
   const name = Object.entries(mapping)
     .map(([key, codec]) => `${key}${codec ? `(${(codec as any).name})` : ""}`)
     .join("\n")
 
-  return {
+  const creators: {
+    [P in keyof Mapping]: Mapping[P] extends Codec<infer T>
+      ? (data: T) => { type: P; data: T }
+      : { type: P }
+  } = {} as any
+  for (const key in mapping) {
+    if (!mapping.hasOwnProperty(key)) continue
+    if (mapping[key] === undefined) {
+      ;(creators as any)[key] = { type: key }
+    } else {
+      ;(creators as any)[key] = (data: any) => ({ type: key, data })
+    }
+  }
+
+  const codec: Codec<EventOfMapping<Mapping>> = {
     name,
     parse(value: unknown, path = []) {
       if (typeof value !== "object" || value == null) {
@@ -233,6 +253,7 @@ export function variant<
       }
     },
   }
+  return Object.assign(codec, creators)
 }
 
 export type infer<T> = T extends Codec<infer U> ? U : never

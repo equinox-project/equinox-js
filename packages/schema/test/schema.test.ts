@@ -50,7 +50,7 @@ describe("Schema", () => {
   })
 })
 
-describe('Event body', () => {
+describe("Event body", () => {
   const schema = s.schema({
     name: s.string,
     age: s.int,
@@ -59,33 +59,33 @@ describe('Event body', () => {
     optional: s.optional(s.string),
     array: s.array(s.number),
   })
-  
-  it('should parse valid event body', () => {
+
+  it("should parse valid event body", () => {
     const body = {
-      name: 'John',
+      name: "John",
       age: 42,
       isCool: true,
-      birthday: '2020-01-01',
+      birthday: "2020-01-01",
       optional: undefined,
       array: [1, 2, 3],
     }
     const expected = {
-      name: 'John',
+      name: "John",
       age: 42,
       isCool: true,
-      birthday: new Date('2020-01-01'),
+      birthday: new Date("2020-01-01"),
       optional: undefined,
       array: [1, 2, 3],
     }
     expect(schema.parse(body)).toEqual(expected)
   })
 
-  it('should fail to parse invalid event body', () => {
+  it("should fail to parse invalid event body", () => {
     const body = {
-      name: 'John',
+      name: "John",
       age: 42,
       isCool: true,
-      birthday: '2020-0101', // not a date
+      birthday: "2020-0101", // not a date
       optional: undefined,
       array: [1, 2, 3],
     }
@@ -93,7 +93,7 @@ describe('Event body', () => {
   })
 })
 
-describe('variant', () => {
+describe("variant", () => {
   const CheckedIn = s.schema({ at: s.date })
   const CheckedOut = s.schema({ at: s.date })
   const Charged = s.schema({ chargeId: s.string, at: s.date, amount: s.number })
@@ -101,37 +101,37 @@ describe('variant', () => {
     CheckedIn,
     CheckedOut,
     Charged,
-    Finalized: undefined
+    Finalized: undefined,
   })
   type Event = s.infer<typeof Event>
 
-  it('should parse CheckedIn', () => {
-    const event: Event = { type: 'CheckedIn', data: { at: new Date() } }
+  it("should parse CheckedIn", () => {
+    const checkedIn = Event.CheckedIn({ at: new Date() })
+    expect(Event.parse(checkedIn)).toEqual(checkedIn)
+  })
+
+  it("should parse CheckedOut", () => {
+    const event = Event.CheckedOut({ at: new Date() })
     expect(Event.parse(event)).toEqual(event)
   })
 
-  it('should parse CheckedOut', () => {
-    const event: Event = { type: 'CheckedOut', data: { at: new Date() } }
+  it("should parse Charged", () => {
+    const event: Event = { type: "Charged", data: { chargeId: "123", at: new Date(), amount: 42 } }
     expect(Event.parse(event)).toEqual(event)
   })
 
-  it('should parse Charged', () => {
-    const event: Event = { type: 'Charged', data: { chargeId: '123', at: new Date(), amount: 42 } }
+  it("should parse Finalized", () => {
+    const event = Event.Finalized
     expect(Event.parse(event)).toEqual(event)
   })
 
-  it('should parse Finalized', () => {
-    const event: Event = { type: 'Finalized' }
-    expect(Event.parse(event)).toEqual(event)
-  })
-
-  it('should fail to parse invalid event', () => {
-    const event = { type: 'CheckedIn', data: { at: '2022222' } }
+  it("should fail to parse invalid event", () => {
+    const event = { type: "CheckedIn", data: { at: "2022222" } }
     expect(() => Event.parse(event)).toThrow()
   })
 
-  it('should silently ignore unknown event', () => {
-    const event = { type: 'Unknown' }
+  it("should silently ignore unknown event", () => {
+    const event = { type: "Unknown" }
     expect(Event.parse(event)).toEqual(undefined)
   })
 })
