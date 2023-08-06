@@ -8,7 +8,7 @@ describe("Invoice auto emailer", () => {
   const store = new VolatileStore<string>()
   const config: Config = { store: Store.Memory, context: store }
 
-  const profile = { name: "Test", email: "test@example.com" }
+  const profile = Payer.Events.PayerProfile.example() 
 
   test("It does not send emails if it can't find the payer", async () => {
     const invoiceId = InvoiceId.create()

@@ -59,6 +59,7 @@ describe("Event body", () => {
     optional: s.optional(s.string),
     array: s.array(s.number),
   })
+  console.log(schema.name)
 
   it("should parse valid event body", () => {
     const body = {

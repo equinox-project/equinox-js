@@ -1,32 +1,23 @@
 import { describe, test, expect } from "vitest"
 import { Fold, Decide, Events } from "../../src/domain/invoice.js"
-import { PayerId } from "../../src/domain/identifiers.js"
 import { createTester, expectError, expectEventsMatching } from "./scenario.js"
 
 const { scenario } = createTester(Fold)
 
-const raised: Events.Event = {
-  type: "InvoiceRaised",
-  data: {
-    payer_id: PayerId.create(),
-    amount: 100,
-    due_date: new Date('2021-01-01T12:00:00Z'),
-  },
-}
+const raised = Events.Event.InvoiceRaised.example() 
 
 describe("Codec", () => {
   test("roundtrips", () => {
-    const encoded = Events.codec.encode(raised, null)
-    const decoded = Events.codec.tryDecode(encoded as any)
-    expect(decoded).toEqual(raised)
+    for (let i = 0; i < 100; i++) {
+      const event = Events.Event.example()
+      const encoded = Events.codec.encode(event, null)
+      const decoded = Events.codec.tryDecode(encoded as any)
+      expect(decoded).toEqual(event)
+    }
   })
 })
 
-const paymentReceived: Events.Event = {
-  type: "PaymentReceived",
-  data: { amount: 10, reference: "123" },
-}
-
+const paymentReceived = Events.Event.PaymentReceived.example()
 describe("Invoice", () => {
   scenario("Raising an invoice")
     .given([])

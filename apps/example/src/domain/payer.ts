@@ -13,7 +13,7 @@ export namespace Stream {
 export namespace Events {
   export const PayerProfile = s.schema({
     name: s.string,
-    email: s.regex(/^.+@.+$/),
+    email: s.email
   })
   export type PayerProfile = s.infer<typeof PayerProfile>
 

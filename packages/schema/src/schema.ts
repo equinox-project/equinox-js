@@ -1,8 +1,11 @@
+import { randomUUID } from "crypto"
+
 export class SchemaError extends Error {}
 
 type Codec<T> = {
   parse: (value: unknown, path?: string[]) => T
   toJSON: (value: T) => unknown
+  example(): T
   name: string
 }
 
@@ -36,6 +39,13 @@ ${Object.entries(mapping)
       }
       return result
     },
+    example() {
+      const result: any = {}
+      for (const key in mapping) {
+        result[key] = mapping[key].example()
+      }
+      return result
+    },
   }
 }
 
@@ -48,6 +58,7 @@ export const string: Codec<string> = {
     return value
   },
   toJSON: (value) => value,
+  example: () => randomUUID(),
 }
 
 export const number: Codec<number> = {
@@ -58,6 +69,7 @@ export const number: Codec<number> = {
     throw new SchemaError("Expected number")
   },
   toJSON: (x) => x,
+  example: () => Math.random(),
 }
 
 export const int: Codec<number> = {
@@ -70,6 +82,7 @@ export const int: Codec<number> = {
     return n
   },
   toJSON: (x) => x,
+  example: () => Math.floor(Math.random() * 100),
 }
 
 export const boolean: Codec<boolean> = {
@@ -81,6 +94,7 @@ export const boolean: Codec<boolean> = {
     return value
   },
   toJSON: (x) => x,
+  example: () => Math.random() > 0.5,
 }
 
 export function array<T>(inner: Codec<T>): Codec<T[]> {
@@ -93,6 +107,7 @@ export function array<T>(inner: Codec<T>): Codec<T[]> {
       return value.map((x, i) => inner.parse(x, [...path, "" + i]))
     },
     toJSON: (value) => value.map(inner.toJSON),
+    example: () => [inner.example()],
   }
 }
 
@@ -105,6 +120,7 @@ export const bigint: Codec<bigint> = {
     throw new SchemaError("Expected bigint")
   },
   toJSON: (x) => x.toString(10),
+  example: () => BigInt(Math.floor(Math.random() * 100)),
 }
 
 export function optional<T>(inner: Codec<T>): Codec<T | undefined> {
@@ -115,6 +131,7 @@ export function optional<T>(inner: Codec<T>): Codec<T | undefined> {
       return inner.parse(value)
     },
     toJSON: (value) => (value == null ? undefined : inner.toJSON(value)),
+    example: () => (Math.random() > 0.5 ? inner.example() : undefined),
   }
 }
 
@@ -130,7 +147,21 @@ export function oneOf<T extends string>(values: T[]): Codec<T> {
       return str
     },
     toJSON: (value) => value,
+    example: () => values[Math.floor(Math.random() * values.length)],
   }
+}
+
+export const email: Codec<string> = {
+  name: `email`,
+  parse(value: unknown): string {
+    const str = string.parse(value)
+    if (!str.includes("@")) {
+      throw new SchemaError(`Expected email, got ${str}`)
+    }
+    return str
+  },
+  toJSON: (value) => value,
+  example: () => "test@example.com",
 }
 
 export function regex(regex: RegExp): Codec<string> {
@@ -144,6 +175,7 @@ export function regex(regex: RegExp): Codec<string> {
       return str
     },
     toJSON: (value) => value,
+    example: () => "",
   }
 }
 
@@ -162,6 +194,7 @@ export const date: Codec<Date> = {
     throw new SchemaError("Expected date")
   },
   toJSON: (value) => value.toISOString(),
+  example: () => new Date(),
 }
 
 const uuidRegex = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i
@@ -176,6 +209,7 @@ export function uuid(): Codec<string> {
       return str.toLowerCase() as any
     },
     toJSON: (value) => value.toLowerCase(),
+    example: () => randomUUID(),
   }
 }
 
@@ -186,6 +220,7 @@ export function map<T, V>(inner: Codec<T>, up: (v: T) => V, down?: (v: V) => T):
       return up(inner.parse(value, path))
     },
     toJSON: (value) => (down ? inner.toJSON(down(value)) : inner.toJSON(value as any)),
+    example: () => up(inner.example()),
   }
 }
 
@@ -195,7 +230,7 @@ type EventOfMapping<Mapping extends { [key: string]: Codec<any> | undefined }> =
 
 type Creators<Mapping extends { [key: string]: Codec<any> | undefined }> = {
   [P in keyof Mapping]: Mapping[P] extends Codec<infer T>
-    ? (data: T) => { type: P; data: T }
+    ? ((data: T) => { type: P; data: T }) & { example: () => { type: P; data: T } }
     : { type: P }
 }
 
@@ -209,17 +244,15 @@ export function variant<
     .map(([key, codec]) => `${key}${codec ? `(${(codec as any).name})` : ""}`)
     .join("\n")
 
-  const creators: {
-    [P in keyof Mapping]: Mapping[P] extends Codec<infer T>
-      ? (data: T) => { type: P; data: T }
-      : { type: P }
-  } = {} as any
+  const creators: Creators<Mapping> = {} as any
   for (const key in mapping) {
     if (!mapping.hasOwnProperty(key)) continue
     if (mapping[key] === undefined) {
       ;(creators as any)[key] = { type: key }
     } else {
-      ;(creators as any)[key] = (data: any) => ({ type: key, data })
+      ;(creators as any)[key] = Object.assign((data: any) => ({ type: key, data }), {
+        example: () => ({ type: key, data: (mapping[key] as any).example() }),
+      })
     }
   }
 
@@ -250,6 +283,17 @@ export function variant<
       return {
         type: value.type,
         data: codec.toJSON((value as any).data),
+      }
+    },
+    example: (): any => {
+      const type = Object.keys(mapping)[Math.floor(Math.random() * Object.keys(mapping).length)]
+      const codec = mapping[type as keyof typeof mapping]
+      if (codec === undefined) {
+        return { type }
+      }
+      return {
+        type,
+        data: codec.example(),
       }
     },
   }
