@@ -56,3 +56,24 @@ export const upcast = <E extends DomainEvent, Ctx = null>(
     encode: codec.encode,
   }
 }
+
+type ISchema<T> = {
+  name: string
+  parse: (v: unknown) => T
+  toJSON: (v: T) => unknown
+}
+
+export const ofSchema = <T extends DomainEvent>(schema: ISchema<T>): ICodec<T, string, null> => {
+  const inner = json<T>()
+  return {
+    tryDecode(e) {
+      const ev = inner.tryDecode(e)
+      if (!ev) return
+      return schema.parse(ev)
+    },
+    encode(e, ctx) {
+      const encoded = schema.toJSON(e)
+      return inner.encode(encoded as T, ctx)
+    },
+  }
+}

@@ -1,36 +1,32 @@
 import { Codec, Decider, ITimelineEvent, StreamId } from "@equinox-js/core"
 import { InvoiceId, PayerId } from "./identifiers.js"
 import * as Payer from "./payer.js"
-import z from "zod"
 import { EmailSender, ISendEmails } from "./send-email.js"
 import * as Config from "../config/equinox.js"
 import * as Invoice from "./invoice.js"
+import { s } from "@equinox-js/schema"
 
 const CATEGORY = "InvoiceAutoEmail"
 const streamId = StreamId.gen(InvoiceId.toString)
 
-const EmailSentSchema = z.object({
-  email: z.string().email(),
-  payer_id: z.string().uuid().transform(PayerId.parse),
+const EmailSent = s.schema({
+  email: s.regex(/^.+@.+$/),
+  payer_id: s.map(s.string, PayerId.parse, PayerId.toString),
 })
-const EmailFailureSchema = z.object({
-  payer_id: z.string().uuid().transform(PayerId.parse),
-  reason: z.string(),
+type EmailSent = s.infer<typeof EmailSent>
+const EmailSendingFailed = s.schema({
+  payer_id: s.map(s.string, PayerId.parse, PayerId.toString),
+  reason: s.string,
+})
+type EmailSendingFailed = s.infer<typeof EmailSendingFailed>
+
+const Event = s.variant({
+  EmailSent,
+  EmailSendingFailed,
 })
 
-type EmailSent = z.infer<typeof EmailSentSchema>
-type EmailFailure = z.infer<typeof EmailFailureSchema>
-
-export type Event =
-  | { type: "EmailSent"; data: EmailSent }
-  | { type: "EmailSendingFailed"; data: EmailFailure }
-export const codec = Codec.upcast<Event>(
-  Codec.json(),
-  Codec.Upcast.body({
-    EmailSent: EmailSentSchema.parse,
-    EmailSendingFailed: EmailFailureSchema.parse,
-  }),
-)
+export type Event = s.infer<typeof Event>
+export const codec = Codec.ofSchema(Event)
 
 export type State = null | Event
 const initial: State = null

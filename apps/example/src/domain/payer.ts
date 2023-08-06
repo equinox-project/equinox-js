@@ -1,8 +1,8 @@
 import { Codec, Decider, StreamId, StreamName } from "@equinox-js/core"
 import { PayerId } from "./identifiers.js"
-import z from "zod"
 import { equals } from "ramda"
 import * as Config from "../config/equinox.js"
+import { s } from "@equinox-js/schema"
 
 export namespace Stream {
   export const CATEGORY = "Payer"
@@ -11,21 +11,19 @@ export namespace Stream {
 }
 
 export namespace Events {
-  export const PayerProfile = z.object({
-    name: z.string(),
-    email: z.string().email(),
+  export const PayerProfile = s.schema({
+    name: s.string,
+    email: s.regex(/^.+@.+$/),
   })
-  export type PayerProfile = z.infer<typeof PayerProfile>
+  export type PayerProfile = s.infer<typeof PayerProfile>
 
-  export type Event = { type: "PayerProfileUpdated"; data: PayerProfile } | { type: "PayerDeleted" }
+  const Event = s.variant({
+    PayerProfileUpdated: PayerProfile,
+    PayerDeleted: undefined
+  })
+  export type Event = s.infer<typeof Event>
 
-  export const codec = Codec.upcast<Event>(
-    Codec.json(),
-    Codec.Upcast.body({
-      PayerProfileUpdated: PayerProfile.parse,
-      PayerDeleted: () => undefined,
-    }),
-  )
+  export const codec = Codec.ofSchema(Event)
 }
 
 export namespace Fold {
