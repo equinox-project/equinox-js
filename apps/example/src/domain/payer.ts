@@ -38,7 +38,6 @@ export namespace Fold {
 }
 
 export namespace Decide {
-  const { PayerProfileUpdated, PayerDeleted } = Events.Event
   import Event = Events.Event
   import State = Fold.State
 
@@ -46,12 +45,12 @@ export namespace Decide {
     (data: Events.PayerProfile) =>
     (state: State): Event[] => {
       if (state && equals(data, state)) return []
-      return [PayerProfileUpdated(data)]
+      return [Event.PayerProfileUpdated(data)]
     }
 
   export const deletePayer = (state: State): Event[] => {
     if (state == null) return []
-    return [PayerDeleted]
+    return [Event.PayerDeleted]
   }
 }
 

@@ -2,7 +2,7 @@ import { PayerId, InvoiceId } from "./identifiers.js"
 import { Codec, Decider, LoadOption, StreamId, StreamName } from "@equinox-js/core"
 import { reduce } from "ramda"
 import * as Config from "../config/equinox.js"
-import {s} from "@equinox-js/schema"
+import { s } from "@equinox-js/schema"
 
 export namespace Stream {
   export const CATEGORY = "Invoice"
@@ -12,7 +12,7 @@ export namespace Stream {
 
 export namespace Events {
   export const InvoiceRaised = s.schema({
-    payer_id: s.map(s.string, PayerId.parse), 
+    payer_id: s.map(s.string, PayerId.parse),
     amount: s.number,
     due_date: s.date,
   })
@@ -24,7 +24,7 @@ export namespace Events {
   export const Event = s.variant({
     InvoiceRaised,
     PaymentReceived: Payment,
-    InvoiceFinalized: undefined
+    InvoiceFinalized: undefined,
   })
 
   export type Event = s.infer<typeof Event>
@@ -99,7 +99,6 @@ export namespace Fold {
 export namespace Decide {
   import State = Fold.State
   import Event = Events.Event
-  const { InvoiceRaised, PaymentReceived, InvoiceFinalized } = Events.Event
 
   export const raiseInvoice =
     (data: Events.InvoiceRaised) =>
@@ -126,7 +125,7 @@ export namespace Decide {
           throw new Error("Invoice is finalized")
         case "Raised":
           if (state.state.payments.has(data.reference)) return []
-          return [PaymentReceived(data)]
+          return [Event.PaymentReceived(data)]
       }
     }
 
@@ -137,7 +136,7 @@ export namespace Decide {
       case "Finalized":
         return []
       case "Raised":
-        return [InvoiceFinalized]
+        return [Event.InvoiceFinalized]
     }
   }
 }
