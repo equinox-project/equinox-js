@@ -2,20 +2,28 @@ import { randomUUID } from "crypto"
 
 export type Uuid<T> = string & { __brand: T }
 
-export type UuidModule<T> = {
-  create: () => Uuid<T>
-  toString: (uuid: Uuid<T>) => string
-  parse: (uuid: string) => Uuid<T>
+const uuidRegex = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i
+
+export function create<T extends string>(name: T) {
+  return {
+    name,
+    parse(value: unknown) {
+      if (typeof value !== "string") {
+        throw new Error("Expected string")
+      }
+      if (!uuidRegex.test(value)) {
+        throw new Error("Expected UUID")
+      }
+      return value.toLowerCase() as Uuid<T>
+    },
+    toString(value: Uuid<T>) {
+      return value.toLowerCase()
+    },
+    toJSON(value: Uuid<T>) {
+      return value.toLowerCase()
+    },
+    create: () => randomUUID() as Uuid<T>,
+    example: () => randomUUID() as Uuid<T>,
+  }
 }
 
-export type Id<T> = T extends UuidModule<infer F> ? Uuid<F> : never
-
-const uuid = {
-  create: <T>() => randomUUID() as Uuid<T>,
-  toString: <T>(uuid: Uuid<T>) => uuid as string,
-  parse: <T>(uuid: string) => uuid.toLowerCase() as Uuid<T>,
-}
-
-export function create<T>() {
-  return uuid as UuidModule<T>
-}

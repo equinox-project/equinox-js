@@ -12,7 +12,7 @@ export namespace Stream {
 
 export namespace Events {
   export const InvoiceRaised = s.schema({
-    payer_id: s.map(s.string, PayerId.parse),
+    payer_id: PayerId, 
     amount: s.number,
     due_date: s.date,
   })

@@ -10,7 +10,9 @@ describe("Codec", () => {
   test("roundtrips", () => {
     for (let i = 0; i < 100; i++) {
       const event = Events.Event.example()
+      console.log(event)
       const encoded = Events.codec.encode(event, null)
+      console.log(encoded)
       const decoded = Events.codec.tryDecode(encoded as any)
       expect(decoded).toEqual(event)
     }
