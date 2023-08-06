@@ -28,10 +28,10 @@ describe("Schema", () => {
   })
   describe("date", () => {
     it("should parse date", () => {
-      expect(s.date().parse("2020-01-01")).toEqual(new Date("2020-01-01"))
+      expect(s.date.parse("2020-01-01")).toEqual(new Date("2020-01-01"))
     })
     it("should fail to parse non-date", () => {
-      expect(() => s.date().parse("hello")).toThrow()
+      expect(() => s.date.parse("hello")).toThrow()
     })
   })
   describe("optional", () => {
@@ -55,7 +55,7 @@ describe('Event body', () => {
     name: s.string,
     age: s.int,
     isCool: s.boolean,
-    birthday: s.date(),
+    birthday: s.date,
     optional: s.optional(s.string),
     array: s.array(s.number),
   })
@@ -94,9 +94,9 @@ describe('Event body', () => {
 })
 
 describe('variant', () => {
-  const CheckedIn = s.schema({ at: s.date() })
-  const CheckedOut = s.schema({ at: s.date() })
-  const Charged = s.schema({ chargeId: s.string, at: s.date(), amount: s.number })
+  const CheckedIn = s.schema({ at: s.date })
+  const CheckedOut = s.schema({ at: s.date })
+  const Charged = s.schema({ chargeId: s.string, at: s.date, amount: s.number })
   const Event = s.variant({
     CheckedIn,
     CheckedOut,
