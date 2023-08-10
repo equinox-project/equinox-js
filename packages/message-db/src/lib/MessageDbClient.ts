@@ -111,7 +111,7 @@ export class MessageDbReader {
 
 function fromDb(row: any): ITimelineEvent<Format> {
   return {
-    size: -1,
+    size: (row.data?.length ?? 0) + (row.meta?.length ?? 0) + (row.type?.length ?? 0),
     id: row.id,
     time: new Date(row.time),
     type: row.type,

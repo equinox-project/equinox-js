@@ -44,6 +44,7 @@ async function* readBatches(
   const span = trace.getActiveSpan()
   let batchCount = 0
   let eventCount = 0
+  let bytes = 0
   let slice: StreamEventsSlice
   do {
     if (maxPermittedReads && batchCount >= maxPermittedReads)
@@ -52,11 +53,13 @@ async function* readBatches(
     yield [slice.lastVersion, slice.messages]
     batchCount++
     eventCount += slice.messages.length
+    bytes += slice.messages.reduce((acc, m) => acc + m.size, 0)
     startPosition = slice.lastVersion + 1n
   } while (!slice.isEnd)
 
   span?.setAttributes({
     [Tags.batches]: batchCount,
+    [Tags.loaded_bytes]: bytes,
     [Tags.loaded_count]: eventCount,
     [Tags.read_version]: String(slice.lastVersion),
   })
