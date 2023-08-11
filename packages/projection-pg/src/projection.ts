@@ -1,7 +1,7 @@
 import { Pool } from "pg"
 import { collapseChanges } from "./collapse"
 import { Action, Change } from "./types"
-import { ident } from "pg-format"
+import { ident } from "./quote"
 
 interface Projection {
   table: string
