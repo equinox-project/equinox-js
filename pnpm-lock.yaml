@@ -316,9 +316,6 @@ importers:
 
   packages/projection-pg:
     dependencies:
-      '@equinox-js/core':
-        specifier: workspace:*
-        version: link:../core
       pg:
         specifier: ^8.8.0
         version: 8.8.0

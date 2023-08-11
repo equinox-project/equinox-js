@@ -28,7 +28,6 @@
     "vitest": "^0.34.1"
   },
   "dependencies": {
-    "@equinox-js/core": "workspace:*",
     "pg": "^8.8.0"
   }
 }
