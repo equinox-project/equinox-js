@@ -1,9 +1,3 @@
-function formatDate(date) {
-  date = date.replace("T", " ")
-  date = date.replace("Z", "+00")
-  return date
-}
-
 export function ident(ident: string) {
   // do not quote a valid, unquoted identifier
   if (/^[a-z_][a-z0-9_$]*$/.test(ident) === true && !isReserved(ident)) {
@@ -13,7 +7,7 @@ export function ident(ident: string) {
   return `"${ident.replace(/"/g, '""')}"`
 }
 
-function isReserved(value) {
+function isReserved(value: string) {
   return reserved.has(value.toUpperCase())
 }
 
