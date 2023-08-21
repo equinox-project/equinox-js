@@ -95,10 +95,10 @@ export function create(context: MessageDbContext, cache: ICache) {
     Events.codec,
     Fold.fold,
     Fold.initial,
-    access,
     cache,
+    access()
   )
-  const resolve = (id: AccountId) => Decider.forStream(category, Stream.id(id))
+  const resolve = (id: AccountId) => Decider.forStream(category, Stream.id(id), context)
   return new Service(resolve)
 }
 ```
