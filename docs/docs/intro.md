@@ -88,17 +88,17 @@ import { ICache, CachingStrategy, Decider } from "@equinox-js/core"
 
 export function create(context: MessageDbContext, cache: ICache) {
   const caching = CachingStrategy.Cache(cache)
-  const access = AccessStrategy.Unoptimized
+  const access = AccessStrategy.Unoptimized()
   const category = MessageDbCategory.create(
     context,
     Stream.Category,
     Events.codec,
     Fold.fold,
     Fold.initial,
-    access,
-    cache,
+    caching,
+    access
   )
-  const resolve = (id: AccountId) => Decider.forStream(category, Stream.id(id))
+  const resolve = (id: AccountId) => Decider.forStream(category, Stream.id(id), null)
   return new Service(resolve)
 }
 ```
