@@ -11,14 +11,14 @@ import * as Equinox from "@equinox-js/core"
 import { randomUUID } from "crypto"
 
 export class VolatileStore<Format> {
-  private readonly streams: Map<string, ITimelineEvent<Format>[]> = new Map()
-  private readonly batches: [string, ITimelineEvent<Format>[]][] = []
+  private readonly streams: Map<StreamName, ITimelineEvent<Format>[]> = new Map()
+  private readonly batches: [StreamName, ITimelineEvent<Format>[]][] = []
 
-  load(streamName: string) {
+  load(streamName: StreamName) {
     return this.streams.get(streamName) ?? []
   }
 
-  sync(streamName: string, expectedCount: number, events: ITimelineEvent<Format>[]) {
+  sync(streamName: StreamName, expectedCount: number, events: ITimelineEvent<Format>[]) {
     const currentValue = this.streams.get(streamName) ?? []
     if (currentValue.length !== expectedCount) return { success: false, events: currentValue }
     const newValue = [...currentValue, ...events]
@@ -29,7 +29,7 @@ export class VolatileStore<Format> {
 
   async handleFrom(
     from: bigint,
-    callback: (streamName: string, events: ITimelineEvent<Format>[]) => Promise<void>,
+    callback: (streamName: StreamName, events: ITimelineEvent<Format>[]) => Promise<void>,
   ) {
     const idx = Number(from)
     const len = this.batches.length
@@ -69,7 +69,7 @@ class Category<Event, State, Context, Format>
   supersedes = Token.supersedes
 
   async load(
-    streamId: string,
+    streamId: Equinox.StreamId,
     _maxStaleMs: number,
     _requireLeader: boolean,
   ): Promise<TokenAndState<State>> {
@@ -106,7 +106,7 @@ class Category<Event, State, Context, Format>
   }
 
   async sync(
-    streamId: string,
+    streamId: Equinox.StreamId,
     context: Context,
     originToken: StreamToken,
     originState: State,
@@ -132,10 +132,11 @@ class Category<Event, State, Context, Format>
   }
 
   async reload(
-    streamName: string,
+    streamId: Equinox.StreamId,
     _requireLeader: boolean,
     _t: TokenAndState<State>,
   ): Promise<TokenAndState<State>> {
+    const streamName = StreamName.create(this.categoryName, streamId)
     const result = this.store.load(streamName)
     const token = Token.ofValue(result)
     const events = this.decodeEvents(result)

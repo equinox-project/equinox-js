@@ -2,7 +2,8 @@ import { StreamToken, SyncResult, TokenAndState } from "./Core.js"
 import LRUCache from "lru-cache"
 import { ICategory } from "./Category.js"
 import { trace } from "@opentelemetry/api"
-import { Tags } from "../index.js"
+import * as Tags from './Tags.js'
+import { StreamId } from "./StreamId.js"
 
 export class CacheEntry<T> {
   constructor(
@@ -107,7 +108,7 @@ export class MemoryCache implements ICache {
 }
 
 export interface IReloadableCategory<E, S, C> extends ICategory<E, S, C> {
-  reload(streamName: string, requireLeader: boolean, t: TokenAndState<S>): Promise<TokenAndState<S>>
+  reload(streamId: StreamId, requireLeader: boolean, t: TokenAndState<S>): Promise<TokenAndState<S>>
 }
 
 export interface ICachingStrategy {
@@ -135,7 +136,7 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
   }
 
   load(
-    streamId: string,
+    streamId: StreamId,
     maxStaleMs: number,
     requireLeader: boolean,
   ): Promise<TokenAndState<State>> {
@@ -147,7 +148,7 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
   }
 
   async sync(
-    streamId: string,
+    streamId: StreamId,
     context: Context,
     originToken: StreamToken,
     originState: State,

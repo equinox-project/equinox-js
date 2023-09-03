@@ -2,7 +2,7 @@ import "./tracing.js"
 import pg from "pg"
 import { MessageDbContext } from "@equinox-js/message-db"
 import { Config, Store } from "../config/equinox.js"
-import { ITimelineEvent, MemoryCache } from "@equinox-js/core"
+import { ITimelineEvent, MemoryCache, StreamName } from "@equinox-js/core"
 import { Invoice, InvoiceAutoEmailer } from "../domain/index.js"
 import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-consumer"
 
@@ -20,7 +20,7 @@ const invoiceEmailer = InvoiceAutoEmailer.Service.create(config)
 const checkpointer = new PgCheckpoints(createPool(process.env.CP_CONN_STR)!)
 checkpointer.ensureTable().then(() => console.log("table created"))
 
-function impliesInvoiceEmailRequired(streamName: string, events: ITimelineEvent[]) {
+function impliesInvoiceEmailRequired(streamName: StreamName, events: ITimelineEvent[]) {
   const id = Invoice.Stream.tryMatch(streamName)
   if (!id) return
   const ev = Invoice.Events.codec.tryDecode(events[0])
@@ -28,7 +28,7 @@ function impliesInvoiceEmailRequired(streamName: string, events: ITimelineEvent[
   return { id, payer_id: ev.data.payer_id, amount: ev.data.amount }
 }
 
-async function handle(streamName: string, events: ITimelineEvent[]) {
+async function handle(streamName: StreamName, events: ITimelineEvent[]) {
   const req = impliesInvoiceEmailRequired(streamName, events)
   if (!req) return
   await invoiceEmailer.sendEmail(req.id, req.payer_id, req.amount)

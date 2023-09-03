@@ -1,61 +1,69 @@
-const CATEGORY_SEPARATOR = "-"
-const ID_SEPARATOR = "_"
+import { StreamId } from "./StreamId"
 
-function parseIdPart(rawElement: string) {
-  if (rawElement === "") throw new Error("StreamName: ID element must not be empty")
-  if (rawElement.includes(ID_SEPARATOR))
-    throw new Error("StreamName: ID element must not contain embedded '_' symbols")
-  return rawElement
-}
+export type StreamName = string & { __brand: "StreamName" }
 
-function parseCategoryPart(rawElement: string) {
-  if (rawElement === "") throw new Error("StreamName: Category element must not be empty")
-  if (rawElement.includes(CATEGORY_SEPARATOR))
-    throw new Error("StreamName: Category element must not contain embedded '-' symbols")
-  return rawElement
-}
+// Ugly hack to get typescript to export the type and the namespace
+// under the same name
 
-export function create(category: string, id: string) {
-  return parseCategoryPart(category) + CATEGORY_SEPARATOR + id
-}
-
-function splitCategoryAndId(streamName: string) {
-  const idx = streamName.indexOf(CATEGORY_SEPARATOR)
-  if (idx === -1) throw new Error("StreamName: Expected category separator '" + CATEGORY_SEPARATOR + "'")
-  return [streamName.slice(0, idx), streamName.slice(idx + 1)]
-}
-
-export function parseCategoryAndId(streamName: string) {
-  const [category, id] = splitCategoryAndId(streamName)
-  return [parseCategoryPart(category), parseIdPart(id)]
-}
-
-export function parseCategory(streamName: string) {
-  const idx = streamName.indexOf(CATEGORY_SEPARATOR)
-  if (idx === -1) throw new Error("StreamName: Expected category separator '" + CATEGORY_SEPARATOR + "'")
-  return parseCategoryPart(streamName.slice(0, idx))
-}
-
-export function parseCategoryAndIds(streamName: string) {
-  const [category, ids] = splitCategoryAndId(streamName)
-  return [parseCategoryPart(category), ids.split(ID_SEPARATOR).map(parseIdPart)]
-}
-
-export function match<A>(category: string, f: (id: string) => A): (streamName: string) => A | undefined
-export function match<A, B>(category: string, f: (id: string) => A, g: (id: string) => B): (streamName: string) => [A, B] | undefined
-export function match<A, B, C>(category: string, f: (id: string) => A, g: (id: string) => B, h: (id: string) => C): (streamName: string) => [A, B, C] | undefined
-export function match<A, B, C, D>(category: string, f: (id: string) => A, g: (id: string) => B, h: (id: string) => C, i: (id: string) => D): (streamName: string) => [A, B, C, D] | undefined
-export function match(category: string, ...fs: ((x: string) => unknown)[]) {
-  return (streamName: string) => {
-    const [cat, ids] = parseCategoryAndIds(streamName)
-    if (cat !== category) return
-    if (ids.length !== fs.length) throw new Error("StreamName: Expected " + fs.length + " IDs")
-      if (fs.length === 1) return fs[0](ids[0])
-    const result = new Array(fs.length)
-    for (let i = 0; i < fs.length; i++) {
-      result[i] = fs[i](ids[i])
+export namespace StreamName {
+  namespace Category {
+    export const separator = "-"
+    export function validate(raw: string) {
+      if (raw === "") throw new Error("StreamName: Category element must not be empty")
+      if (raw.includes(separator))
+        throw new Error("StreamName: Category element must not contain embedded '-' symbols")
     }
+    export function ofStreamName(x: StreamName) {
+      return x.slice(0, x.indexOf(separator))
+    }
+  }
+
+  export function category(x: StreamName) {
+    return Category.ofStreamName(x)
+  }
+
+  namespace Internal {
+    export function tryParse(raw: string): [string, StreamId] | undefined {
+      const idx = raw.indexOf(Category.separator)
+      const category = raw.substring(0, idx)
+      const id = raw.substring(idx + 1)
+      if (idx < 0 || !id || !category) return undefined
+      return [category, id as StreamId]
+    }
+  }
+
+  export function parse(x: string) {
+    const idx = x.indexOf(Category.separator)
+    if (idx === -1)
+      throw new Error(`StreamName "${x}" must contain a category separator "${Category.separator}"`)
+    return x as StreamName
+  }
+
+  export function create(category: string, id: StreamId) {
+    Category.validate(category)
+    return (category + Category.separator + id) as StreamName
+  }
+
+  export function compose(category: string, elements: string[]) {
+    return create(category, StreamId.Elements.compose(elements))
+  }
+
+  export function split(x: StreamName) {
+    const result = Internal.tryParse(x)
+    // should never happen
+    if (result === undefined) throw new Error(`StreamName "${x}" is invalid`)
     return result
   }
-}
 
+  export function tryMatch<T>(category: string, dec: (id: StreamId) => T) {
+    return (x: StreamName): T | undefined => {
+      const [cat, id] = split(x)
+      if (cat === category) return dec(id)
+      return undefined
+    }
+  }
+
+  export function tryFind(category: string) {
+    return tryMatch(category, (id) => id)
+  }
+}
