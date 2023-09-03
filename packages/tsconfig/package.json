@@ -1,8 +1,0 @@
-{
-  "name": "tsconfig",
-  "version": "1.0.0-alpha.24",
-  "private": true,
-  "files": [
-    "base.json"
-  ]
-}
