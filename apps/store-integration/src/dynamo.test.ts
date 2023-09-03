@@ -2,31 +2,33 @@ import * as Cart from "./domain/Cart.js"
 import * as ContactPreferences from "./domain/ContactPreferences.js"
 import { Decider, MemoryCache, Codec, CachingStrategy, Tags, StreamId } from "@equinox-js/core"
 import { describe, test, expect, afterEach, afterAll } from "vitest"
-import { Pool } from "pg"
 import { randomUUID } from "crypto"
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
 import { InMemorySpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base"
 import {
   AccessStrategy,
-  MessageDbCategory,
-  MessageDbConnection,
-  MessageDbContext,
-} from "@equinox-js/message-db"
+  DynamoStoreCategory,
+  DynamoStoreClient,
+  DynamoStoreContext,
+  TipOptions,
+  QueryOptions,
+} from "@equinox-js/dynamo-store"
+import { DynamoDB } from "@aws-sdk/client-dynamodb"
 
-const Category = MessageDbCategory
+const Category = DynamoStoreCategory
 
 const defaultBatchSize = 500
 
 namespace CartService {
   type E = Cart.Events.Event
   type S = Cart.Fold.State
-  const codec = Cart.Events.codec
+  const codec = Codec.deflate(Cart.Events.codec)
   const fold = Cart.Fold.fold
   const initial = Cart.Fold.initial
   const cache = new MemoryCache()
   const noCache = CachingStrategy.NoCache()
 
-  export function createWithoutOptimization(context: MessageDbContext) {
+  export function createWithoutOptimization(context: DynamoStoreContext) {
     const category = Category.create(
       context,
       Cart.Category,
@@ -39,38 +41,41 @@ namespace CartService {
     return Cart.Service.create(category)
   }
 
-  export function createWithSnapshotStrategy(context: MessageDbContext) {
-    const access = AccessStrategy.AdjacentSnapshots<E, S>(
-      Cart.Fold.snapshotEventType,
-      Cart.Fold.snapshot,
-    )
+  export function createWithSnapshotStrategy(context: DynamoStoreContext) {
+    const access = AccessStrategy.Snapshot<E, S>(Cart.Fold.isOrigin, Cart.Fold.snapshot)
     const category = Category.create(context, Cart.Category, codec, fold, initial, noCache, access)
     return Cart.Service.create(category)
   }
 
   const caching = CachingStrategy.Cache(cache)
 
-  export function createWithCaching(context: MessageDbContext) {
-    const category = Category.create(context, Cart.Category, codec, fold, initial, caching)
+  export function createWithCaching(context: DynamoStoreContext) {
+    const access = AccessStrategy.Unoptimized()
+    const category = Category.create(context, Cart.Category, codec, fold, initial, caching, access)
     return Cart.Service.create(category)
   }
 
-  export function createWithSnapshotStrategyAndCaching(context: MessageDbContext) {
-    const access = AccessStrategy.AdjacentSnapshots<E, S>(
-      Cart.Fold.snapshotEventType,
-      Cart.Fold.snapshot,
-    )
+  export function createWithSnapshotStrategyAndCaching(context: DynamoStoreContext) {
+    const access = AccessStrategy.Snapshot<E, S>(Cart.Fold.isOrigin, Cart.Fold.snapshot)
     const category = Category.create(context, Cart.Category, codec, fold, initial, caching, access)
     return Cart.Service.create(category)
   }
 }
+const ddb = new DynamoDB({
+  region: "local",
+  credentials: { accessKeyId: "local", secretAccessKey: "local" },
+  endpoint: "http://127.0.0.1:8000",
+})
 
-const client = MessageDbConnection.create(
-  new Pool({ connectionString: "postgres://message_store:@127.0.0.1:5432/message_store" }),
-)
+const client = new DynamoStoreClient(ddb)
 
-const createContext = (connection: MessageDbConnection, batchSize: number) =>
-  new MessageDbContext(connection, batchSize)
+const createContext = (connection: DynamoStoreClient, batchSize: number) =>
+  new DynamoStoreContext({
+    client: connection,
+    tableName: "test_events",
+    tip: TipOptions.create({ maxEvents: batchSize }),
+    query: QueryOptions.create({ maxItems: batchSize }),
+  })
 
 namespace SimplestThing {
   export type Event = { type: "StuffHappened" }
@@ -79,8 +84,15 @@ namespace SimplestThing {
   export const initial: Event = { type: "StuffHappened" }
   export const fold = (_state: Event, events: Event[]) => events.reduce(evolve, initial)
   export const categoryName = "SimplestThing"
-  export const resolve = (context: MessageDbContext, categoryName: string, streamId: StreamId) => {
-    const category = Category.create(context, categoryName, codec, fold, initial)
+  export const resolve = (
+    context: DynamoStoreContext,
+    categoryName: string,
+    streamId: StreamId,
+  ) => {
+    const caching = CachingStrategy.NoCache()
+    const access = AccessStrategy.Unoptimized()
+    // prettier-ignore
+    const category = Category.create(context, categoryName, Codec.deflate(codec), fold, initial, caching, access)
     return Decider.forStream(category, streamId, undefined)
   }
 }
@@ -88,12 +100,12 @@ namespace SimplestThing {
 namespace ContactPreferencesService {
   const { fold, initial, codec } = ContactPreferences
 
-  export const createService = (client: MessageDbConnection) => {
+  export const createService = (client: DynamoStoreClient) => {
     const context = createContext(client, defaultBatchSize)
     const category = Category.create(
       context,
       ContactPreferences.Category,
-      codec,
+      Codec.deflate(codec),
       fold,
       initial,
       undefined,
@@ -119,6 +131,7 @@ const assertSpans = (...expected: Record<string, any>[]) => {
     status_message: x.status.message,
   }))
   expect(attributes).toEqual(expected.map(expect.objectContaining))
+  memoryExporter.reset()
 }
 
 provider.addSpanProcessor(spanProcessor)
@@ -204,17 +217,37 @@ describe("Round-trips against the store", () => {
       [Tags.loaded_count]: 0,
       [Tags.append_count]: 11,
     })
-    memoryExporter.reset()
 
-    const state = await service.read(cartId)
+    let state = await service.read(cartId)
     expect(state.items).toEqual([expect.objectContaining({ quantity: addRemoveCount })])
 
     const expectedEventCount = 2 * addRemoveCount - 1
-    const expectedBatches = Math.ceil(expectedEventCount / batchSize)
+    // because dynamo requires that appends always first go through the tip we end up with a single tip read here
     assertSpans({
       name: "Query",
-      [Tags.batches]: expectedBatches,
+      [Tags.batches]: 1,
       [Tags.loaded_count]: expectedEventCount,
+    })
+
+    await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(
+      cartContext,
+      cartId,
+      skuId,
+      service,
+      addRemoveCount,
+    )
+    assertSpans({
+      name: "Transact",
+      [Tags.batches]: 1,
+      [Tags.loaded_count]: 11,
+      [Tags.append_count]: 11,
+    })
+    state = await service.read(cartId)
+    expect(state.items).toEqual([expect.objectContaining({ quantity: addRemoveCount })])
+    assertSpans({
+      name: "Query",
+      [Tags.batches]: 2,
+      [Tags.loaded_count]: expectedEventCount * 2,
     })
   })
   test("manages sync conflicts by retrying [without any optimizations]", async () => {

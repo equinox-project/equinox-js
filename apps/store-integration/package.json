@@ -6,7 +6,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.258.0",
     "@equinox-js/core": "workspace:*",
+    "@equinox-js/dynamo-store": "workspace:*",
     "@equinox-js/message-db": "workspace:*",
     "@opentelemetry/api": "^1.4.0",
     "@opentelemetry/sdk-trace-base": "^1.9.0",

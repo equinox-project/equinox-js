@@ -1,4 +1,5 @@
 import { IEventData, ITimelineEvent } from "./Types.js"
+import * as zlib from "zlib"
 
 export interface ICodec<E, F, C = undefined> {
   tryDecode(event: ITimelineEvent<F>): E | undefined
@@ -54,5 +55,21 @@ export const upcast = <E extends DomainEvent, Ctx = null>(
       return upcast(decoded)
     },
     encode: codec.encode,
+  }
+}
+
+export function deflate<E, C>(codec: ICodec<E, string, C>): ICodec<E, Buffer, C> {
+  return {
+    tryDecode(e) {
+      const data = e.data ? zlib.inflateSync(e.data).toString() : undefined
+      const meta = e.meta ? zlib.inflateSync(e.meta).toString() : undefined
+      return codec.tryDecode({ ...e, data, meta })
+    },
+    encode(e, ctx) {
+      const inner = codec.encode(e, ctx)
+      const data = inner.data ? zlib.deflateSync(inner.data) : undefined
+      const meta = inner.meta ? zlib.deflateSync(inner.meta) : undefined
+      return { ...inner, data, meta }
+    },
   }
 }
