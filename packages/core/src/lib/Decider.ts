@@ -1,5 +1,6 @@
 import { IStream, queryAsync, TokenAndState, transactAsync } from "./Core.js"
 import { Category } from "./Category.js"
+import { StreamId } from "./StreamId.js"
 
 type LoadOption = { requireLoad?: boolean, requireLeader?: boolean, maxStaleMs?: number, assumeEmpty?: boolean }
 
@@ -311,7 +312,7 @@ export class Decider<Event, State> {
     )
   }
 
-  static forStream<E, S, C>(category: Category<E, S, C>, streamId: string, context: C) {
+  static forStream<E, S, C>(category: Category<E, S, C>, streamId: StreamId, context: C) {
     return new Decider(category.stream(context, streamId))
   }
 }

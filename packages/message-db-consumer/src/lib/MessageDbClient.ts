@@ -1,5 +1,5 @@
 import { Pool } from "pg"
-import { ITimelineEvent } from "@equinox-js/core"
+import { ITimelineEvent, StreamName } from "@equinox-js/core"
 
 export type Format = string
 
@@ -41,9 +41,9 @@ export class MessageDbCategoryReader {
   }
 }
 
-function fromDb(row: any): [string, ITimelineEvent<Format>] {
+function fromDb(row: any): [StreamName, ITimelineEvent<Format>] {
   return [
-    row.stream_name,
+    row.stream_name as StreamName,
     {
       size: -1,
       id: row.id,

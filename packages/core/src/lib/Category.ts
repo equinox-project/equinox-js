@@ -1,11 +1,12 @@
 import { IStream, TokenAndState, StreamToken, SyncResult } from "./Core.js"
 import { trace } from "@opentelemetry/api"
-import { Tags } from "../index.js"
+import * as Tags from './Tags.js'
+import { StreamId } from "./StreamId.js"
 
 /** Store-agnostic interface representing interactions an Application can have with a set of streams with a given pair of Event and State types */
 export interface ICategory<Event, State, Context = null> {
   /** Obtain the state from the target stream */
-  load(streamId: string, maxStaleMs: number, requireLeader: boolean): Promise<TokenAndState<State>>
+  load(streamId: StreamId, maxStaleMs: number, requireLeader: boolean): Promise<TokenAndState<State>>
 
   /**
    * Given the supplied `token` [and related `originState`], attempt to move to state `state'` by appending the supplied `events` to the underlying stream
@@ -13,7 +14,7 @@ export interface ICategory<Event, State, Context = null> {
    * SyncResult.Conflict: implies the `events` were not synced; if desired the consumer can use the included resync workflow in order to retry
    */
   sync(
-    streamId: string,
+    streamId: StreamId,
     context: Context,
     originToken: StreamToken,
     originState: State,
@@ -27,7 +28,7 @@ export class Category<Event, State, Context = null> {
     private readonly empty: TokenAndState<State>,
   ) {}
 
-  stream(context: Context, streamId: string): IStream<Event, State> {
+  stream(context: Context, streamId: StreamId): IStream<Event, State> {
     return {
       loadEmpty: () => this.empty,
       load: (maxStaleMs, requireLeader) => {

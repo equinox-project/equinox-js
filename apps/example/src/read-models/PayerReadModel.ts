@@ -1,4 +1,4 @@
-import { ITimelineEvent } from "@equinox-js/core"
+import { ITimelineEvent, StreamName } from "@equinox-js/core"
 import { Pool } from "pg"
 import { PayerId } from "../domain/identifiers.js"
 import { Payer } from "../domain/index.js"
@@ -10,7 +10,7 @@ const { Delete, Upsert } = forEntity<Payer, "id"| "version">()
 
 export const projection = { table: "payer", id: ["id"], version: "version"}
 
-function changes(stream: string, events: ITimelineEvent[]): Change[] {
+function changes(stream: StreamName, events: ITimelineEvent[]): Change[] {
   const id = Payer.Stream.tryMatch(stream) 
   if (!id) return []
   const event = Payer.Events.codec.tryDecode(events[events.length - 1])

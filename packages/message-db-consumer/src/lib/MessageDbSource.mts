@@ -1,6 +1,6 @@
 import { MessageDbCategoryReader } from "./MessageDbClient.js"
 import { ICheckpointer } from "./Checkpoints.js"
-import { ITimelineEvent, Tags } from "@equinox-js/core"
+import { ITimelineEvent, StreamName, Tags } from "@equinox-js/core"
 import { Pool } from "pg"
 import { SpanKind, SpanStatusCode, trace } from "@opentelemetry/api"
 import { sleep } from "./Sleep.js"
@@ -21,7 +21,7 @@ interface CreateOptions {
   /** The checkpointer to use for checkpointing */
   checkpointer: ICheckpointer
   /** The handler to call for each batch of stream messages */
-  handler: (streamName: string, events: ITimelineEvent[]) => Promise<void>
+  handler: (streamName: StreamName, events: ITimelineEvent[]) => Promise<void>
   /** sleep time in ms between reads when at the end of the category */
   tailSleepIntervalMs: number
   /** The maximum number of concurrent streams to process, enforced via p-limit */
@@ -53,7 +53,7 @@ export class MessageDbSource {
 
   private runHandlerWithTrace(
     category: string,
-    streamName: string,
+    streamName: StreamName,
     events: ITimelineEvent[],
     handler: () => Promise<void>,
   ) {
@@ -113,7 +113,7 @@ export class MessageDbSource {
     while (!signal.aborted) {
       const batch = await readBatch(position)
       if (signal.aborted) return
-      const byStreamName = new Map<string, ITimelineEvent[]>()
+      const byStreamName = new Map<StreamName, ITimelineEvent[]>()
       for (let i = 0; i < batch.messages.length; ++i) {
         const [streamName, msg] = batch.messages[i]
         if (!byStreamName.has(streamName)) byStreamName.set(streamName, [])

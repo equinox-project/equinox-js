@@ -132,7 +132,7 @@ export class MessageDbContext {
   }
 
   async reload<Event, State>(
-    streamName: string,
+    streamName: Equinox.StreamName,
     requireLeader: boolean,
     token: StreamToken,
     tryDecode: TryDecode<Event>,
@@ -237,7 +237,7 @@ class InternalCategory<Event, State, Context>
   ) {}
 
   private async loadAlgorithm(
-    streamId: string,
+    streamId: Equinox.StreamId,
     requireLeader: boolean,
   ): Promise<[StreamToken, State]> {
     const streamName = Equinox.StreamName.create(this.categoryName, streamId)
@@ -297,12 +297,12 @@ class InternalCategory<Event, State, Context>
 
   supersedes = Token.supersedes
 
-  async load(streamId: string, _maxStaleMs: number, requireLeader: boolean) {
+  async load(streamId: Equinox.StreamId, _maxStaleMs: number, requireLeader: boolean) {
     const [token, state] = await this.loadAlgorithm(streamId, requireLeader)
     return { token, state }
   }
 
-  async reload(streamId: string, requireLeader: boolean, t: TokenAndState<State>) {
+  async reload(streamId: Equinox.StreamId, requireLeader: boolean, t: TokenAndState<State>) {
     const streamName = Equinox.StreamName.create(this.categoryName, streamId)
     const [token, state] = await this.context.reload(
       streamName,
@@ -316,7 +316,7 @@ class InternalCategory<Event, State, Context>
   }
 
   async sync(
-    streamId: string,
+    streamId: Equinox.StreamId,
     ctx: Context,
     token: StreamToken,
     state: State,
