@@ -5,11 +5,11 @@ import { equals } from "ramda"
 import * as Config from "../config/equinox.js"
 
 export namespace Stream {
-  export const CATEGORY = "Payer"
+  export const category = "Payer"
   export const streamId = StreamId.gen(PayerId.toString)
   export const decodeId = StreamId.dec(PayerId.parse)
-  export const tryMatch = StreamName.tryMatch(CATEGORY, decodeId)
-  export const name = (id: PayerId) => StreamName.create(CATEGORY, streamId(id))
+  export const tryMatch = StreamName.tryMatch(category, decodeId)
+  export const name = StreamName.gen(category, streamId)
 }
 
 export namespace Events {
@@ -80,7 +80,7 @@ export class Service {
     switch (config.store) {
       case Config.Store.Memory:
         return Config.MemoryStore.create(
-          Stream.CATEGORY,
+          Stream.category,
           Events.codec,
           Fold.fold,
           Fold.initial,
@@ -88,7 +88,7 @@ export class Service {
         )
       case Config.Store.MessageDb:
         return Config.MessageDb.createLatestKnown(
-          Stream.CATEGORY,
+          Stream.category,
           Events.codec,
           Fold.fold,
           Fold.initial,

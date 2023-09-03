@@ -66,4 +66,13 @@ export namespace StreamName {
   export function tryFind(category: string) {
     return tryMatch(category, (id) => id)
   }
+
+  type StreamIdFunc = (...args: any[]) => StreamId
+
+  export function gen<Id extends StreamIdFunc>(
+    category: string,
+    streamId: Id,
+  ): (...args: Parameters<Id>) => StreamName {
+    return (...args: Parameters<Id>) => create(category, streamId(...args))
+  }
 }
