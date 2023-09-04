@@ -1,7 +1,7 @@
 import * as Cart from "./domain/Cart.js"
 import * as ContactPreferences from "./domain/ContactPreferences.js"
 import { Decider, MemoryCache, Codec, CachingStrategy, Tags, StreamId } from "@equinox-js/core"
-import { describe, test, expect, afterEach, afterAll } from "vitest"
+import { describe, test, expect, afterEach, afterAll, beforeAll } from "vitest"
 import { randomUUID } from "crypto"
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
 import { InMemorySpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base"
