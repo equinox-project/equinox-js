@@ -61,3 +61,5 @@ export const snapshot_written = "eqx.snapshot.written"
 export const append_version = "eqx.append.version"
 /** In case of conflict, which event types did we try to append */
 export const append_types = "eqx.append.types"
+
+export const eqxAttrs = Symbol.for("eqx.attrs")

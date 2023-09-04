@@ -1,6 +1,7 @@
 import {
   AttributeValue,
   ConditionalCheckFailedException,
+  ConsumedCapacity,
   DynamoDB,
   QueryCommandOutput,
   ReturnConsumedCapacity,
@@ -23,7 +24,7 @@ import {
 } from "@equinox-js/core"
 import { randomUUID } from "crypto"
 import { keepMapRev, keepMap } from "./Array.js"
-import { trace } from "@opentelemetry/api"
+import { context, trace } from "@opentelemetry/api"
 
 /** A single Domain Event from the array held in a Batch */
 type Event = {
@@ -334,12 +335,14 @@ export class StoreTable {
 
   async tryGetTip(stream: string, consistentRead: boolean) {
     const key = Batch.tableKeyForStreamTip(stream)
-    const item = await this.client.getItem({
-      TableName: this.name,
-      Key: key,
-      ConsistentRead: consistentRead,
-      ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
-    })
+    const item = await this.client
+      .getItem({
+        TableName: this.name,
+        Key: key,
+        ConsistentRead: consistentRead,
+        ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
+      })
+      .then(reportRU)
 
     if (!item.Item) return undefined
     return Batch.ofSchema(item.Item as Batch.Schema)
@@ -347,14 +350,16 @@ export class StoreTable {
 
   async tryUpdateTip(stream: string, expr: DynamoExpr) {
     const pk = Batch.tableKeyForStreamTip(stream)
-    const result = await this.client.updateItem({
-      TableName: this.name,
-      Key: pk,
-      UpdateExpression: expr.text,
-      ConditionExpression: expr.condition,
-      ExpressionAttributeValues: expr.values,
-      ReturnValues: "ALL_NEW",
-    })
+    const result = await this.client
+      .updateItem({
+        TableName: this.name,
+        Key: pk,
+        UpdateExpression: expr.text,
+        ConditionExpression: expr.condition,
+        ExpressionAttributeValues: expr.values,
+        ReturnValues: "ALL_NEW",
+      })
+      .then(reportRU)
     if (!result.Attributes) return undefined
     return Batch.ofSchema(result.Attributes as Batch.Schema)
   }
@@ -373,17 +378,19 @@ export class StoreTable {
       if (maxI != null) attributes[":maxI"] = { N: String(maxI) }
       if (minN != null) attributes[":minN"] = { N: String(minN) }
 
-      return this.client.query({
-        TableName: this.name,
-        KeyConditionExpression: maxI == null ? "p = :p" : "p = :p AND i < :maxI",
-        FilterExpression: minN == null ? undefined : "n > :minN",
-        ExpressionAttributeValues: attributes,
-        Limit: batchSize,
-        ExclusiveStartKey: le,
-        ScanIndexForward: !backwards,
-        ConsistentRead: consistentRead,
-        ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
-      })
+      return this.client
+        .query({
+          TableName: this.name,
+          KeyConditionExpression: maxI == null ? "p = :p" : "p = :p AND i < :maxI",
+          FilterExpression: minN == null ? undefined : "n > :minN",
+          ExpressionAttributeValues: attributes,
+          Limit: batchSize,
+          ExclusiveStartKey: le,
+          ScanIndexForward: !backwards,
+          ConsistentRead: consistentRead,
+          ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
+        })
+        .then(reportRU)
     }
     let lastEvaluatedKey: Record<string, AttributeValue> | undefined = undefined
     do {
@@ -395,18 +402,20 @@ export class StoreTable {
   }
   async *queryIAndNOrderByNAscending(stream: string, maxItems: number): AsyncIterable<Projected[]> {
     const send = (le?: Record<string, any>) =>
-      this.client.query({
-        TableName: this.name,
-        KeyConditionExpression: "p = :p",
-        ExpressionAttributeValues: {
-          ":p": { S: stream },
-        },
-        ProjectionExpression: "i, c, n",
-        Limit: maxItems,
-        ExclusiveStartKey: le,
-        ScanIndexForward: true,
-        ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
-      })
+      this.client
+        .query({
+          TableName: this.name,
+          KeyConditionExpression: "p = :p",
+          ExpressionAttributeValues: {
+            ":p": { S: stream },
+          },
+          ProjectionExpression: "i, c, n",
+          Limit: maxItems,
+          ExclusiveStartKey: le,
+          ScanIndexForward: true,
+          ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
+        })
+        .then(reportRU)
 
     let lastEvaluatedKey: Record<string, AttributeValue> | undefined = undefined
     do {
@@ -418,11 +427,13 @@ export class StoreTable {
   }
 
   async deleteItem(stream: string, i: bigint) {
-    await this.client.deleteItem({
-      TableName: this.name,
-      Key: { p: { S: stream }, i: { N: String(i) } },
-      ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
-    })
+    await this.client
+      .deleteItem({
+        TableName: this.name,
+        Key: { p: { S: stream }, i: { N: String(i) } },
+        ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
+      })
+      .then(reportRU)
   }
 }
 
@@ -632,17 +643,17 @@ namespace Sync {
         await table.client.putItem({
           ...actions[0].Put,
           ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
-        })
+        }).then(reportRU)
       } else if (actions.length === 1 && actions[0].Update != null) {
         await table.client.updateItem({
           ...actions[0].Update,
           ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
-        })
+        }).then(reportRU)
       } else {
         await table.client.transactWriteItems({
           TransactItems: actions,
           ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
-        })
+        }).then(reportRU)
       }
       return { type: "Written", etag: etag_ }
     } catch (err: any) {
@@ -1471,4 +1482,16 @@ export class DynamoStoreCategory {
     const empty: TokenAndState<S> = { token: Token.empty, state: initial }
     return new Category(category, empty)
   }
+}
+
+type ConsumedCapacityOutput = { ConsumedCapacity?: ConsumedCapacity | ConsumedCapacity[] }
+function reportRU<T extends ConsumedCapacityOutput>(response: T): T {
+  if (!response.ConsumedCapacity) return response
+  const capacities = Array.isArray(response.ConsumedCapacity)
+    ? response.ConsumedCapacity
+    : [response.ConsumedCapacity]
+  const cost = capacities.reduce((acc, x) => acc + (x.CapacityUnits ?? 0), 0)
+  const map = context.active().getValue(Tags.eqxAttrs) as Map<string, any>
+  map.set("eqx.ru", (map.get("eqx.ru") ?? 0) + cost)
+  return response
 }

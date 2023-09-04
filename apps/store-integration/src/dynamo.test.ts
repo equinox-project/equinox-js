@@ -211,6 +211,7 @@ describe("Round-trips against the store", () => {
       addRemoveCount,
     )
 
+    const attrs = getStoreSpans()[0].attributes
     assertSpans({
       name: "Transact",
       [Tags.pages]: 1,
@@ -218,6 +219,8 @@ describe("Round-trips against the store", () => {
       [Tags.loaded_count]: 0,
       [Tags.append_count]: 11,
     })
+    expect(attrs["eqx.ru"]).toBeLessThanOrEqual(3)
+    expect(attrs["eqx.ru"]).toBeGreaterThanOrEqual(2)
 
     let state = await service.read(cartId)
     expect(state.items).toEqual([expect.objectContaining({ quantity: addRemoveCount })])
@@ -229,6 +232,7 @@ describe("Round-trips against the store", () => {
       [Tags.pages]: 1,
       [Tags.batches]: 1,
       [Tags.loaded_count]: expectedEventCount,
+      "eqx.ru": 0.5,
     })
 
     await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(
@@ -244,6 +248,7 @@ describe("Round-trips against the store", () => {
       [Tags.batches]: 1,
       [Tags.loaded_count]: 11,
       [Tags.append_count]: 11,
+      "eqx.ru": 28.5,
     })
     state = await service.read(cartId)
     expect(state.items).toEqual([expect.objectContaining({ quantity: addRemoveCount })])
@@ -252,6 +257,7 @@ describe("Round-trips against the store", () => {
       [Tags.pages]: 1,
       [Tags.batches]: 2,
       [Tags.loaded_count]: expectedEventCount * 2,
+      "eqx.ru": 1,
     })
   })
   test("manages sync conflicts by retrying [without any optimizations]", async () => {
@@ -368,6 +374,7 @@ describe("Caching", () => {
       [Tags.load_method]: "BatchBackward",
       [Tags.loaded_count]: 0,
       [Tags.append_count]: 9,
+      "eqx.ru": 2,
     })
     const staleRes = await service2.readStale(cartId)
     memoryExporter.reset()
@@ -379,6 +386,7 @@ describe("Caching", () => {
       [Tags.loaded_count]: 0,
       [Tags.loaded_from_version]: "9",
       [Tags.cache_hit]: true,
+      "eqx.ru": 0.5,
     })
 
     // Add one more - the round-trip should only incur a single read
@@ -396,13 +404,14 @@ describe("Caching", () => {
       [Tags.loaded_count]: 0,
       [Tags.cache_hit]: true,
       [Tags.append_count]: 1,
+      "eqx.ru": 2.5,
     })
 
     const res = await service2.readStale(cartId)
     expect(res).not.toEqual(freshRes)
     assertSpans({ name: "Query", [Tags.cache_hit]: true })
     await service2.read(cartId)
-    assertSpans({ name: "Query", [Tags.loaded_count]: 0, [Tags.cache_hit]: true })
+    assertSpans({ name: "Query", [Tags.loaded_count]: 0, [Tags.cache_hit]: true, "eqx.ru": 0.5 })
 
     // Optimistic transactions
     // As the cache is up-to-date, we can transact against the cached value and do a null transaction without a round-trip
@@ -416,6 +425,7 @@ describe("Caching", () => {
     let attrs = getStoreSpans()[0].attributes
     assertSpans({ name: "Transact", [Tags.cache_hit]: true, [Tags.allow_stale]: true })
     expect(attrs).not.to.have.property(Tags.batches)
+    expect(attrs).not.to.have.property(Tags.append_count)
     // As the cache is up-to-date, we can do an optimistic append, saving a Read round-trip
     const skuId3 = randomUUID() as Cart.SkuId
     await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(
@@ -428,7 +438,7 @@ describe("Caching", () => {
 
     // this time, we did something, so we see the append call
     attrs = getStoreSpans()[0].attributes
-    assertSpans({ name: "Transact", [Tags.cache_hit]: true, [Tags.append_count]: 1 })
+    assertSpans({ name: "Transact", [Tags.cache_hit]: true, [Tags.append_count]: 1, "eqx.ru": 8 })
     expect(attrs).not.to.have.property(Tags.batches)
 
     // If we don't have a cache attached, we don't benefit from / pay the price for any optimism
@@ -446,6 +456,7 @@ describe("Caching", () => {
       [Tags.batches]: 2,
       [Tags.cache_hit]: false,
       [Tags.append_count]: 1,
+      "eqx.ru": 1.5,
     })
     // we've engineered a clash with the cache state (service3 doest participate in caching)
     // Conflict with cached state leads to a read forward to re-sync; Then we'll idempotently decide not to do any append
@@ -459,7 +470,7 @@ describe("Caching", () => {
     )
 
     const events = memoryExporter.getFinishedSpans()[0].events
-    assertSpans({ name: "Transact", [Tags.cache_hit]: true, [Tags.allow_stale]: true })
+    assertSpans({ name: "Transact", [Tags.cache_hit]: true, [Tags.allow_stale]: true, "eqx.ru": 1 })
     expect(events).toEqual([expect.objectContaining({ name: "Conflict" })])
   })
 })

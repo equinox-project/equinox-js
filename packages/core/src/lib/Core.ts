@@ -1,4 +1,6 @@
 import { tracer } from "./Tracing"
+import { context, trace } from "@opentelemetry/api"
+import { eqxAttrs } from "./Tags"
 
 export type TokenAndState<State> = { token: StreamToken; state: State }
 
@@ -66,6 +68,21 @@ function run<Event, State, Result, V = Result>(
   return loop(1, origin)
 }
 
+function wrapInTrace<T>(name: string, fn: () => Promise<T>) {
+  const span = tracer.startSpan(name)
+  const attrs = new Map<string, any>()
+  const otelCtx = trace.setSpan(context.active(), span).setValue(eqxAttrs, attrs)
+  return context.with(otelCtx, () =>
+    fn().finally(() => {
+      const attrs = otelCtx.getValue(eqxAttrs) as Map<string, any>
+      for (const [key, value] of attrs.entries()) {
+        span.setAttribute(key, value)
+      }
+      span.end()
+    }),
+  )
+}
+
 export function transactAsync<Event, State, Result, V = Result>(
   stream: IStream<Event, State>,
   fetch: (stream: IStream<Event, State>) => Promise<TokenAndState<State>>,
@@ -73,10 +90,8 @@ export function transactAsync<Event, State, Result, V = Result>(
   reload: (attempt: number) => void,
   mapResult: (r: Result, ctx: TokenAndState<State>) => V,
 ) {
-  return tracer.startActiveSpan("Transact", (span) =>
-    fetch(stream)
-      .then((origin) => run(stream, decide, reload, mapResult, origin))
-      .finally(() => span.end()),
+  return wrapInTrace("Transact", () =>
+    fetch(stream).then((origin) => run(stream, decide, reload, mapResult, origin)),
   )
 }
 
@@ -85,9 +100,5 @@ export function queryAsync<Event, State, V>(
   fetch: (stream: IStream<Event, State>) => Promise<TokenAndState<State>>,
   projection: (ctx: TokenAndState<State>) => V,
 ): Promise<V> {
-  return tracer.startActiveSpan("Query", (span) =>
-    fetch(stream)
-      .then(projection)
-      .finally(() => span.end()),
-  )
+  return wrapInTrace("Query", () => fetch(stream).then(projection))
 }
