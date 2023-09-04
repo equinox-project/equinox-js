@@ -66,6 +66,27 @@ const ddb = new DynamoDB({
   credentials: { accessKeyId: "local", secretAccessKey: "local" },
   endpoint: "http://127.0.0.1:8000",
 })
+beforeAll(async () => {
+  try {
+    await ddb.describeTable({
+      TableName: "test_events",
+    })
+  } catch (err) {
+    console.log("Table does not exists. Creating")
+    await ddb.createTable({
+      BillingMode: "PAY_PER_REQUEST",
+      AttributeDefinitions: [
+        { AttributeName: "p", AttributeType: "S" },
+        { AttributeName: "i", AttributeType: "N" },
+      ],
+      TableName: "test_events",
+      KeySchema: [
+        { AttributeName: "p", KeyType: "HASH" },
+        { AttributeName: "i", KeyType: "RANGE" },
+      ],
+    })
+  }
+})
 
 const client = new DynamoStoreClient(ddb)
 
