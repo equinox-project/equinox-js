@@ -1,5 +1,6 @@
 import {
   AttributeValue,
+  ConditionalCheckFailedException,
   DynamoDB,
   QueryCommandOutput,
   ReturnConsumedCapacity,
@@ -645,8 +646,9 @@ namespace Sync {
       }
       return { type: "Written", etag: etag_ }
     } catch (err: any) {
+      if (err instanceof ConditionalCheckFailedException) return { type: "ConflictUnknown" }
       console.error(err)
-      return { type: "ConflictUnknown" }
+      throw err
     }
   }
 
@@ -880,7 +882,8 @@ namespace Query {
     maxIndex: number | undefined,
   ): Promise<ScanResult<E> | undefined> {
     let found = false
-    let responseCount = 0
+    let pagesCount = 0
+    let batchCount = 0
     let maybeTipPos: Position | undefined = undefined
     const events: [Event, E | undefined][] = []
 
@@ -898,11 +901,12 @@ namespace Query {
         minIndex,
         maxIndex,
         maxRequests,
-        responseCount,
+        pagesCount,
         batches,
       )
       if (maybeTipPos == null) maybeTipPos = maybePos
-      responseCount++
+      pagesCount++
+      batchCount += batches.length
       for (const x of batchEvents) {
         const decoded = tryDecode(Event.toTimelineEvent(x))
         events.push([x, decoded])
@@ -914,7 +918,8 @@ namespace Query {
       if (found) break
     }
     trace.getActiveSpan()?.setAttributes({
-      [Tags.batches]: responseCount,
+      [Tags.batches]: batchCount,
+      [Tags.pages]: pagesCount,
       [Tags.loaded_count]: events.length,
     })
 
@@ -1122,6 +1127,8 @@ class StoreClient {
     isOrigin: (e: E) => boolean,
     checkUnfolds: boolean,
   ): Promise<[StreamToken, E[]]> {
+    const span = trace.getActiveSpan()
+    span?.setAttribute(Tags.load_method, "BatchBackward")
     if (!checkUnfolds)
       return this.read(stream, consistentRead, Direction.Backward, tryDecode, isOrigin)
     const res = await this.loadTip(stream, consistentRead, maybePos)
@@ -1210,6 +1217,7 @@ class StoreClient {
     )
     switch (res.type) {
       case "ConflictUnknown":
+        trace.getActiveSpan()?.addEvent("Conflict")
         return { type: "ConflictUnknown" }
       case "Written":
         return {

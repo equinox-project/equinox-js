@@ -12,7 +12,7 @@ import {
   DynamoStoreContext,
   TipOptions,
   QueryOptions,
-} from "@equinox-js/dynamo-store"
+} from "../../../packages/dynamo-store/dynamo-store/src/index.js"
 import { DynamoDB } from "@aws-sdk/client-dynamodb"
 
 const Category = DynamoStoreCategory
@@ -213,7 +213,8 @@ describe("Round-trips against the store", () => {
 
     assertSpans({
       name: "Transact",
-      [Tags.batches]: 1,
+      [Tags.pages]: 1,
+      [Tags.batches]: 0,
       [Tags.loaded_count]: 0,
       [Tags.append_count]: 11,
     })
@@ -225,6 +226,7 @@ describe("Round-trips against the store", () => {
     // because dynamo requires that appends always first go through the tip we end up with a single tip read here
     assertSpans({
       name: "Query",
+      [Tags.pages]: 1,
       [Tags.batches]: 1,
       [Tags.loaded_count]: expectedEventCount,
     })
@@ -238,6 +240,7 @@ describe("Round-trips against the store", () => {
     )
     assertSpans({
       name: "Transact",
+      [Tags.pages]: 1,
       [Tags.batches]: 1,
       [Tags.loaded_count]: 11,
       [Tags.append_count]: 11,
@@ -246,6 +249,7 @@ describe("Round-trips against the store", () => {
     expect(state.items).toEqual([expect.objectContaining({ quantity: addRemoveCount })])
     assertSpans({
       name: "Query",
+      [Tags.pages]: 1,
       [Tags.batches]: 2,
       [Tags.loaded_count]: expectedEventCount * 2,
     })
@@ -361,7 +365,7 @@ describe("Caching", () => {
     )
     assertSpans({
       name: "Transact",
-      [Tags.load_method]: "BatchForward",
+      [Tags.load_method]: "BatchBackward",
       [Tags.loaded_count]: 0,
       [Tags.append_count]: 9,
     })
@@ -372,7 +376,6 @@ describe("Caching", () => {
 
     assertSpans({
       name: "Query",
-      [Tags.batches]: 1,
       [Tags.loaded_count]: 0,
       [Tags.loaded_from_version]: "9",
       [Tags.cache_hit]: true,

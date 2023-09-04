@@ -19,6 +19,8 @@ export const read_version = "eqx.load.version"
 export const batch_size = "eqx.load.batch_size"
 /** The total number of batches loaded from the store */
 export const batches = "eqx.load.batches"
+/** The total number of pages loaded from the store (each page can contain multiple batches) */
+export const pages = "eqx.load.pages"
 /** The total number of events loaded from the store */
 export const loaded_count = "eqx.load.count"
 /** The total size of events loaded */
