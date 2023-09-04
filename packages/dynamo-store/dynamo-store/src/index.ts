@@ -686,7 +686,7 @@ namespace Sync {
     )
     const unfolds = streamUnfolds.map(
       (x, i): Unfold => ({
-        i: baseIndex + i,
+        i: n_,
         t: new Date(),
         c: x.type,
         d: x.data ?? Buffer.alloc(0),
@@ -752,6 +752,7 @@ namespace Tip {
     maxIndex: number | undefined,
     tip: Batch,
   ): ITimelineEvent<Buffer>[] => {
+    const span = trace.getActiveSpan()
     const events = Batch.enumEvents(minIndex, maxIndex, tip)
     const result: ITimelineEvent<Buffer>[] = new Array(events.length + tip.u.length)
     for (let i = 0; i < tip.e.length; i++) {
@@ -759,6 +760,9 @@ namespace Tip {
     }
     for (let i = 0; i < tip.u.length; i++) {
       result[i + tip.e.length] = Unfold.toTimelineEvent(tip.u[i])
+    }
+    if (tip.u.length) {
+      span?.setAttribute(Tags.snapshot_version, tip.u[0].i)
     }
     return result.sort(compareITimelineEvents)
   }
@@ -777,6 +781,8 @@ namespace Tip {
     maxIndex?: number,
   ): Promise<Res<LoadedTip>> {
     const t = await get(table, stream, consistentRead, position)
+    const span = trace.getActiveSpan()
+    span?.setAttributes({ "eqx.load.tip": true, "eqx.load.tip_result": t.type })
     switch (t.type) {
       case "NotFound":
       case "NotModified":
@@ -784,11 +790,17 @@ namespace Tip {
       case "Found":
         const tip = t.data
         const minIndex = Position.flatten(position).index
+        const pos = Position.fromTip(tip)
+        const baseIndex = Batch.baseIndex(tip)
+        span?.setAttributes({
+          "eqx.load.tip_position": Position.toIndex(pos),
+          "eqx.load.tip_base_index": baseIndex,
+        })
         return {
           type: "Found",
           data: {
-            position: Position.fromTip(tip),
-            baseIndex: Batch.baseIndex(tip),
+            position: pos,
+            baseIndex,
             events: enumEventsAndUnfolds(minIndex, maxIndex, tip),
           },
         }
@@ -839,11 +851,11 @@ namespace Query {
     events: Event[]
   }
 
-  export async function scanTip<E>(
+  export function scanTip<E>(
     tryDecode: TryDecode<E>,
     isOrigin: (ev: E) => boolean,
     tip: Tip.LoadedTip,
-  ): Promise<ScanResult<E>> {
+  ): ScanResult<E> {
     const items: E[] = []
     const isOrigin_ = (ev: ITimelineEvent<Buffer>) => {
       const x = tryDecode(ev)
@@ -1098,7 +1110,7 @@ class StoreClient {
     maxIndex?: number,
     tipRet?: Tip.LoadedTip,
   ): Promise<[StreamToken, E[]]> {
-    const tip = tipRet && (await Query.scanTip(tryDecode, isOrigin, tipRet))
+    const tip = tipRet && Query.scanTip(tryDecode, isOrigin, tipRet)
     maxIndex = maxIndex ?? (tip ? Batch.tipMagicI : undefined)
     const walk =
       (table: StoreTable) => (minIndex: number | undefined, maxIndex: number | undefined) =>
@@ -1116,6 +1128,7 @@ class StoreClient {
         )
     const walkFallback = this.fallback == null ? this.query.ignoreMissing : walk(this.fallback)
     const [pos, events] = await Query.load(minIndex, maxIndex, tip, walk(this.table), walkFallback)
+    trace.getActiveSpan()?.setAttribute(Tags.loaded_count, events.length)
     return [Token.create(pos), events]
   }
 
@@ -1324,6 +1337,8 @@ class StoreCategory<E, S, C> implements IReloadableCategory<E, S, C> {
     requireLeader: boolean,
     t: TokenAndState<S>,
   ): Promise<TokenAndState<S>> {
+    const span = trace.getActiveSpan()
+    span?.setAttribute(Tags.loaded_from_version, String(Position.toIndex(Token.unpack(t.token))))
     const streamName = this.streamName(streamId)
     const result = await this.store.reload(
       streamName,
@@ -1335,8 +1350,10 @@ class StoreCategory<E, S, C> implements IReloadableCategory<E, S, C> {
 
     switch (result.type) {
       case "Found":
+        span?.setAttribute(Tags.loaded_count, result.events.length)
         return { token: result.token, state: this.fold(t.state, result.events) }
       case "Unchanged":
+        span?.setAttribute(Tags.loaded_count, 0)
         return t
     }
   }

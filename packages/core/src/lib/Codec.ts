@@ -61,8 +61,8 @@ export const upcast = <E extends DomainEvent, Ctx = null>(
 export function deflate<E, C>(codec: ICodec<E, string, C>): ICodec<E, Buffer, C> {
   return {
     tryDecode(e) {
-      const data = e.data ? zlib.inflateSync(e.data).toString() : undefined
-      const meta = e.meta ? zlib.inflateSync(e.meta).toString() : undefined
+      const data = e.data?.length ? zlib.inflateSync(e.data).toString() : undefined
+      const meta = e.meta?.length ? zlib.inflateSync(e.meta).toString() : undefined
       return codec.tryDecode({ ...e, data, meta })
     },
     encode(e, ctx) {
