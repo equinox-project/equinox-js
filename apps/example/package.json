@@ -9,7 +9,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.258.0",
     "@equinox-js/core": "workspace:*",
+    "@equinox-js/dynamo-store": "workspace:*",
     "@equinox-js/memory-store": "workspace:*",
     "@equinox-js/message-db": "workspace:*",
     "@equinox-js/message-db-consumer": "workspace:*",

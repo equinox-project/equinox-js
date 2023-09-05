@@ -196,14 +196,12 @@ export class Service {
     return decider.query(Query.summary)
   }
 
+  // prettier-ignore
   static resolveCategory(config: Config.Config) {
     switch (config.store) {
-      case Config.Store.Memory:
-        // prettier-ignore
-        return Config.MemoryStore.create(Stream.CATEGORY, Events.codec, Fold.fold, Fold.initial, config)
-      case Config.Store.MessageDb:
-        // prettier-ignore
-        return Config.MessageDb.createUnoptimized(Stream.CATEGORY, Events.codec, Fold.fold, Fold.initial, config)
+      case Config.Store.Memory: return Config.MemoryStore.create(Stream.CATEGORY, Events.codec, Fold.fold, Fold.initial, config)
+      case Config.Store.MessageDb: return Config.MessageDb.createUnoptimized(Stream.CATEGORY, Events.codec, Fold.fold, Fold.initial, config)
+      case Config.Store.Dynamo: return Config.Dynamo.createUnoptimized(Stream.CATEGORY, Events.codec, Fold.fold, Fold.initial, config)
     }
   }
 

@@ -1,0 +1,68 @@
+import pg from "pg"
+import { MessageDbContext } from "@equinox-js/message-db"
+import { Config, Store } from "../config/equinox.js"
+import { MemoryCache } from "@equinox-js/core"
+import { VolatileStore } from "@equinox-js/memory-store"
+import { DynamoDB } from "@aws-sdk/client-dynamodb"
+import {
+  DynamoStoreClient,
+  DynamoStoreContext,
+  QueryOptions,
+  TipOptions,
+} from "@equinox-js/dynamo-store"
+
+function createMessageDbConfig(): Config {
+  const createPool = (connectionString?: string) =>
+    connectionString ? new pg.Pool({ connectionString, max: 10 }) : undefined
+
+  const leaderPool = createPool(process.env.MDB_CONN_STR)!
+  const followerPool = createPool(process.env.MDB_RO_CONN_STR)
+
+  return {
+    store: Store.MessageDb,
+    context: MessageDbContext.create({ leaderPool, followerPool, batchSize: 500 }),
+    cache: new MemoryCache(),
+  }
+}
+
+function createDynamoClient() {
+  if (process.env.IS_LOCAL === "true") {
+    return new DynamoDB({
+      endpoint: "http://localhost:4566",
+      region: "us-east-1",
+      credentials: {
+        accessKeyId: "test",
+        secretAccessKey: "test",
+      },
+    })
+  }
+  return new DynamoDB({ region: process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION })
+}
+
+function createDynamoConfig(): Config {
+  const ddb = createDynamoClient()
+
+  const tableName = process.env.TABLE_NAME || "events"
+  const archiveTableName = process.env.ARCHIVE_TABLE_NAME
+  const client = new DynamoStoreClient(ddb)
+  const context = new DynamoStoreContext({
+    client,
+    tableName,
+    archiveTableName,
+    tip: TipOptions.create({}),
+    query: QueryOptions.create({}),
+  })
+  return { store: Store.Dynamo, context, cache: new MemoryCache() }
+}
+
+export function createConfig(): Config {
+  switch (process.env.STORE) {
+    case "message-db":
+      return createMessageDbConfig()
+    case "dynamo":
+      return createDynamoConfig()
+    case "memory":
+      return { store: Store.Memory, context: new VolatileStore<string>() }
+  }
+  throw new Error(`Unknown store: ${process.env.STORE}`)
+}

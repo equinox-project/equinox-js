@@ -83,6 +83,8 @@ export class Service {
         return Config.MemoryStore.create(CATEGORY, codec, fold, initial, config)
       case Config.Store.MessageDb:
         return Config.MessageDb.createLatestKnown(CATEGORY, codec, fold, initial, config)
+      case Config.Store.Dynamo:
+        return Config.Dynamo.createLatestKnown(CATEGORY, codec, fold, initial, config)
     }
   }
 
