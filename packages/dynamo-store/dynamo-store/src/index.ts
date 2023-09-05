@@ -77,6 +77,16 @@ namespace Event {
     }
   }
 
+  export function ofEventData(baseIndex: number) {
+    return (e: IEventData<Buffer>, i: number): Event => ({
+      i: baseIndex + i,
+      t: new Date(),
+      c: e.type,
+      d: e.data ?? Buffer.alloc(0),
+      m: e.meta ?? Buffer.alloc(0),
+    })
+  }
+
   export function arrayBytes(events: Event[]): number {
     let result = 0
     for (let i = 0; i < events.length; i++) result += bytes(events[i])
@@ -121,6 +131,16 @@ namespace Unfold {
       data: unfold.d,
       meta: unfold.m,
     }
+  }
+
+  export function ofEventData(i: number) {
+    return (x: IEventData<Buffer>): Unfold => ({
+      i,
+      t: new Date(),
+      c: x.type,
+      d: x.data ?? Buffer.alloc(0),
+      m: x.meta ?? Buffer.alloc(0),
+    })
   }
 }
 
@@ -293,7 +313,6 @@ namespace Batch {
   }
 }
 
-type RequestConsumption = { total: number }
 export enum Direction {
   Forward,
   Backward,
@@ -658,12 +677,10 @@ namespace Sync {
       return { type: "Written", etag: etag_ }
     } catch (err: any) {
       if (err instanceof ConditionalCheckFailedException) return { type: "ConflictUnknown" }
-      console.error(err)
       throw err
     }
   }
 
-  const maxDynamoDbItemSize = 400 * 1024
   type Result =
     | { type: "ConflictUnknown" }
     | {
@@ -686,24 +703,8 @@ namespace Sync {
     streamUnfolds: IEventData<Buffer>[],
   ): Promise<Result> {
     const baseIndex = n_ - streamEvents.length
-    const events = streamEvents.map(
-      (e, i): Event => ({
-        i: baseIndex + i,
-        t: new Date(),
-        c: e.type,
-        d: e.data ?? Buffer.alloc(0),
-        m: e.meta ?? Buffer.alloc(0),
-      }),
-    )
-    const unfolds = streamUnfolds.map(
-      (x, i): Unfold => ({
-        i: n_,
-        t: new Date(),
-        c: x.type,
-        d: x.data ?? Buffer.alloc(0),
-        m: x.meta ?? Buffer.alloc(0),
-      }),
-    )
+    const events = streamEvents.map(Event.ofEventData(baseIndex))
+    const unfolds = streamUnfolds.map(Unfold.ofEventData(n_))
     if (events.length === 0 && unfolds.length === 0)
       throw new Error("Must write either events or unfolds")
     const cur = Position.flatten(pos)
