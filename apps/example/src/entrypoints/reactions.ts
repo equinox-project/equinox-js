@@ -1,24 +1,20 @@
 import "./tracing.js"
-import pg from "pg"
-import { MessageDbContext } from "@equinox-js/message-db"
-import { Config, Store } from "../config/equinox.js"
-import { ITimelineEvent, MemoryCache, StreamName } from "@equinox-js/core"
+import { ITimelineEvent, StreamName } from "@equinox-js/core"
 import { Invoice, InvoiceAutoEmailer } from "../domain/index.js"
 import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-consumer"
+import { DynamoStoreSource, DynamoCheckpoints, LoadMode } from "@equinox-js/dynamo-store-source"
+import { createConfig, createPool, dynamoDB, followerPool, leaderPool } from "./config.js"
+import { Store } from "../config/equinox.js"
+import {
+  DynamoStoreClient,
+  DynamoStoreContext,
+  QueryOptions,
+  TipOptions,
+} from "@equinox-js/dynamo-store"
 
-const createPool = (connectionString?: string) =>
-  connectionString ? new pg.Pool({ connectionString, max: 10 }) : undefined
-
-const leaderPool = createPool(process.env.MDB_CONN_STR)!
-const followerPool = createPool(process.env.MDB_RO_CONN_STR)
-
-const context = MessageDbContext.create({ leaderPool, followerPool, batchSize: 500 })
-const config: Config = { store: Store.MessageDb, context, cache: new MemoryCache() }
+const config = createConfig()
 
 const invoiceEmailer = InvoiceAutoEmailer.Service.create(config)
-
-const checkpointer = new PgCheckpoints(createPool(process.env.CP_CONN_STR)!)
-checkpointer.ensureTable().then(() => console.log("table created"))
 
 function impliesInvoiceEmailRequired(streamName: StreamName, events: ITimelineEvent[]) {
   const id = Invoice.Stream.tryMatch(streamName)
@@ -34,16 +30,52 @@ async function handle(streamName: StreamName, events: ITimelineEvent[]) {
   await invoiceEmailer.sendEmail(req.id, req.payer_id, req.amount)
 }
 
-const source = MessageDbSource.create({
-  pool: followerPool ?? leaderPool,
-  batchSize: 500,
-  categories: [Invoice.Stream.CATEGORY],
-  groupName: "InvoiceAutoEmailer",
-  checkpointer,
-  handler: handle,
-  tailSleepIntervalMs: 100,
-  maxConcurrentStreams: 10,
-})
+function createSource() {
+  switch (config.store) {
+    case Store.Memory:
+      throw new Error("Memory store not supported")
+    case Store.MessageDb:
+      const checkpointer = new PgCheckpoints(createPool(process.env.CP_CONN_STR)!)
+      checkpointer.ensureTable().then(() => console.log("table created"))
+
+      return MessageDbSource.create({
+        pool: followerPool() ?? leaderPool(),
+        batchSize: 500,
+        categories: [Invoice.Stream.CATEGORY],
+        groupName: "InvoiceAutoEmailer",
+        checkpointer,
+        handler: handle,
+        tailSleepIntervalMs: 100,
+        maxConcurrentStreams: 10,
+      })
+    case Store.Dynamo:
+      const ddb = dynamoDB()
+      const context = new DynamoStoreContext({
+        client: new DynamoStoreClient(ddb),
+        tableName: process.env.INDEX_TABLE_NAME || "events_index",
+        tip: TipOptions.create({}),
+        query: QueryOptions.create({}),
+      })
+      const checkpoints = DynamoCheckpoints.create(
+        config.context,
+        config.cache,
+        300, // 5 minutes
+      )
+      return DynamoStoreSource.create({
+        context,
+        categories: [Invoice.Stream.CATEGORY],
+        groupName: "InvoiceAutoEmailer",
+        checkpoints,
+        handler: handle,
+        tailSleepIntervalMs: 100,
+        maxConcurrentStreams: 10,
+        batchSizeCutoff: 500,
+        mode: LoadMode.WithData(10, config.context),
+      })
+  }
+}
+
+const source = createSource()
 
 const ctrl = new AbortController()
 

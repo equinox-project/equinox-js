@@ -11,12 +11,12 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts"
+    "build": "tsup src/index.ts --format cjs,esm --dts"
   },
   "devDependencies": {
     "@types/node": "^18.11.18",
-    "tsup": "^6.5.0",
-    "typescript": "^4.7.4",
+    "tsup": "^7.2.0",
+    "typescript": "^5.2.2",
     "vitest": "^0.25.3"
   },
   "dependencies": {

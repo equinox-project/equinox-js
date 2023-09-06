@@ -10,7 +10,16 @@ import { DynamoStoreIngester } from "@equinox-js/dynamo-store-indexer"
 import * as Handler from "./Handler.js"
 
 const itemCutoffKiB = 48
-const ddbClient = new DynamoDB({ region: process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION })
+
+const LOCALSTACK_HOSTNAME = process.env.LOCALSTACK_HOSTNAME
+const ENDPOINT = `http://${LOCALSTACK_HOSTNAME}:4566`
+if (LOCALSTACK_HOSTNAME) {
+  process.env.AWS_SECRET_ACCESS_KEY = "test"
+  process.env.AWS_ACCESS_KEY_ID = "test"
+  console.log("USING LOCALSTACK CONFIG")
+}
+const CLIENT_CONFIG = LOCALSTACK_HOSTNAME ? { endpoint: ENDPOINT } : {}
+const ddbClient = new DynamoDB(CLIENT_CONFIG)
 
 const indexTableName = process.env.INDEX_TABLE_NAME
 if (indexTableName == null) throw new Error('Missing environment variable "INDEX_TABLE_NAME"')

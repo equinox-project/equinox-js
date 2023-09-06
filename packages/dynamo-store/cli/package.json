@@ -1,14 +1,8 @@
 {
-  "name": "@equinox-js/dynamo-store",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "require": "./dist/index.js",
-      "import": "./dist/index.mjs",
-      "types": "./dist/index.d.ts"
-    }
+  "name": "@equinox-js/dynamo-store-cli",
+  "type": "module",
+  "bin": {
+    "dynamo-store": "./bin/index.js"
   },
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts"
@@ -24,6 +18,8 @@
     "@aws-sdk/smithy-client": "^3.257.0",
     "@aws-sdk/types": "^3.257.0",
     "@equinox-js/core": "workspace:*",
-    "@opentelemetry/api": "^1.4.0"
+    "@equinox-js/dynamo-store": "workspace:*",
+    "chalk": "^5.3.0",
+    "commander": "^11.0.0"
   }
 }

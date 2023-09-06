@@ -5,7 +5,8 @@
  * The Reader module reads Ingested events forward from a given Index on the Epoch's stream
  * The Checkpoint per Index consists of the pair of 1. EpochId 2. Event Index within that Epoch (see `module Checkpoint` for detail)
  */
-import { AppendsEpochId, AppendsTrancheId, Checkpoint, IndexStreamId } from "./Identifiers.js"
+import { AppendsEpochId, AppendsTrancheId, IndexStreamId } from "./Identifiers.js"
+import { Checkpoint } from "./Checkpoint.js"
 import {
   CachingStrategy,
   Codec,

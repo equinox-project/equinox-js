@@ -22,6 +22,7 @@
     "@equinox-js/dynamo-store-indexer-lambda": "workspace:*",
     "aws-cdk-lib": "2.94.0",
     "constructs": "^10.0.0",
+    "esbuild": "^0.19.2",
     "source-map-support": "^0.5.21"
   }
 }

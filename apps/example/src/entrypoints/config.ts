@@ -11,16 +11,28 @@ import {
   TipOptions,
 } from "@equinox-js/dynamo-store"
 
+export const createPool = (connectionString?: string) =>
+  connectionString ? new pg.Pool({ connectionString, max: 10 }) : undefined
+
+const lazy = <T>(fn: () => T) => {
+  let value: T | undefined
+  return () => {
+    if (value === undefined) value = fn()
+    return value
+  }
+}
+
+export const leaderPool = lazy(() => createPool(process.env.MDB_CONN_STR)!)
+export const followerPool = lazy(() => createPool(process.env.MDB_RO_CONN_STR))
+
 function createMessageDbConfig(): Config {
-  const createPool = (connectionString?: string) =>
-    connectionString ? new pg.Pool({ connectionString, max: 10 }) : undefined
-
-  const leaderPool = createPool(process.env.MDB_CONN_STR)!
-  const followerPool = createPool(process.env.MDB_RO_CONN_STR)
-
   return {
     store: Store.MessageDb,
-    context: MessageDbContext.create({ leaderPool, followerPool, batchSize: 500 }),
+    context: MessageDbContext.create({
+      leaderPool: leaderPool(),
+      followerPool: followerPool(),
+      batchSize: 500,
+    }),
     cache: new MemoryCache(),
   }
 }
@@ -39,8 +51,10 @@ function createDynamoClient() {
   return new DynamoDB({ region: process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION })
 }
 
+export const dynamoDB = lazy(() => createDynamoClient())
+
 function createDynamoConfig(): Config {
-  const ddb = createDynamoClient()
+  const ddb = dynamoDB()
 
   const tableName = process.env.TABLE_NAME || "events"
   const archiveTableName = process.env.ARCHIVE_TABLE_NAME

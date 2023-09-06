@@ -29,7 +29,7 @@
     "@equinox-js/core": "workspace:*",
     "@equinox-js/memory-store": "workspace:*",
     "@equinox-js/message-db": "workspace:*",
-    "typescript": "^4.9.5"
+    "typescript": "^5.2.2"
   },
   "browserslist": {
     "production": [
