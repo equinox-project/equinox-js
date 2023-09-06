@@ -74,9 +74,11 @@ function wrapInTrace<T>(name: string, fn: () => Promise<T>) {
   const otelCtx = trace.setSpan(context.active(), span).setValue(eqxAttrs, attrs)
   return context.with(otelCtx, () =>
     fn().finally(() => {
-      const attrs = otelCtx.getValue(eqxAttrs) as Map<string, any>
-      for (const [key, value] of attrs.entries()) {
-        span.setAttribute(key, value)
+      const attrs = otelCtx.getValue(eqxAttrs) as Map<string, any> | undefined
+      if (attrs) {
+        for (const [key, value] of attrs) {
+          span.setAttribute(key, value)
+        }
       }
       span.end()
     }),
