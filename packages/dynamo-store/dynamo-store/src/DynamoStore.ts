@@ -273,7 +273,7 @@ namespace Batch {
       const t = new Date(e.t.S)
       const idx = baseIndex + i
       const d = e.d ? e.d.B : Buffer.alloc(0)
-      const m = e.d ? e.d.B : Buffer.alloc(0)
+      const m = e.m ? e.m.B : Buffer.alloc(0)
       events[i] = { i: idx, t, c, d, m, correlationId: e.x?.S, causationId: e.y?.S }
     }
 
