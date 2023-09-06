@@ -19,7 +19,6 @@
     "@aws-sdk/types": "^3.257.0",
     "@equinox-js/core": "workspace:*",
     "@equinox-js/dynamo-store": "workspace:*",
-    "chalk": "^5.3.0",
     "commander": "^11.0.0"
   }
 }
