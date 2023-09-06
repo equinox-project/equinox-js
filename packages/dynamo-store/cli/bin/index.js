@@ -49,7 +49,6 @@ program
         event.data ? renderObject(JSON.parse(Buffer.from(zlib.inflateSync(event.data)).toString('utf-8'))) : '',
       ]
       console.log(parts.join(" | "))
-
     }
   })
 

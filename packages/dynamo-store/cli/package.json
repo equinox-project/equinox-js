@@ -4,9 +4,6 @@
   "bin": {
     "dynamo-store": "./bin/index.js"
   },
-  "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts"
-  },
   "devDependencies": {
     "@types/node": "^18.11.18",
     "tsup": "^7.2.0",
