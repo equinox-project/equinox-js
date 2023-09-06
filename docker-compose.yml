@@ -7,16 +7,6 @@ services:
       - db-data:/var/lib/postgresql/data:cached
     ports:
       - "5432:5432"
-  dynamodb-local:
-    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal"
-    image: "amazon/dynamodb-local:latest"
-    container_name: dynamodb-local
-    ports:
-      - "8000:8000"
-    volumes:
-      - "dynamo-data:/home/dynamodblocal"
-    working_dir: /home/dynamodblocal  
 
 volumes:
   db-data:
-  dynamo-data:

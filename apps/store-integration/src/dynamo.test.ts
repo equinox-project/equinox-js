@@ -20,7 +20,7 @@ import {
   DynamoStoreContext,
   TipOptions,
   QueryOptions,
-} from "../../../packages/dynamo-store/dynamo-store/src/index.js"
+} from "@equinox-js/dynamo-store"
 import { DynamoDB } from "@aws-sdk/client-dynamodb"
 
 const Category = DynamoStoreCategory
@@ -70,9 +70,9 @@ namespace CartService {
   }
 }
 const ddb = new DynamoDB({
-  region: "local",
-  credentials: { accessKeyId: "local", secretAccessKey: "local" },
-  endpoint: "http://127.0.0.1:8000",
+  region: "us-east-1",
+  credentials: { accessKeyId: "test", secretAccessKey: "test" },
+  endpoint: "http://127.0.0.1:4566",
 })
 beforeAll(async () => {
   try {
