@@ -3,7 +3,14 @@
 import { Command } from "commander"
 import zlib from "zlib"
 
-import { DynamoDB } from "@aws-sdk/client-dynamodb"
+import {
+  BillingMode,
+  DynamoDB,
+  KeyType,
+  ScalarAttributeType,
+  StreamViewType,
+  TableClass,
+} from "@aws-sdk/client-dynamodb"
 import {
   DynamoStoreClient,
   DynamoStoreContext,
@@ -69,6 +76,46 @@ program
           : "",
       ]
       console.log(parts.join(" | "))
+    }
+  })
+
+program
+  .command("create-table")
+  .option("-E, --endpoint <endpoint>", "DynamoDB Endpoint")
+  .option("--name <table-name>", "name of table")
+  .option("-bm --billing-mode <billing-mode>", "billing mode of table", BillingMode.PAY_PER_REQUEST)
+  .option("--rus <rus>", "Read capacity")
+  .option("--wus <rus>", "Write capacity")
+  .option("--table-class <table-class>", "Table class", TableClass.STANDARD)
+  .option("--stream <stream>", "Stream mode", StreamViewType.NEW_IMAGE)
+  .action(async (options) => {
+    const ddb = createDynamoClient(options)
+    try {
+      console.log(`${chalk.Text("Creating table")} ${chalk.String(options.name)}`)
+      console.log(`${chalk.Text("Options: ")} ${renderObject(options)}`)
+      await ddb.createTable({
+        TableName: options.name,
+        AttributeDefinitions: [
+          { AttributeName: "p", AttributeType: ScalarAttributeType.S },
+          { AttributeName: "i", AttributeType: ScalarAttributeType.N },
+        ],
+        KeySchema: [
+          { AttributeName: "p", KeyType: KeyType.HASH },
+          { AttributeName: "i", KeyType: KeyType.RANGE },
+        ],
+        TableClass: options.tableClass,
+        BillingMode: options.billingMode,
+        ProvisionedThroughput:
+          options.billingMode === BillingMode.PROVISIONED
+            ? { ReadCapacityUnits: options.rus, WriteCapacityUnits: options.wus }
+            : undefined,
+        StreamSpecification:
+          options.stream === "none"
+            ? undefined
+            : { StreamEnabled: true, StreamViewType: options.stream },
+      })
+    } catch (e) {
+      console.error(e)
     }
   })
 

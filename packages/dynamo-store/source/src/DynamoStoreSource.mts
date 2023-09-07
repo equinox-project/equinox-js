@@ -213,6 +213,7 @@ export class DynamoStoreSourceClient {
   dop: number
   hydrating: boolean
   tryLoad: any
+
   constructor(
     private readonly indexStoreContext: DynamoStoreContext,
     categoryFilter: (cat: string) => boolean,
@@ -276,6 +277,7 @@ function inflate(event: ITimelineEvent<Buffer>): ITimelineEvent {
 
 export class DynamoStoreSource {
   limiter: LimitFunction
+
   constructor(private readonly options: CreateOptions) {
     this.limiter = pLimit(options.maxConcurrentStreams)
   }

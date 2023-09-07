@@ -1270,7 +1270,16 @@ class StoreClient {
     minIndex?: number,
     maxIndex?: number,
   ) {
-    return Query.walkLazy(this.table, stream, query, tryDecode, isOrigin, direction, minIndex, maxIndex)
+    return Query.walkLazy(
+      this.table,
+      stream,
+      query,
+      tryDecode,
+      isOrigin,
+      direction,
+      minIndex,
+      maxIndex,
+    )
   }
 }
 export type MapUnfolds<E, S> =
@@ -1392,20 +1401,24 @@ export class DynamoStoreClient {
   }
 }
 
+export type DynamoStoreContextOptions = {
+  client: DynamoStoreClient
+  tableName: string
+  tip: TipOptions
+  query: QueryOptions
+  archiveTableName?: string
+}
 export class DynamoStoreContext {
   storeClient: StoreClient
-  constructor(options: {
-    client: DynamoStoreClient
-    tableName: string
-    tip: TipOptions
-    query: QueryOptions
-    archiveTableName?: string
-  }) {
+  constructor(options: DynamoStoreContextOptions) {
     const primary = new StoreTable(options.tableName, options.client.primary)
     const fallback = options.archiveTableName
       ? StoreTable.create(options.archiveTableName, options.client.secondary)
       : undefined
     this.storeClient = new StoreClient(primary, fallback, options.query, options.tip)
+  }
+  static create(options: DynamoStoreContextOptions) {
+    return new DynamoStoreContext(options)
   }
 }
 
@@ -1437,6 +1450,49 @@ export namespace AccessStrategy {
   ): AccessStrategy<E, S> => ({ type: "Custom", isOrigin, transmute })
 }
 
+const mapAccess = <E, S>(
+  access: AccessStrategy<E, S>,
+): { isOrigin: (e: E) => boolean; checkUnfolds: boolean; mapUnfolds: MapUnfolds<E, S> } => {
+  switch (access.type) {
+    case "Unoptimized":
+      return {
+        isOrigin: () => false,
+        checkUnfolds: false,
+        mapUnfolds: { type: "None" },
+      }
+    case "LatestKnownEvent":
+      return {
+        isOrigin: () => true,
+        checkUnfolds: true,
+        mapUnfolds: { type: "Unfold", unfold: (es: E[], _s: S) => [es[es.length - 1]] },
+      }
+    case "Snapshot":
+      return {
+        isOrigin: access.isOrigin,
+        checkUnfolds: true,
+        mapUnfolds: { type: "Unfold", unfold: (_es: E[], s: S) => [access.toSnapshot(s)] },
+      }
+    case "MultiSnapshot":
+      return {
+        isOrigin: access.isOrigin,
+        checkUnfolds: true,
+        mapUnfolds: { type: "Unfold", unfold: (_es: E[], s: S) => access.toSnapshot(s) },
+      }
+    case "RollingState":
+      return {
+        isOrigin: () => true,
+        checkUnfolds: true,
+        mapUnfolds: { type: "Unfold", unfold: (_: E[], s: S) => [access.toSnapshot(s)] },
+      }
+    case "Custom":
+      return {
+        isOrigin: access.isOrigin,
+        checkUnfolds: true,
+        mapUnfolds: { type: "Transmute", transmute: access.transmute },
+      }
+  }
+}
+
 export class DynamoStoreCategory {
   static create<E, S, C>(
     context: DynamoStoreContext,
@@ -1447,35 +1503,7 @@ export class DynamoStoreCategory {
     caching: ICachingStrategy | undefined,
     access: AccessStrategy<E, S>,
   ): Category<E, S, C> {
-    let isOrigin: (e: E) => boolean
-    let checkUnfolds = true
-    let mapUnfolds: MapUnfolds<E, S>
-    switch (access.type) {
-      case "Unoptimized":
-        isOrigin = () => false
-        checkUnfolds = false
-        mapUnfolds = { type: "None" }
-        break
-      case "LatestKnownEvent":
-        isOrigin = () => true
-        mapUnfolds = { type: "Unfold", unfold: (es: E[], _s: S) => [es[es.length - 1]] }
-        break
-      case "Snapshot":
-        isOrigin = access.isOrigin
-        mapUnfolds = { type: "Unfold", unfold: (_es: E[], s: S) => [access.toSnapshot(s)] }
-        break
-      case "MultiSnapshot":
-        isOrigin = access.isOrigin
-        mapUnfolds = { type: "Unfold", unfold: (_es: E[], s: S) => access.toSnapshot(s) }
-        break
-      case "RollingState":
-        isOrigin = () => true
-        mapUnfolds = { type: "Unfold", unfold: (_: E[], s: S) => [access.toSnapshot(s)] }
-        break
-      case "Custom":
-        isOrigin = access.isOrigin
-        mapUnfolds = { type: "Transmute", transmute: access.transmute }
-    }
+    const { isOrigin, checkUnfolds, mapUnfolds } = mapAccess(access)
 
     const inner = new StoreCategory(
       context.storeClient,
@@ -1562,4 +1590,3 @@ export class EventsContext {
     return data
   }
 }
-

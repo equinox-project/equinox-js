@@ -11,7 +11,7 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts"
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --sourcemap"
   },
   "devDependencies": {
     "@types/node": "^18.11.18",
