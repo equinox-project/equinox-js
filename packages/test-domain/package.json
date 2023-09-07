@@ -1,0 +1,19 @@
+{
+  "name": "@equinox-js/test-domain",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p ."
+  },
+  "dependencies": {
+    "@equinox-js/core": "workspace:*",
+    "ramda": "^0.28.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.18",
+    "@types/pg": "^8.6.6",
+    "@types/ramda": "^0.28.21",
+    "typescript": "^5.2.2"
+  }
+}

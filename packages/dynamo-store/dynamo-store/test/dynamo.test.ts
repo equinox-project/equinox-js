@@ -1,32 +1,42 @@
-import * as Cart from "./domain/Cart.js"
-import * as ContactPreferences from "./domain/ContactPreferences.js"
-import { Decider, MemoryCache, Codec, CachingStrategy, Tags, StreamId } from "@equinox-js/core"
-import { describe, test, expect, afterEach, afterAll } from "vitest"
-import { Pool } from "pg"
+import { Cart, ContactPreferences } from "@equinox-js/test-domain"
+import {
+  Decider,
+  MemoryCache,
+  Codec,
+  CachingStrategy,
+  Tags,
+  StreamId,
+  ICache,
+} from "@equinox-js/core"
+import { describe, test, expect, afterEach, afterAll, beforeAll } from "vitest"
 import { randomUUID } from "crypto"
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
 import { InMemorySpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base"
 import {
   AccessStrategy,
-  MessageDbCategory,
-  MessageDbConnection,
-  MessageDbContext,
-} from "@equinox-js/message-db"
+  DynamoStoreCategory,
+  DynamoStoreClient,
+  DynamoStoreContext,
+  TipOptions,
+  QueryOptions,
+} from "../src"
+import { DynamoDB } from "@aws-sdk/client-dynamodb"
 
-const Category = MessageDbCategory
+const Category = DynamoStoreCategory
 
 const defaultBatchSize = 500
+
 
 namespace CartService {
   type E = Cart.Events.Event
   type S = Cart.Fold.State
-  const codec = Cart.Events.codec
+  const codec = Codec.deflate(Cart.Events.codec)
   const fold = Cart.Fold.fold
   const initial = Cart.Fold.initial
   const cache = new MemoryCache()
   const noCache = CachingStrategy.NoCache()
 
-  export function createWithoutOptimization(context: MessageDbContext) {
+  export function createWithoutOptimization(context: DynamoStoreContext) {
     const category = Category.create(
       context,
       Cart.Category,
@@ -39,38 +49,62 @@ namespace CartService {
     return Cart.Service.create(category)
   }
 
-  export function createWithSnapshotStrategy(context: MessageDbContext) {
-    const access = AccessStrategy.AdjacentSnapshots<E, S>(
-      Cart.Fold.snapshotEventType,
-      Cart.Fold.snapshot,
-    )
+  export function createWithSnapshotStrategy(context: DynamoStoreContext) {
+    const access = AccessStrategy.Snapshot<E, S>(Cart.Fold.isOrigin, Cart.Fold.snapshot)
     const category = Category.create(context, Cart.Category, codec, fold, initial, noCache, access)
     return Cart.Service.create(category)
   }
 
   const caching = CachingStrategy.Cache(cache)
 
-  export function createWithCaching(context: MessageDbContext) {
-    const category = Category.create(context, Cart.Category, codec, fold, initial, caching)
+  export function createWithCaching(context: DynamoStoreContext) {
+    const access = AccessStrategy.Unoptimized()
+    const category = Category.create(context, Cart.Category, codec, fold, initial, caching, access)
     return Cart.Service.create(category)
   }
 
-  export function createWithSnapshotStrategyAndCaching(context: MessageDbContext) {
-    const access = AccessStrategy.AdjacentSnapshots<E, S>(
-      Cart.Fold.snapshotEventType,
-      Cart.Fold.snapshot,
-    )
+  export function createWithSnapshotStrategyAndCaching(context: DynamoStoreContext) {
+    const access = AccessStrategy.Snapshot<E, S>(Cart.Fold.isOrigin, Cart.Fold.snapshot)
     const category = Category.create(context, Cart.Category, codec, fold, initial, caching, access)
     return Cart.Service.create(category)
   }
 }
+const ddb = new DynamoDB({
+  region: "us-east-1",
+  credentials: { accessKeyId: "test", secretAccessKey: "test" },
+  endpoint: "http://127.0.0.1:4566",
+})
+beforeAll(async () => {
+  try {
+    await ddb.describeTable({
+      TableName: "test_events",
+    })
+  } catch (err) {
+    console.log("Table does not exists. Creating")
+    await ddb.createTable({
+      BillingMode: "PAY_PER_REQUEST",
+      AttributeDefinitions: [
+        { AttributeName: "p", AttributeType: "S" },
+        { AttributeName: "i", AttributeType: "N" },
+      ],
+      TableName: "test_events",
+      KeySchema: [
+        { AttributeName: "p", KeyType: "HASH" },
+        { AttributeName: "i", KeyType: "RANGE" },
+      ],
+    })
+  }
+})
 
-const client = MessageDbConnection.create(
-  new Pool({ connectionString: "postgres://message_store:@127.0.0.1:5432/message_store" }),
-)
+const client = new DynamoStoreClient(ddb)
 
-const createContext = (connection: MessageDbConnection, batchSize: number) =>
-  new MessageDbContext(connection, batchSize)
+const createContext = (connection: DynamoStoreClient, batchSize: number) =>
+  new DynamoStoreContext({
+    client: connection,
+    tableName: "test_events",
+    tip: TipOptions.create({ maxEvents: batchSize }),
+    query: QueryOptions.create({ maxItems: batchSize }),
+  })
 
 namespace SimplestThing {
   export type Event = { type: "StuffHappened" }
@@ -79,8 +113,15 @@ namespace SimplestThing {
   export const initial: Event = { type: "StuffHappened" }
   export const fold = (_state: Event, events: Event[]) => events.reduce(evolve, initial)
   export const categoryName = "SimplestThing"
-  export const resolve = (context: MessageDbContext, categoryName: string, streamId: StreamId) => {
-    const category = Category.create(context, categoryName, codec, fold, initial)
+  export const resolve = (
+    context: DynamoStoreContext,
+    categoryName: string,
+    streamId: StreamId,
+  ) => {
+    const caching = CachingStrategy.NoCache()
+    const access = AccessStrategy.Unoptimized()
+    // prettier-ignore
+    const category = Category.create(context, categoryName, Codec.deflate(codec), fold, initial, caching, access)
     return Decider.forStream(category, streamId, undefined)
   }
 }
@@ -88,15 +129,15 @@ namespace SimplestThing {
 namespace ContactPreferencesService {
   const { fold, initial, codec } = ContactPreferences
 
-  export const createService = (client: MessageDbConnection) => {
+  export const createService = (client: DynamoStoreClient, cache?: ICache) => {
     const context = createContext(client, defaultBatchSize)
     const category = Category.create(
       context,
       ContactPreferences.Category,
-      codec,
+      Codec.deflate(codec),
       fold,
       initial,
-      undefined,
+      cache ? CachingStrategy.Cache(cache) : CachingStrategy.NoCache(),
       AccessStrategy.LatestKnownEvent(),
     )
     return ContactPreferences.Service.create(category)
@@ -112,6 +153,14 @@ const getStoreSpans = () =>
     .getFinishedSpans()
     .filter((x) => x.instrumentationLibrary.name === "@equinox-js/core")
 
+const assertRU = (min: number, max: number) => {
+  const rus = getStoreSpans().reduce((acc, x) => {
+    if (x.attributes["eqx.ru"]) return acc + Number(x.attributes["eqx.ru"])
+    return acc
+  }, 0)
+  expect(rus).toBeGreaterThanOrEqual(min)
+  expect(rus).toBeLessThanOrEqual(max)
+}
 const assertSpans = (...expected: Record<string, any>[]) => {
   const attributes = getStoreSpans().map((x) => ({
     name: x.name,
@@ -119,6 +168,7 @@ const assertSpans = (...expected: Record<string, any>[]) => {
     status_message: x.status.message,
   }))
   expect(attributes).toEqual(expected.map(expect.objectContaining))
+  memoryExporter.reset()
 }
 
 provider.addSpanProcessor(spanProcessor)
@@ -198,23 +248,51 @@ describe("Round-trips against the store", () => {
       addRemoveCount,
     )
 
+    assertRU(2, 3)
     assertSpans({
       name: "Transact",
-      [Tags.batches]: 1,
+      [Tags.pages]: 1,
+      [Tags.batches]: 0,
       [Tags.loaded_count]: 0,
       [Tags.append_count]: 11,
     })
-    memoryExporter.reset()
 
-    const state = await service.read(cartId)
+    let state = await service.read(cartId)
     expect(state.items).toEqual([expect.objectContaining({ quantity: addRemoveCount })])
 
     const expectedEventCount = 2 * addRemoveCount - 1
-    const expectedBatches = Math.ceil(expectedEventCount / batchSize)
+    // because dynamo requires that appends always first go through the tip we end up with a single tip read here
+    assertRU(0, 1)
     assertSpans({
       name: "Query",
-      [Tags.batches]: expectedBatches,
+      [Tags.pages]: 1,
+      [Tags.batches]: 1,
       [Tags.loaded_count]: expectedEventCount,
+    })
+
+    await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(
+      cartContext,
+      cartId,
+      skuId,
+      service,
+      addRemoveCount,
+    )
+    assertRU(20, 30)
+    assertSpans({
+      name: "Transact",
+      [Tags.pages]: 1,
+      [Tags.batches]: 1,
+      [Tags.loaded_count]: 11,
+      [Tags.append_count]: 11,
+    })
+    state = await service.read(cartId)
+    expect(state.items).toEqual([expect.objectContaining({ quantity: addRemoveCount })])
+    assertRU(0, 2)
+    assertSpans({
+      name: "Query",
+      [Tags.pages]: 1,
+      [Tags.batches]: 2,
+      [Tags.loaded_count]: expectedEventCount * 2,
     })
   })
   test("manages sync conflicts by retrying [without any optimizations]", async () => {
@@ -326,9 +404,10 @@ describe("Caching", () => {
       service1,
       5,
     )
+    assertRU(1, 3)
     assertSpans({
       name: "Transact",
-      [Tags.load_method]: "BatchForward",
+      [Tags.load_method]: "BatchBackward",
       [Tags.loaded_count]: 0,
       [Tags.append_count]: 9,
     })
@@ -337,14 +416,13 @@ describe("Caching", () => {
     const freshRes = await service2.read(cartId)
     expect(staleRes).toEqual(freshRes)
 
+    assertRU(0.5, 2)
     assertSpans({
       name: "Query",
-      [Tags.batches]: 1,
       [Tags.loaded_count]: 0,
       [Tags.loaded_from_version]: "9",
       [Tags.cache_hit]: true,
     })
-    memoryExporter.reset()
 
     // Add one more - the round-trip should only incur a single read
 
@@ -356,25 +434,22 @@ describe("Caching", () => {
       service1,
       1,
     )
+    assertRU(2, 3)
     assertSpans({
       name: "Transact",
-      [Tags.batches]: 1,
       [Tags.loaded_count]: 0,
       [Tags.cache_hit]: true,
       [Tags.append_count]: 1,
     })
-    memoryExporter.reset()
 
     const res = await service2.readStale(cartId)
     expect(res).not.toEqual(freshRes)
     assertSpans({ name: "Query", [Tags.cache_hit]: true })
-    expect(getStoreSpans()[0].attributes).not.to.have.property(Tags.batches)
-    memoryExporter.reset()
     await service2.read(cartId)
-    assertSpans({ name: "Query", [Tags.batches]: 1, [Tags.cache_hit]: true })
+    assertRU(0.5, 1)
+    assertSpans({ name: "Query", [Tags.loaded_count]: 0, [Tags.cache_hit]: true })
 
     // Optimistic transactions
-    memoryExporter.reset()
     // As the cache is up-to-date, we can transact against the cached value and do a null transaction without a round-trip
     await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(
       cartContext,
@@ -383,9 +458,10 @@ describe("Caching", () => {
       service1,
       1,
     )
+    let attrs = getStoreSpans()[0].attributes
     assertSpans({ name: "Transact", [Tags.cache_hit]: true, [Tags.allow_stale]: true })
-    expect(getStoreSpans()[0].attributes).not.to.have.property(Tags.batches)
-    memoryExporter.reset()
+    expect(attrs).not.to.have.property(Tags.batches)
+    expect(attrs).not.to.have.property(Tags.append_count)
     // As the cache is up-to-date, we can do an optimistic append, saving a Read round-trip
     const skuId3 = randomUUID() as Cart.SkuId
     await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(
@@ -397,11 +473,12 @@ describe("Caching", () => {
     )
 
     // this time, we did something, so we see the append call
+    attrs = getStoreSpans()[0].attributes
+    assertRU(7, 10)
     assertSpans({ name: "Transact", [Tags.cache_hit]: true, [Tags.append_count]: 1 })
-    expect(getStoreSpans()[0].attributes).not.to.have.property(Tags.batches)
+    expect(attrs).not.to.have.property(Tags.batches)
 
     // If we don't have a cache attached, we don't benefit from / pay the price for any optimism
-    memoryExporter.reset()
     const skuId4 = randomUUID() as Cart.SkuId
     await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(
       cartContext,
@@ -411,6 +488,7 @@ describe("Caching", () => {
       1,
     )
     // Need 2 batches to do the reading
+    assertRU(1, 2)
     assertSpans({
       name: "Transact",
       [Tags.batches]: 2,
@@ -428,200 +506,116 @@ describe("Caching", () => {
       1,
     )
 
+    const events = memoryExporter.getFinishedSpans()[0].events
+    assertRU(1, 2)
     assertSpans({ name: "Transact", [Tags.cache_hit]: true, [Tags.allow_stale]: true })
-    expect(memoryExporter.getFinishedSpans()[0].events).toEqual([
-      expect.objectContaining({ name: "Conflict" }),
-    ])
+    expect(events).toEqual([expect.objectContaining({ name: "Conflict" })])
   })
 })
 
 describe("AccessStrategy.LatestKnownEvent", () => {
-  test("Reads and updates against Store", async () => {
-    const id = randomUUID() as ContactPreferences.ClientId
-    const service = ContactPreferencesService.createService(client)
-    const value: ContactPreferences.Preferences = {
-      littlePromotions: Math.random() > 0.5,
-      manyPromotions: Math.random() > 0.5,
-      productReview: Math.random() > 0.5,
-      quickSurveys: Math.random() > 0.5,
+  test("Can correctly read and update Contacts against DocStore with LatestKnownEvent", async () => {
+    const cache = new MemoryCache()
+    const service = ContactPreferencesService.createService(client, cache)
+    const username = randomUUID().replace(/-/g, "")
+    const id = ContactPreferences.ClientId.parse(`${username}@example.com`)
+    // prettier-ignore
+    const value = { manyPromotions: false, littlePromotions: false, productReview: false, quickSurveys: true }
+    // prettier-ignore
+    const otherValue = { manyPromotions: false, littlePromotions: false, productReview: true, quickSurveys: true }
+    for (let i = 1; i <= 13; ++i) {
+      await service.update(id, i % 2 === 0 ? value : otherValue)
     }
-
-    // Feed some junk into the stream
-    for (let i = 0; i < 12; ++i) {
-      let quickSurveysValue = i % 2 === 0
-      await service.update(id, { ...value, quickSurveys: quickSurveysValue })
-    }
-    // Ensure there will be something to be changed by the Update below
-    await service.update(id, { ...value, quickSurveys: !value.quickSurveys })
     memoryExporter.reset()
     await service.update(id, value)
+    const result = await service.read(id)
+    expect(result).toEqual(value)
+    const staleResult = await service.readStale(id) // should not trigger roundtrip
+    expect(staleResult).toEqual(value)
+    assertSpans(
+      { name: "Transact", "eqx.load.tip_result": "NotModified" },
+      { name: "Query", "eqx.load.tip_result": "NotModified" },
+      { name: "Query", [Tags.cache_hit]: true, [Tags.allow_stale]: true },
+    )
+  })
 
+  test("Can correctly read and update Contacts against DocStore with LatestKnownEvent without Caching", async () => {
+    const service = ContactPreferencesService.createService(client)
+    const username = randomUUID().replace(/-/g, "")
+    const id = ContactPreferences.ClientId.parse(`${username}@example.com`)
+    // prettier-ignore
+    const value = { manyPromotions: false, littlePromotions: false, productReview: false, quickSurveys: true }
+    // prettier-ignore
+    const otherValue = { manyPromotions: false, littlePromotions: false, productReview: true, quickSurveys: true }
+    for (let i = 1; i <= 13; ++i) {
+      await service.update(id, i % 2 === 0 ? value : otherValue)
+    }
+    memoryExporter.reset()
+    await service.update(id, value)
     const result = await service.read(id)
     expect(result).toEqual(value)
     assertSpans(
-      {
-        name: "Transact",
-        [Tags.load_method]: "Last",
-        [Tags.loaded_count]: 1,
-        [Tags.append_count]: 1,
-      },
-      { name: "Query", [Tags.load_method]: "Last", [Tags.loaded_count]: 1 },
+      { name: "Transact", "eqx.load.tip": true, "eqx.load.tip_result": "Found" },
+      { name: "Query", "eqx.load.tip": true, "eqx.load.tip_result": "Found" },
     )
   })
 })
 
-describe("AccessStrategy.AdjacentSnapshots", () => {
-  test("Snapshots to avoid redundant reads", async () => {
-    const batchSize = 10
-    const context = createContext(client, batchSize)
-    const service = CartService.createWithSnapshotStrategy(context)
+describe("AccessStrategy.Snapshot", () => {
+  test("Can roundtrip against DocStore, using Snapshotting to avoid queries", async () => {
+    const context = createContext(client, 10)
+    const [service1, service2] = [
+      CartService.createWithSnapshotStrategy(context),
+      CartService.createWithSnapshotStrategy(context),
+    ]
 
-    const cartId = randomUUID() as Cart.CartId
-    const skuId = randomUUID() as Cart.SkuId
     const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
+    const cartId = Cart.CartId.create()
+    const skuId = randomUUID()
 
-    // Trigger 8 events, then reload
-    await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 4)
-    await service.read(cartId)
+    // Trigger 10 events, then reload
+    await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 5)
+    await service2.read(cartId)
     assertSpans(
-      {
-        name: "Transact",
-        [Tags.loaded_count]: 0,
-        [Tags.snapshot_version]: -1,
-        [Tags.append_count]: 8,
-        [Tags.snapshot_written]: false,
-      },
-      { name: "Query", [Tags.loaded_count]: 8, [Tags.snapshot_version]: -1 },
+      { name: "Transact", "eqx.load.tip_result": "NotFound" },
+      { name: "Query", "eqx.load.tip_result": "Found" },
     )
 
-    // Add two more, which should push it over the threshold and hence trigger an append of a snapshot event
-    memoryExporter.reset()
-    await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 1)
-    assertSpans({
-      name: "Transact",
-      [Tags.loaded_count]: 8,
-      [Tags.snapshot_version]: -1,
-      [Tags.append_count]: 2,
-      [Tags.snapshot_written]: true,
-    })
-
-    // We now have 10 events and should be able to read them with a single call
-    memoryExporter.reset()
-    await service.read(cartId)
-    assertSpans({ name: "Query", [Tags.loaded_count]: 0, [Tags.snapshot_version]: 10 })
-
-    // Add 8 more; total of 18 should not trigger snapshotting as we snapshotted at Event Number 10
-    memoryExporter.reset()
-    await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 4)
-    assertSpans({
-      name: "Transact",
-      [Tags.loaded_count]: 0,
-      [Tags.snapshot_version]: 10,
-      [Tags.loaded_from_version]: "10",
-      [Tags.append_count]: 8,
-      [Tags.snapshot_written]: false,
-    })
-
-    // While we now have 18 events, we should be able to read them with a single call
-    memoryExporter.reset()
-    await service.read(cartId)
-    assertSpans({
-      name: "Query",
-      [Tags.loaded_count]: 8,
-      [Tags.snapshot_version]: 10,
-      [Tags.loaded_from_version]: "10",
-    })
-
-    // add two more events, triggering a snapshot, then read it in a single snapshotted read
-    memoryExporter.reset()
-    await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service, 1)
-    assertSpans({
-      name: "Transact",
-      [Tags.loaded_count]: 8,
-      [Tags.snapshot_version]: 10,
-      [Tags.loaded_from_version]: "10",
-      [Tags.append_count]: 2,
-      [Tags.snapshot_written]: true,
-    })
-    // While we now have 18 events, we should be able to read them with a single call
-    memoryExporter.reset()
-    await service.read(cartId)
-    assertSpans({
-      name: "Query",
-      [Tags.loaded_count]: 0,
-      [Tags.snapshot_version]: 20,
-      [Tags.loaded_from_version]: "20",
-    })
+    // Add two more - the roundtrip should only incur a single read
+    await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 1)
+    assertSpans({ name: "Transact", "eqx.load.tip_result": "Found" })
+    // While we now have 12 events, we should be able to read them with a single call
+    await service2.read(cartId)
+    assertSpans({ name: "Query", "eqx.load.tip_result": "Found" })
   })
 
-  test("Combining snapshots and caching", async () => {
-    const batchSize = 10
-    const context = createContext(client, batchSize)
-    const service1 = CartService.createWithSnapshotStrategy(context)
-    const service2 = CartService.createWithSnapshotStrategyAndCaching(context)
+  test("Can roundtrip against DocStore, correctly using Snapshotting and Cache to avoid redundant reads", async () => {
+    const queryMaxItems = 10
+    const context = createContext(client, queryMaxItems)
+    const [service1, service2] = [
+      CartService.createWithSnapshotStrategyAndCaching(context),
+      CartService.createWithSnapshotStrategyAndCaching(context),
+    ]
 
-    const cartId = randomUUID() as Cart.CartId
-    const skuId = randomUUID() as Cart.SkuId
     const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
+    const cartId = Cart.CartId.create()
+    const skuId = randomUUID()
 
-    // Trigger 8 events, then reload
-    await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 4)
+    // Trigger 10 events, then reload
+    await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 5)
     await service2.read(cartId)
-
     assertSpans(
-      {
-        name: "Transact",
-        [Tags.loaded_count]: 0,
-        [Tags.snapshot_version]: -1,
-        [Tags.snapshot_written]: false,
-      },
-      { name: "Query", [Tags.loaded_count]: 8, [Tags.snapshot_version]: -1 },
+      { name: "Transact", "eqx.load.tip_result": "NotFound" },
+      { name: "Query", "eqx.load.tip_result": "NotModified" },
     )
 
-    // Add two more, which should push it over the threshold and hence trigger generation of a snapshot event
-    memoryExporter.reset()
+    // Add two more - the roundtrip should only incur a single read
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 1)
-    assertSpans({
-      name: "Transact",
-      [Tags.loaded_count]: 8,
-      [Tags.snapshot_version]: -1,
-      [Tags.snapshot_written]: true,
-    })
+    assertSpans({ name: "Transact", "eqx.load.tip_result": "NotModified" })
 
-    // We now have 10 events, we should be able to read them with a single snapshotted read
-    memoryExporter.reset()
-    await service1.read(cartId)
-    assertSpans({ name: "Query", [Tags.loaded_count]: 0, [Tags.snapshot_version]: 10 })
-
-    // Add 8 more; total of 18 should not trigger snapshotting as the snapshot is at version 10
-    memoryExporter.reset()
-    await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 4)
-    assertSpans({
-      name: "Transact",
-      [Tags.loaded_count]: 0,
-      [Tags.snapshot_version]: 10,
-      [Tags.snapshot_written]: false,
-    })
-
-    // While we now have 18 events, we should be able to read them with a single snapshotted read
-    memoryExporter.reset()
-    await service1.read(cartId)
-    assertSpans({ name: "Query", [Tags.loaded_count]: 8, [Tags.snapshot_version]: 10 })
-
-    // ... trigger a second snapshotting
-    memoryExporter.reset()
-    await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 1)
-    assertSpans({
-      name: "Transact",
-      [Tags.loaded_count]: 8,
-      [Tags.snapshot_version]: 10,
-      [Tags.snapshot_written]: true,
-    })
-
-    // and we _could_ reload the 20 events with a single slice read. However, we are using the cache, which last saw it with 10 events, which necessitates two reads
-    memoryExporter.reset()
+    // While we now have 12 events, we should be able to read them with a single call
     await service2.read(cartId)
-    assertSpans({ name: "Query", [Tags.loaded_count]: 12, [Tags.cache_hit]: true })
+    assertSpans({ name: "Query", "eqx.load.tip_result": "NotModified" })
   })
 })
 
