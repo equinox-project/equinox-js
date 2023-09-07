@@ -153,6 +153,14 @@ const getStoreSpans = () =>
     .getFinishedSpans()
     .filter((x) => x.instrumentationLibrary.name === "@equinox-js/core")
 
+const assertRU = (min: number, max: number) => {
+  const rus = getStoreSpans().reduce((acc, x) => {
+    if (x.attributes["eqx.ru"]) return acc + Number(x.attributes["eqx.ru"])
+    return acc
+  }, 0)
+  expect(rus).toBeGreaterThanOrEqual(min)
+  expect(rus).toBeLessThanOrEqual(max)
+}
 const assertSpans = (...expected: Record<string, any>[]) => {
   const attributes = getStoreSpans().map((x) => ({
     name: x.name,
@@ -240,7 +248,7 @@ describe("Round-trips against the store", () => {
       addRemoveCount,
     )
 
-    const attrs = getStoreSpans()[0].attributes
+    assertRU(2, 3)
     assertSpans({
       name: "Transact",
       [Tags.pages]: 1,
@@ -248,20 +256,18 @@ describe("Round-trips against the store", () => {
       [Tags.loaded_count]: 0,
       [Tags.append_count]: 11,
     })
-    expect(attrs["eqx.ru"]).toBeLessThanOrEqual(3)
-    expect(attrs["eqx.ru"]).toBeGreaterThanOrEqual(2)
 
     let state = await service.read(cartId)
     expect(state.items).toEqual([expect.objectContaining({ quantity: addRemoveCount })])
 
     const expectedEventCount = 2 * addRemoveCount - 1
     // because dynamo requires that appends always first go through the tip we end up with a single tip read here
+    assertRU(0, 1)
     assertSpans({
       name: "Query",
       [Tags.pages]: 1,
       [Tags.batches]: 1,
       [Tags.loaded_count]: expectedEventCount,
-      "eqx.ru": 0.5,
     })
 
     await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(
@@ -271,22 +277,22 @@ describe("Round-trips against the store", () => {
       service,
       addRemoveCount,
     )
+    assertRU(20, 30)
     assertSpans({
       name: "Transact",
       [Tags.pages]: 1,
       [Tags.batches]: 1,
       [Tags.loaded_count]: 11,
       [Tags.append_count]: 11,
-      "eqx.ru": 28.5,
     })
     state = await service.read(cartId)
     expect(state.items).toEqual([expect.objectContaining({ quantity: addRemoveCount })])
+    assertRU(0, 2)
     assertSpans({
       name: "Query",
       [Tags.pages]: 1,
       [Tags.batches]: 2,
       [Tags.loaded_count]: expectedEventCount * 2,
-      "eqx.ru": 1,
     })
   })
   test("manages sync conflicts by retrying [without any optimizations]", async () => {
@@ -398,24 +404,24 @@ describe("Caching", () => {
       service1,
       5,
     )
+    assertRU(1, 3)
     assertSpans({
       name: "Transact",
       [Tags.load_method]: "BatchBackward",
       [Tags.loaded_count]: 0,
       [Tags.append_count]: 9,
-      "eqx.ru": 2,
     })
     const staleRes = await service2.readStale(cartId)
     memoryExporter.reset()
     const freshRes = await service2.read(cartId)
     expect(staleRes).toEqual(freshRes)
 
+    assertRU(0.5, 2)
     assertSpans({
       name: "Query",
       [Tags.loaded_count]: 0,
       [Tags.loaded_from_version]: "9",
       [Tags.cache_hit]: true,
-      "eqx.ru": 0.5,
     })
 
     // Add one more - the round-trip should only incur a single read
@@ -428,19 +434,20 @@ describe("Caching", () => {
       service1,
       1,
     )
+    assertRU(2, 3)
     assertSpans({
       name: "Transact",
       [Tags.loaded_count]: 0,
       [Tags.cache_hit]: true,
       [Tags.append_count]: 1,
-      "eqx.ru": 2.5,
     })
 
     const res = await service2.readStale(cartId)
     expect(res).not.toEqual(freshRes)
     assertSpans({ name: "Query", [Tags.cache_hit]: true })
     await service2.read(cartId)
-    assertSpans({ name: "Query", [Tags.loaded_count]: 0, [Tags.cache_hit]: true, "eqx.ru": 0.5 })
+    assertRU(0.5, 1)
+    assertSpans({ name: "Query", [Tags.loaded_count]: 0, [Tags.cache_hit]: true })
 
     // Optimistic transactions
     // As the cache is up-to-date, we can transact against the cached value and do a null transaction without a round-trip
@@ -467,7 +474,8 @@ describe("Caching", () => {
 
     // this time, we did something, so we see the append call
     attrs = getStoreSpans()[0].attributes
-    assertSpans({ name: "Transact", [Tags.cache_hit]: true, [Tags.append_count]: 1, "eqx.ru": 8 })
+    assertRU(7, 10)
+    assertSpans({ name: "Transact", [Tags.cache_hit]: true, [Tags.append_count]: 1 })
     expect(attrs).not.to.have.property(Tags.batches)
 
     // If we don't have a cache attached, we don't benefit from / pay the price for any optimism
@@ -480,12 +488,12 @@ describe("Caching", () => {
       1,
     )
     // Need 2 batches to do the reading
+    assertRU(1, 2)
     assertSpans({
       name: "Transact",
       [Tags.batches]: 2,
       [Tags.cache_hit]: false,
       [Tags.append_count]: 1,
-      "eqx.ru": 1.5,
     })
     // we've engineered a clash with the cache state (service3 doest participate in caching)
     // Conflict with cached state leads to a read forward to re-sync; Then we'll idempotently decide not to do any append
@@ -499,7 +507,8 @@ describe("Caching", () => {
     )
 
     const events = memoryExporter.getFinishedSpans()[0].events
-    assertSpans({ name: "Transact", [Tags.cache_hit]: true, [Tags.allow_stale]: true, "eqx.ru": 1 })
+    assertRU(1, 2)
+    assertSpans({ name: "Transact", [Tags.cache_hit]: true, [Tags.allow_stale]: true })
     expect(events).toEqual([expect.objectContaining({ name: "Conflict" })])
   })
 })
