@@ -1,6 +1,6 @@
 import {
   AppendsEpochId,
-  AppendsTrancheId,
+  AppendsPartitionId,
   Checkpoint,
   IndexStreamId,
 } from "@equinox-js/dynamo-store-indexer"
@@ -32,19 +32,19 @@ namespace Impl {
     return `${epoch}@${offset}`
   }
 
-  export const readTranches = (context: DynamoStoreContext) => {
+  export const readPartitions = (context: DynamoStoreContext) => {
     const index = AppendsIndex.Reader.create(context)
-    return index.readKnownTranches()
+    return index.readKnownPartitions()
   }
 
   export const readTailPositionForTranche = async (
     context: DynamoStoreContext,
-    trancheId: AppendsTrancheId,
+    partitionId: AppendsPartitionId,
   ) => {
     const index = AppendsIndex.Reader.create(context)
-    const epochId = await index.readIngestionEpochId(trancheId)
+    const epochId = await index.readIngestionEpochId(partitionId)
     const epochs = AppendsEpoch.Reader.Config.create(context)
-    const version = await epochs.readVersion(trancheId, epochId)
+    const version = await epochs.readVersion(partitionId, epochId)
     return Checkpoint.positionOfEpochAndOffset(epochId, version)
   }
 
@@ -84,12 +84,12 @@ namespace Impl {
     ) => (() => Promise<ITimelineEvent<Buffer>[]>) | undefined,
     loadDop: number,
     batchCutoff: number,
-    tid: AppendsTrancheId,
+    partitionId: AppendsPartitionId,
     position: Checkpoint,
   ) {
     const epochs = AppendsEpoch.Reader.Config.create(context)
     const [epochId, offset] = Checkpoint.toEpochAndOffset(position)
-    const [_size, version, state] = await epochs.read(tid, epochId, offset)
+    const [_size, version, state] = await epochs.read(partitionId, epochId, offset)
     const totalChanges = state.changes.length
     const [totalStreams, chosenEvents, totalEvents, streamEvents] = (() => {
       const all = AppendsEpoch.flatten(state.changes.flatMap(([_i, xs]) => xs))
@@ -150,9 +150,7 @@ namespace Impl {
 }
 
 export type LoadMode =
-  /** Skip loading of Data/Meta for events; this is the most efficient mode as it means the Source only needs to read from the index */
   | { type: "IndexOnly" }
-  /** Populates the Data/Meta fields for events; necessitates loads of all individual streams that pass the categoryFilter before they can be handled */
   | {
       type: "WithData"
       degreeOfParallelism: number
@@ -161,7 +159,9 @@ export type LoadMode =
     }
 
 export namespace LoadMode {
+  /** Skip loading of Data/Meta for events; this is the most efficient mode as it means the Source only needs to read from the index */
   export const IndexOnly = (): LoadMode => ({ type: "IndexOnly" })
+  /** Populates the Data/Meta fields for events; necessitates loads of all individual streams that pass the categoryFilter before they can be handled */
   export const WithData = (degreeOfParallelism: number, context: DynamoStoreContext): LoadMode => ({
     type: "WithData",
     degreeOfParallelism,
@@ -218,7 +218,7 @@ export class DynamoStoreSourceClient {
     private readonly indexStoreContext: DynamoStoreContext,
     categoryFilter: (cat: string) => boolean,
     loadMode: LoadMode,
-    private readonly trancheIds?: AppendsTrancheId[],
+    private readonly partitionIds?: AppendsPartitionId[],
   ) {
     const lm = LoadMode.map(categoryFilter, loadMode)
     this.dop = lm.degreeOfParallelism
@@ -226,22 +226,22 @@ export class DynamoStoreSourceClient {
     this.tryLoad = lm.tryLoad
   }
 
-  crawl(trancheId: AppendsTrancheId, position: Checkpoint): AsyncIterable<Batch<Buffer>> {
+  crawl(partitionId: AppendsPartitionId, position: Checkpoint): AsyncIterable<Batch<Buffer>> {
     return Impl.materializeIndexEpochAsBatchesOfStreamEvents(
       this.indexStoreContext,
       this.hydrating,
       this.tryLoad,
       this.dop,
       100,
-      trancheId,
+      partitionId,
       position,
     )
   }
 
-  async listTranches() {
-    if (this.trancheIds) return this.trancheIds
-    const res = await Impl.readTranches(this.indexStoreContext)
-    return res.length === 0 ? [AppendsTrancheId.wellKnownId] : res
+  async listPartitions(): Promise<AppendsPartitionId[]> {
+    if (this.partitionIds) return this.partitionIds
+    const res = await Impl.readPartitions(this.indexStoreContext)
+    return res.length === 0 ? [AppendsPartitionId.wellKnownId] : res
   }
 }
 
@@ -284,20 +284,20 @@ export class DynamoStoreSource {
 
   async handleTranche(
     client: DynamoStoreSourceClient,
-    tranche: AppendsTrancheId,
+    partition: AppendsPartitionId,
     signal: AbortSignal,
   ) {
     let pos = Checkpoint.ofPosition(
       await this.options.checkpoints.load(
         this.options.groupName,
-        AppendsTrancheId.toString(tranche),
+        AppendsPartitionId.toString(partition),
       ),
     )
     if (pos === Checkpoint.initial && this.options.startFromTail) {
-      pos = await Impl.readTailPositionForTranche(this.options.context, tranche)
+      pos = await Impl.readTailPositionForTranche(this.options.context, partition)
     }
     while (!signal.aborted) {
-      for await (const batch of client.crawl(tranche, pos)) {
+      for await (const batch of client.crawl(partition, pos)) {
         const streams = new Map<StreamName, ITimelineEvent[]>()
         for (const [stream, event] of batch.items) {
           const events = streams.get(stream)
@@ -317,7 +317,7 @@ export class DynamoStoreSource {
         if (batch.checkpoint !== pos) {
           await this.options.checkpoints.commit(
             this.options.groupName,
-            AppendsTrancheId.toString(tranche),
+            AppendsPartitionId.toString(partition),
             batch.checkpoint,
           )
           pos = batch.checkpoint
@@ -338,8 +338,8 @@ export class DynamoStoreSource {
       categoryFilter,
       this.options.mode,
     )
-    const tranches = await client.listTranches()
-    await Promise.all(tranches.map((tranche) => this.handleTranche(client, tranche, signal)))
+    const partitions = await client.listPartitions()
+    await Promise.all(partitions.map((partition) => this.handleTranche(client, partition, signal)))
   }
 
   static create(options: CreateOptions): DynamoStoreSource {

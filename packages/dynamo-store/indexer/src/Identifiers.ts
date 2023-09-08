@@ -6,6 +6,19 @@ export namespace AppendsEpochId {
   export const parse = (n: string) => Number(n) as AppendsEpochId
 }
 
+export type AppendsPartitionId = number & { __brand: "AppendsPartitionId" }
+export namespace AppendsPartitionId {
+  // Partitioning is not yet implemented
+  export const wellKnownId = 0 as AppendsPartitionId
+  export const toString = (x: AppendsPartitionId) => x.toString()
+  export const toTrancheId = (x: AppendsPartitionId) => toString(x)
+  export const parse = (s: string): AppendsPartitionId => {
+    const n = Number(s)
+    if (Number.isNaN(n)) throw new Error(`Invalid AppendsPartitionId: ${s}`)
+    return n as AppendsPartitionId
+  }
+}
+
 export type AppendsTrancheId = number & { __brand: "AppendsTrancheId" }
 export namespace AppendsTrancheId {
   export const wellKnownId = 0 as AppendsTrancheId

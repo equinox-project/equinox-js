@@ -6,7 +6,7 @@ import {
   StreamId,
   CachingStrategy,
 } from "@equinox-js/core"
-import { AppendsEpochId, AppendsTrancheId } from "./Identifiers.js"
+import { AppendsEpochId, AppendsPartitionId } from "./Identifiers.js"
 import { DynamoStoreContext, DynamoStoreCategory, AccessStrategy } from "@equinox-js/dynamo-store"
 import { Map } from "immutable"
 
@@ -16,25 +16,30 @@ export namespace Stream {
 }
 
 export namespace Events {
-  type Started =
-    | { tranche: AppendsTrancheId; epoch: AppendsEpochId }
-    | { partition: AppendsTrancheId; epoch: AppendsEpochId }
+  type Started = { partition: AppendsPartitionId; epoch: AppendsEpochId }
   export type Event =
     | { type: "Started"; data: Started }
-    | { type: "Snapshotted"; data: { active: Record<AppendsTrancheId, AppendsEpochId> } }
+    | { type: "Snapshotted"; data: { active: Record<AppendsPartitionId, AppendsEpochId> } }
 
-  export const codec = Codec.deflate(Codec.json<Event>())
+  const upcast = Codec.Upcast.body<Event>({
+    Started: (x) =>
+      "tranche" in x
+        ? { partition: x.tranche, epoch: x.epoch }
+        : { partition: x.partition, epoch: x.epoch },
+    Snapshotted: (x) => x as any,
+  })
+  export const codec = Codec.deflate<Event, null>(Codec.upcast(Codec.json(), upcast))
 }
 
 export namespace Fold {
-  export type State = Map<AppendsTrancheId, AppendsEpochId>
+  export type State = Map<AppendsPartitionId, AppendsEpochId>
   export const initial: State = Map([])
   export const evolve = (state: State, event: Events.Event): State => {
     switch (event.type) {
       case "Snapshotted":
         return Map(event.data.active)
       case "Started":
-        if ("tranche" in event.data) return state.set(event.data.tranche, event.data.epoch)
+        if ("tranche" in event.data) return state.set(event.data.partition, event.data.epoch)
         return state.set(event.data.partition, event.data.epoch)
     }
   }
@@ -47,11 +52,11 @@ export namespace Fold {
 }
 
 export const interpret =
-  (trancheId: AppendsTrancheId, epochId: AppendsEpochId) =>
+  (partitionId: AppendsPartitionId, epochId: AppendsEpochId) =>
   (state: Fold.State): Events.Event[] => {
-    const current = state.get(trancheId)
+    const current = state.get(partitionId)
     if (current != null && current < epochId && epochId > AppendsEpochId.initial)
-      return [{ type: "Started", data: { partition: trancheId, epoch: epochId } }]
+      return [{ type: "Started", data: { partition: partitionId, epoch: epochId } }]
     return []
   }
 
@@ -59,10 +64,10 @@ export class Service {
   constructor(private readonly resolve: () => Decider<Events.Event, Fold.State>) {}
 
   /** Determines the current active epoch for the specified Tranche */
-  readIngestionEpochId(trancheId: AppendsTrancheId): Promise<AppendsEpochId> {
+  readIngestionEpochId(partitionId: AppendsPartitionId): Promise<AppendsEpochId> {
     const decider = this.resolve()
     return decider.query(
-      (state) => state.get(trancheId) ?? AppendsEpochId.initial,
+      (state) => state.get(partitionId) ?? AppendsEpochId.initial,
       LoadOption.AnyCachedValue,
     )
   }
@@ -71,9 +76,9 @@ export class Service {
    * Mark specified `epochId` as live for the purposes of ingesting commits for the specified Tranche
    * Writers are expected to react to having writes to an epoch denied (due to it being Closed) by anointing the successor via this
    */
-  markIngestionEpoch(trancheId: AppendsTrancheId, epochId: AppendsEpochId): Promise<void> {
+  markIngestionEpoch(partitionId: AppendsPartitionId, epochId: AppendsEpochId): Promise<void> {
     const decider = this.resolve()
-    return decider.transact(interpret(trancheId, epochId), LoadOption.AnyCachedValue)
+    return decider.transact(interpret(partitionId, epochId), LoadOption.AnyCachedValue)
   }
 
   static create(context: DynamoStoreContext, caching?: ICachingStrategy) {
@@ -95,10 +100,10 @@ function createCategory(context: DynamoStoreContext, caching?: ICachingStrategy)
 }
 
 export namespace Reader {
-  const readKnownTranches = (state: Fold.State) => Array.from(state.keys())
+  const readKnownPartitions = (state: Fold.State) => Array.from(state.keys())
 
-  const readIngestionEpochId = (trancheId: AppendsTrancheId) => (state: Fold.State) =>
-    state.get(trancheId) ?? AppendsEpochId.initial
+  const readIngestionEpochId = (partitionId: AppendsPartitionId) => (state: Fold.State) =>
+    state.get(partitionId) ?? AppendsEpochId.initial
 
   export class Service {
     constructor(private readonly resolve: () => Decider<Events.Event, Fold.State>) {}
@@ -108,14 +113,14 @@ export namespace Reader {
       return decider.query((x) => x)
     }
 
-    readKnownTranches() {
+    readKnownPartitions() {
       const decider = this.resolve()
-      return decider.query(readKnownTranches)
+      return decider.query(readKnownPartitions)
     }
 
-    readIngestionEpochId(trancheId: AppendsTrancheId) {
+    readIngestionEpochId(partitionId: AppendsPartitionId) {
       const decider = this.resolve()
-      return decider.query(readIngestionEpochId(trancheId))
+      return decider.query(readIngestionEpochId(partitionId))
     }
   }
 

@@ -3,7 +3,7 @@ import { CachingStrategy, ICachingStrategy, MemoryCache } from "@equinox-js/core
 import * as AppendsEpoch from "./AppendsEpoch.js"
 import * as AppendsIndex from "./AppendsIndex.js"
 import * as ExactlyOnceIngester from "./ExactlyOnceIngester.js"
-import { AppendsEpochId, AppendsTrancheId, IndexStreamId } from "./Identifiers.js"
+import { AppendsEpochId, AppendsPartitionId, IndexStreamId } from "./Identifiers.js"
 
 type Ingester = ExactlyOnceIngester.Service<
   AppendsEpochId,
@@ -12,7 +12,7 @@ type Ingester = ExactlyOnceIngester.Service<
   IndexStreamId
 >
 export class DynamoStoreIndexer {
-  ingester: (trancheId: AppendsTrancheId) => Ingester
+  ingester: (partitionId: AppendsPartitionId) => Ingester
   constructor(
     context: DynamoStoreContext,
     cache: ICachingStrategy | undefined,
@@ -32,21 +32,21 @@ export class DynamoStoreIndexer {
         cache,
       )
       const index = AppendsIndex.Service.create(context, cache)
-      const createIngester = (trancheId: AppendsTrancheId) => {
-        let readIngestionEpoch = () => index.readIngestionEpochId(trancheId)
+      const createIngester = (partitionId: AppendsPartitionId) => {
+        let readIngestionEpoch = () => index.readIngestionEpochId(partitionId)
         let markIngestionEpoch = (epochId: AppendsEpochId) =>
-          index.markIngestionEpoch(trancheId, epochId)
+          index.markIngestionEpoch(partitionId, epochId)
         let ingest = (eid: AppendsEpochId, items: AppendsEpoch.Events.StreamSpan[]) =>
-          epochs.ingest(trancheId, eid, items)
+          epochs.ingest(partitionId, eid, items)
         return ExactlyOnceIngester.create(readIngestionEpoch, markIngestionEpoch, ingest, (s) => s)
       }
 
-      const ingesterForTranche = new Map<AppendsTrancheId, Ingester>()
-      return (trancheId: AppendsTrancheId) => {
-        const maybeIngester = ingesterForTranche.get(trancheId)
+      const ingesterForPartition = new Map<AppendsPartitionId, Ingester>()
+      return (partitionId: AppendsPartitionId) => {
+        const maybeIngester = ingesterForPartition.get(partitionId)
         if (maybeIngester != null) return maybeIngester
-        const ingester = createIngester(trancheId)
-        ingesterForTranche.set(trancheId, ingester)
+        const ingester = createIngester(partitionId)
+        ingesterForPartition.set(partitionId, ingester)
         return ingester
       }
     }
@@ -54,10 +54,10 @@ export class DynamoStoreIndexer {
   }
 
   async ingestWithoutConcurrency(
-    trancheId: AppendsTrancheId,
+    partitionId: AppendsPartitionId,
     spans: AppendsEpoch.Events.StreamSpan[],
   ) {
-    const ingester = this.ingester(trancheId)
+    const ingester = this.ingester(partitionId)
     const originEpoch = await ingester.activeIngestionEpochId()
     return ingester.ingestMany(originEpoch, spans)
   }

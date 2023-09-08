@@ -5,7 +5,7 @@
  * The Reader module reads Ingested events forward from a given Index on the Epoch's stream
  * The Checkpoint per Index consists of the pair of 1. EpochId 2. Event Index within that Epoch (see `module Checkpoint` for detail)
  */
-import { AppendsEpochId, AppendsTrancheId, IndexStreamId } from "./Identifiers.js"
+import { AppendsEpochId, AppendsPartitionId, IndexStreamId } from "./Identifiers.js"
 import { Checkpoint } from "./Checkpoint.js"
 import {
   CachingStrategy,
@@ -26,8 +26,8 @@ export const maxItemsPerEpoch = Checkpoint.MAX_ITEMS_PER_EPOCH
 
 export namespace Stream {
   export const category = "$AppendsEpoch"
-  export const streamId = StreamId.gen(AppendsTrancheId.toString, AppendsEpochId.toString)
-  export const decodeId = StreamId.dec(AppendsTrancheId.parse, AppendsEpochId.parse)
+  export const streamId = StreamId.gen(AppendsPartitionId.toString, AppendsEpochId.toString)
+  export const decodeId = StreamId.dec(AppendsPartitionId.parse, AppendsEpochId.parse)
   export const tryMatch = StreamName.tryMatch(category, decodeId)
 }
 
@@ -44,6 +44,8 @@ export namespace Events {
 }
 
 const next = (x: Events.StreamSpan) => Number(x.i) + x.c.length
+
+/** Aggregates all spans per stream into a single Span from the lowest index to the highest */
 export const flatten = (spans: Events.StreamSpan[]): Events.StreamSpan[] => {
   const grouped: Record<IndexStreamId, Events.StreamSpan[]> = {}
   for (const span of spans) {
@@ -64,7 +66,7 @@ export const flatten = (spans: Events.StreamSpan[]): Events.StreamSpan[] => {
   })
 }
 
-namespace Fold {
+export namespace Fold {
   export type State = { versions: Map<IndexStreamId, number>; closed: boolean }
   const withVersions = (state: State, e: Events.Ingested): State => {
     let versions = state.versions
@@ -76,7 +78,7 @@ namespace Fold {
     }
     return { ...state, versions }
   }
-  const withClosed = (state: State): State => ({ ...state, closed: true })
+  export const withClosed = (state: State): State => ({ ...state, closed: true })
 
   export const initial: State = { versions: Map(), closed: false }
   const evolve = (state: State, event: Events.Event): State => {
@@ -90,18 +92,24 @@ namespace Fold {
   export const fold = (state: State, events: Events.Event[]): State => events.reduce(evolve, state)
 }
 
-namespace Ingest {
-  const classify = (
-    { versions: cur }: Fold.State,
-    eventSpan: Events.StreamSpan,
-  ): { type: "Start" | "Append"; data: Events.StreamSpan } | { type: "Discard" } => {
+export namespace Ingest {
+  type Classified =
+    | { type: "Start" | "Append"; data: Events.StreamSpan }
+    | { type: "Discard" }
+    | { type: "Gap"; data: number }
+  const classify = ({ versions: cur }: Fold.State, eventSpan: Events.StreamSpan): Classified => {
     const curNext = cur.get(eventSpan.p)
     if (curNext == null) return { type: "Start", data: eventSpan }
     const appendLen = next(eventSpan) - curNext
+    if (appendLen > eventSpan.c.length) return { type: "Gap", data: appendLen - eventSpan.c.length }
     if (appendLen > 0) {
       return {
         type: "Append",
-        data: { p: eventSpan.p, i: curNext, c: eventSpan.c.slice(eventSpan.c.length - appendLen) },
+        data: {
+          p: eventSpan.p,
+          i: curNext,
+          c: eventSpan.c.slice(eventSpan.c.length - appendLen),
+        },
       }
     }
     return { type: "Discard" }
@@ -125,6 +133,8 @@ namespace Ingest {
         case "Append":
           appended.push(x.data)
           break
+        case "Gap":
+          throw new Error(`Invalid gap of ${x.data} at ${eventSpan.i} in "${eventSpan.p}"`)
         case "Discard":
           break
       }
@@ -144,6 +154,9 @@ namespace Ingest {
         case "Start":
         case "Append":
           result.push(x.data)
+          break
+        case "Gap":
+          result.push(eventSpan)
       }
     }
     return result
@@ -175,13 +188,13 @@ export class Service {
       n: number,
     ) => boolean,
     private readonly resolve: (
-      trancehId: AppendsTrancheId,
+      trancehId: AppendsPartitionId,
       epochId: AppendsEpochId,
     ) => Decider<Events.Event, Fold.State>,
   ) {}
 
   async ingest(
-    trancheId: AppendsTrancheId,
+    trancheId: AppendsPartitionId,
     epochId: AppendsEpochId,
     spans: Events.StreamSpan[],
     assumeEmpty = false,
@@ -262,14 +275,14 @@ export namespace Reader {
   export class Service {
     constructor(
       private readonly resolve: (
-        t: AppendsTrancheId,
+        t: AppendsPartitionId,
         e: AppendsEpochId,
         v: bigint,
       ) => Decider<Event, State>,
     ) {}
 
     read(
-      trancheId: AppendsTrancheId,
+      trancheId: AppendsPartitionId,
       epochId: AppendsEpochId,
       minIndex: bigint,
     ): Promise<[bigint | undefined, bigint, State]> {
@@ -277,7 +290,7 @@ export namespace Reader {
       return decider.queryEx((c) => [c.streamEventBytes, c.version, c.state])
     }
 
-    readVersion(trancheId: AppendsTrancheId, epochId: AppendsEpochId) {
+    readVersion(trancheId: AppendsPartitionId, epochId: AppendsEpochId) {
       const decider = this.resolve(trancheId, epochId, 9223372036854775807n)
       return decider.queryEx((c) => c.version)
     }
