@@ -25,5 +25,6 @@
     "@equinox-js/dynamo-store": "workspace:*",
     "@equinox-js/dynamo-store-indexer": "workspace:*",
     "@opentelemetry/api": "^1.4.0"
-  }
+  },
+  "version": "1.0.0-alpha.25"
 }

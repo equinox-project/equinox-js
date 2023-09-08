@@ -17,5 +17,6 @@
     "@equinox-js/core": "workspace:*",
     "@equinox-js/dynamo-store": "workspace:*",
     "commander": "^11.0.0"
-  }
+  },
+  "version": "1.0.0-alpha.25"
 }

@@ -13,7 +13,7 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --clean"
   },
-  "version": "1.0.0-alpha.24",
+  "version": "1.0.0-alpha.25",
   "files": [
     "./dist"
   ],
