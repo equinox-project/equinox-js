@@ -38,9 +38,10 @@ function createMessageDbConfig(): Config {
 }
 
 function createDynamoClient() {
-  if (process.env.IS_LOCAL === "true") {
+  const LOCALSTACK_HOSTNAME = process.env.LOCALSTACK_HOSTNAME
+  if (LOCALSTACK_HOSTNAME) {
     return new DynamoDB({
-      endpoint: "http://localhost:4566",
+      endpoint: `http://${LOCALSTACK_HOSTNAME}:4566`,
       region: "us-east-1",
       credentials: {
         accessKeyId: "test",

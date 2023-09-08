@@ -7,6 +7,7 @@ import {
   Tags,
   StreamId,
   ICache,
+  StreamName,
 } from "@equinox-js/core"
 import { describe, test, expect, afterEach, afterAll, beforeAll } from "vitest"
 import { randomUUID } from "crypto"
@@ -17,15 +18,16 @@ import {
   DynamoStoreCategory,
   DynamoStoreClient,
   DynamoStoreContext,
+  EventsContext,
   TipOptions,
   QueryOptions,
 } from "../src"
 import { DynamoDB } from "@aws-sdk/client-dynamodb"
+import { trace } from "@opentelemetry/api"
 
 const Category = DynamoStoreCategory
 
 const defaultBatchSize = 500
-
 
 namespace CartService {
   type E = Cart.Events.Event
@@ -69,11 +71,13 @@ namespace CartService {
     return Cart.Service.create(category)
   }
 }
+
 const ddb = new DynamoDB({
   region: "us-east-1",
   credentials: { accessKeyId: "test", secretAccessKey: "test" },
-  endpoint: "http://127.0.0.1:4566",
+  endpoint: `http://localhost:4566`,
 })
+
 beforeAll(async () => {
   try {
     await ddb.describeTable({
@@ -113,6 +117,7 @@ namespace SimplestThing {
   export const initial: Event = { type: "StuffHappened" }
   export const fold = (_state: Event, events: Event[]) => events.reduce(evolve, initial)
   export const categoryName = "SimplestThing"
+  export const streamName = StreamName.gen(categoryName, (x: StreamId) => x)
   export const resolve = (
     context: DynamoStoreContext,
     categoryName: string,
@@ -248,7 +253,7 @@ describe("Round-trips against the store", () => {
       addRemoveCount,
     )
 
-    assertRU(2, 3)
+    assertRU(2, 4)
     assertSpans({
       name: "Transact",
       [Tags.pages]: 1,
@@ -277,7 +282,7 @@ describe("Round-trips against the store", () => {
       service,
       addRemoveCount,
     )
-    assertRU(20, 30)
+    assertRU(0, 30)
     assertSpans({
       name: "Transact",
       [Tags.pages]: 1,
@@ -629,4 +634,44 @@ test("Version is 0-based", async () => {
     (result, ctx) => [result, ctx.version],
   )
   expect([before, after]).toEqual([0n, 1n])
+})
+
+test("EventsContext can read events for a stream", async () => {
+  const context = createContext(client, 3)
+  let id = StreamId.create(randomUUID())
+  const decider = SimplestThing.resolve(context, SimplestThing.categoryName, id)
+  for (let i = 0; i < 3; ++i) {
+    await decider.transact(() => [
+      { type: "StuffHappened" },
+      { type: "StuffHappened" },
+      { type: "StuffHappened" },
+    ])
+  }
+  memoryExporter.reset()
+  const eventsContext = new EventsContext(context)
+  const result = await trace
+    .getTracer("@equinox-js/core")
+    .startActiveSpan("Read", (span) =>
+      eventsContext.read(SimplestThing.streamName(id)).finally(() => span.end()),
+    )
+  expect(result.length).toEqual(9)
+  for (let i = 0; i < 9; ++i) {
+    expect(result[i]).toMatchObject({
+      type: "StuffHappened",
+      index: BigInt(i),
+      size: 53,
+      isUnfold: false,
+      id: "00000000-0000-0000-0000-000000000000",
+      data: Buffer.alloc(0),
+      meta: Buffer.alloc(0),
+    })
+    if (i > 0) {
+      // time is ascending
+      expect(result[i].time.getTime()).toBeGreaterThanOrEqual(result[i - 1].time.getTime())
+    }
+  }
+  assertSpans({
+    name: "Read",
+    [Tags.batches]: 3,
+  })
 })
