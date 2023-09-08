@@ -1,4 +1,4 @@
-import { Cart, ContactPreferences } from "@equinox-js/test-domain"
+import { Cart, ContactPreferences } from "../../../test-domain/src/index.js"
 import { Decider, MemoryCache, Codec, CachingStrategy, Tags, StreamId } from "@equinox-js/core"
 import { describe, test, expect, afterEach, afterAll } from "vitest"
 import { Pool } from "pg"

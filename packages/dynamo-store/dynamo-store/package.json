@@ -26,7 +26,6 @@
     "@aws-sdk/smithy-client": "^3.257.0",
     "@aws-sdk/types": "^3.257.0",
     "@equinox-js/core": "workspace:*",
-    "@equinox-js/test-domain": "workspace:*",
     "@opentelemetry/api": "^1.4.0"
   },
   "version": "1.0.0-alpha.26"
