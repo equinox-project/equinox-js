@@ -349,6 +349,10 @@ importers:
       '@aws-sdk/types':
         specifier: ^3.257.0
         version: 3.257.0
+      '@opentelemetry/api':
+        specifier: ^1.4.0
+        version: 1.4.0
+    devDependencies:
       '@equinox-js/core':
         specifier: workspace:*
         version: link:../../core
@@ -358,10 +362,6 @@ importers:
       '@equinox-js/dynamo-store-indexer':
         specifier: workspace:*
         version: link:../indexer
-      '@opentelemetry/api':
-        specifier: ^1.4.0
-        version: 1.4.0
-    devDependencies:
       '@types/aws-lambda':
         specifier: ^8.10.110
         version: 8.10.110
