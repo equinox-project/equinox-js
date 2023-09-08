@@ -68,8 +68,7 @@ export class Service {
   }
 
   static create(category: Equinox.Category<Event, State>) {
-    const resolve = (clientId: ClientId) =>
-      Decider.forStream(category, Category, streamId(clientId), null)
+    const resolve = (clientId: ClientId) => Decider.forStream(category, streamId(clientId), null)
     return new Service(resolve)
   }
 }

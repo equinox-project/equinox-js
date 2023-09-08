@@ -147,7 +147,7 @@ export class Service {
       if (prepare) await prepare()
       return interpretMany(Fold.fold, commands.map(interpret))(state)
     }
-    const opt = optimistic ? LoadOption.AnyCachedValue: LoadOption.RequireLoad
+    const opt = optimistic ? LoadOption.AnyCachedValue : LoadOption.RequireLoad
     return decider.transactResultAsync(interpretCommands, opt)
   }
 

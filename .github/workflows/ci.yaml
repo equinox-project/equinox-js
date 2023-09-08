@@ -33,7 +33,7 @@ jobs:
       dynamo:
         image: "amazon/dynamodb-local:latest"
         ports:
-          - "8000:8000"
+          - "4566:8000"
     steps:
       - name: Checkout
         uses: actions/checkout@v3

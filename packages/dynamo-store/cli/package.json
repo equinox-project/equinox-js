@@ -1,0 +1,21 @@
+{
+  "name": "@equinox-js/dynamo-store-cli",
+  "type": "module",
+  "bin": {
+    "dynamo-store": "./bin/index.js"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.18",
+    "tsup": "^7.2.0",
+    "typescript": "^5.2.2",
+    "vitest": "^0.25.3"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.258.0",
+    "@aws-sdk/smithy-client": "^3.257.0",
+    "@aws-sdk/types": "^3.257.0",
+    "@equinox-js/core": "workspace:*",
+    "@equinox-js/dynamo-store": "workspace:*",
+    "commander": "^11.0.0"
+  }
+}

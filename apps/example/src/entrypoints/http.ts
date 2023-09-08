@@ -1,21 +1,11 @@
 import "./tracing.js"
 import "express-async-errors"
 import express from "express"
-import pg from "pg"
-import { MessageDbContext } from "@equinox-js/message-db"
-import { Config, Store } from "../config/equinox.js"
-import { MemoryCache } from "@equinox-js/core"
 import { Payer, Invoice } from "../domain/index.js"
 import { InvoiceId, PayerId } from "../domain/identifiers.js"
+import { createConfig } from "./config.js"
 
-const createPool = (connectionString?: string) =>
-  connectionString ? new pg.Pool({ connectionString, max: 10 }) : undefined
-
-const leaderPool = createPool(process.env.MDB_CONN_STR)!
-const followerPool = createPool(process.env.MDB_RO_CONN_STR)
-
-const context = MessageDbContext.create({ leaderPool, followerPool, batchSize: 500 })
-const config: Config = { store: Store.MessageDb, context, cache: new MemoryCache() }
+const config = createConfig()
 
 const payerService = Payer.Service.create(config)
 const invoiceService = Invoice.Service.create(config)

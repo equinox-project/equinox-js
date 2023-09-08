@@ -9,7 +9,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.258.0",
     "@equinox-js/core": "workspace:*",
+    "@equinox-js/dynamo-store": "workspace:*",
+    "@equinox-js/dynamo-store-source": "workspace:*",
     "@equinox-js/memory-store": "workspace:*",
     "@equinox-js/message-db": "workspace:*",
     "@equinox-js/message-db-consumer": "workspace:*",
@@ -34,7 +37,7 @@
     "@types/node": "^18.11.18",
     "@types/pg": "^8.0.0",
     "@types/ramda": "^0.28.21",
-    "tsup": "^6.5.0",
+    "tsup": "^7.2.0",
     "vitest": "^0.34.1"
   }
 }

@@ -1,0 +1,29 @@
+{
+  "name": "@equinox-js/dynamo-store-source",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.mts --sourcemap --format esm,cjs --dts --clean"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.18",
+    "p-limit": "^4.0.0",
+    "tsup": "^7.2.0",
+    "typescript": "^5.2.2",
+    "vitest": "^0.25.3"
+  },
+  "dependencies": {
+    "@equinox-js/core": "workspace:*",
+    "@equinox-js/dynamo-store": "workspace:*",
+    "@equinox-js/dynamo-store-indexer": "workspace:*",
+    "@opentelemetry/api": "^1.4.0"
+  }
+}
