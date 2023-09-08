@@ -1,9 +1,10 @@
 import * as cdk from "aws-cdk-lib"
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb"
 import { Construct } from "constructs"
+import { BillingMode } from "aws-cdk-lib/aws-dynamodb"
 export class EventsTable extends Construct {
   table: dynamodb.Table
-  constructor(scope: Construct, id: string) {
+  constructor(scope: Construct, id: string, isIndex: boolean) {
     super(scope, id)
 
     const tableName = new cdk.CfnParameter(this, "TableName", {
@@ -52,9 +53,17 @@ export class EventsTable extends Construct {
       },
       billingMode: billingMode.valueAsString as dynamodb.BillingMode,
       tableClass: tableClass.valueAsString as dynamodb.TableClass,
-      writeCapacity: writeCapacity.valueAsNumber || undefined,
-      readCapacity: readCapacity.valueAsNumber || undefined,
-      stream: (streamViewType.valueAsString as dynamodb.StreamViewType) || undefined,
+      writeCapacity:
+        billingMode.valueAsString === BillingMode.PROVISIONED
+          ? writeCapacity.valueAsNumber
+          : undefined,
+      readCapacity:
+        billingMode.valueAsString === BillingMode.PROVISIONED
+          ? readCapacity.valueAsNumber
+          : undefined,
+      stream: isIndex
+        ? undefined
+        : (streamViewType.valueAsString as dynamodb.StreamViewType) || undefined,
     })
   }
 }

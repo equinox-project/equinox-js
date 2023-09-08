@@ -14,7 +14,7 @@ export class IndexerLambda extends Construct {
     super(scope, id)
 
     const fn = new NodejsFunction(this, "IndexerLambda", {
-      runtime: lambda.Runtime.NODEJS_16_X,
+      runtime: lambda.Runtime.NODEJS_18_X,
       entry: "./node_modules/@equinox-js/dynamo-store-indexer-lambda/src/index.ts",
       handler: "handler",
       environment: {
@@ -24,6 +24,7 @@ export class IndexerLambda extends Construct {
     })
 
     eventsTable.grantReadData(fn)
+    eventsTable.grantStreamRead(fn)
     eventsTable.grantFullAccess(fn)
     indexTable.grantReadWriteData(fn)
 

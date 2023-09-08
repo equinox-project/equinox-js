@@ -3,13 +3,13 @@ import { Construct } from "constructs"
 import { EventsTable } from "./table"
 import { IndexerLambda } from "./indexer-lambda"
 
-export class SrcStack extends cdk.Stack {
+export class DynamoStoreStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props)
 
-    const events = new EventsTable(this, "events")
-    const index = new EventsTable(this, "events_index")
-    
+    const events = new EventsTable(this, "events", false)
+    const index = new EventsTable(this, "events_index", true)
+
     const indexer = new IndexerLambda(this, "indexer", events.table, index.table)
   }
 }

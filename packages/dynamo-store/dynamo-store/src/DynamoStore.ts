@@ -4,7 +4,6 @@ import {
   ConsumedCapacity,
   DynamoDB,
   QueryCommandOutput,
-  ReturnConsumedCapacity,
   TransactWriteItemsInput,
 } from "@aws-sdk/client-dynamodb"
 import {
@@ -359,7 +358,7 @@ export class StoreTable {
         TableName: this.name,
         Key: key,
         ConsistentRead: consistentRead,
-        ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
+        ReturnConsumedCapacity: "TOTAL",
       })
       .then(reportRU)
 
@@ -407,7 +406,7 @@ export class StoreTable {
           ExclusiveStartKey: le,
           ScanIndexForward: !backwards,
           ConsistentRead: consistentRead,
-          ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
+          ReturnConsumedCapacity: "TOTAL",
         })
         .then(reportRU)
     }
@@ -432,7 +431,7 @@ export class StoreTable {
           Limit: maxItems,
           ExclusiveStartKey: le,
           ScanIndexForward: true,
-          ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
+          ReturnConsumedCapacity: "TOTAL",
         })
         .then(reportRU)
 
@@ -450,7 +449,7 @@ export class StoreTable {
       .deleteItem({
         TableName: this.name,
         Key: { p: { S: stream }, i: { N: String(i) } },
-        ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
+        ReturnConsumedCapacity: "TOTAL",
       })
       .then(reportRU)
   }
@@ -661,17 +660,17 @@ namespace Sync {
       if (actions.length === 1 && actions[0].Put != null) {
         await table.client.putItem({
           ...actions[0].Put,
-          ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
+          ReturnConsumedCapacity: "TOTAL",
         }).then(reportRU)
       } else if (actions.length === 1 && actions[0].Update != null) {
         await table.client.updateItem({
           ...actions[0].Update,
-          ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
+          ReturnConsumedCapacity: "TOTAL",
         }).then(reportRU)
       } else {
         await table.client.transactWriteItems({
           TransactItems: actions,
-          ReturnConsumedCapacity: ReturnConsumedCapacity.TOTAL,
+          ReturnConsumedCapacity: "TOTAL",
         }).then(reportRU)
       }
       return { type: "Written", etag: etag_ }

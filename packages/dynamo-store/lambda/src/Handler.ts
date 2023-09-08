@@ -1,7 +1,7 @@
 import { DynamoDBStreamEvent } from "aws-lambda"
 import {
   AppendsEpoch,
-  AppendsTrancheId,
+  AppendsPartitionId,
   DynamoStoreIndexer,
   IndexStreamId,
 } from "@equinox-js/dynamo-store-indexer"
@@ -87,5 +87,5 @@ export const handle = async (service: DynamoStoreIndexer, evt: DynamoDBStreamEve
   const spans = parse(evt)
   if (spans.length === 0) return
   // TOCONSIDER if there are multiple shards, they should map to individual TrancheIds in order to avoid continual concurrency violations from competing writers
-  await service.ingestWithoutConcurrency(AppendsTrancheId.wellKnownId, spans)
+  await service.ingestWithoutConcurrency(AppendsPartitionId.wellKnownId, spans)
 }
