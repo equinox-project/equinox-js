@@ -1,6 +1,6 @@
 {
   "name": "@equinox-js/dynamo-store-infra",
-  "version": "1.0.0-alpha.26",
+  "version": "1.0.0-alpha.27",
   "bin": {
     "src": "bin/src.js"
   },

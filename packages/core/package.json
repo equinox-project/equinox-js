@@ -14,7 +14,7 @@
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
     "test": "vitest run"
   },
-  "version": "1.0.0-alpha.26",
+  "version": "1.0.0-alpha.27",
   "files": [
     "./dist"
   ],
