@@ -19,13 +19,6 @@ export namespace AppendsPartitionId {
   }
 }
 
-export type AppendsTrancheId = number & { __brand: "AppendsTrancheId" }
-export namespace AppendsTrancheId {
-  export const wellKnownId = 0 as AppendsTrancheId
-  export const toString = (id: AppendsTrancheId) => String(id)
-  export const parse = (n: string) => Number(n) as AppendsTrancheId
-}
-
 export type IndexStreamId = string & { __brand: "IndexStreamId" }
 export namespace IndexStreamId {
   export const toString = (x: IndexStreamId) => x as string

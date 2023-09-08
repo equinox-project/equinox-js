@@ -8,17 +8,21 @@ import {
   StreamName,
 } from "@equinox-js/core"
 import { AccessStrategy, DynamoStoreCategory, DynamoStoreContext } from "@equinox-js/dynamo-store"
-import { AppendsTrancheId } from "@equinox-js/dynamo-store-indexer"
+import { AppendsPartitionId } from "@equinox-js/dynamo-store-indexer"
 
 export interface ICheckpointer {
   commit(groupName: string, category: string, position: bigint): Promise<void>
 
-  load(groupName: string, category: string, establishOrigin?: () => Promise<bigint>): Promise<bigint>
+  load(
+    groupName: string,
+    category: string,
+    establishOrigin?: () => Promise<bigint>,
+  ): Promise<bigint>
 }
 
 namespace Stream {
   export const category = "$ReaderCheckpoint"
-  export const streamId = StreamId.gen(AppendsTrancheId.toString, (x: string) => x)
+  export const streamId = StreamId.gen(AppendsPartitionId.toString, (x: string) => x)
   export const name = StreamName.gen(category, streamId)
 }
 
@@ -171,21 +175,21 @@ namespace Decide {
 export class DynamoCheckpoints implements ICheckpointer {
   constructor(
     private readonly resolve: (
-      trancheId: AppendsTrancheId,
+      partitionId: AppendsPartitionId,
       groupName: string,
     ) => Decider<Events.Event, Fold.State>,
     private readonly checkpointFreqS: number,
   ) {}
-  commit(groupName: string, category: string, position: bigint): Promise<void> {
-    const decider = this.resolve(AppendsTrancheId.parse(category), groupName)
+  commit(groupName: string, tranche: string, position: bigint): Promise<void> {
+    const decider = this.resolve(AppendsPartitionId.parse(tranche), groupName)
     return decider.transact(Decide.update(new Date(), position), LoadOption.AnyCachedValue)
   }
   load(
     groupName: string,
-    category: string,
+    tranche: string,
     establishOrigin_?: () => Promise<bigint>,
   ): Promise<bigint> {
-    const decider = this.resolve(AppendsTrancheId.parse(category), groupName)
+    const decider = this.resolve(AppendsPartitionId.parse(tranche), groupName)
     const establishOrigin = establishOrigin_ ?? (() => Promise.resolve(BigInt(0)))
     const now = new Date()
     return decider.transactResultAsync(
@@ -194,8 +198,8 @@ export class DynamoCheckpoints implements ICheckpointer {
     )
   }
 
-  override(groupName: string, category: string, position: bigint): Promise<void> {
-    const decider = this.resolve(AppendsTrancheId.parse(category), groupName)
+  override(groupName: string, tranche: string, position: bigint): Promise<void> {
+    const decider = this.resolve(AppendsPartitionId.parse(tranche), groupName)
     return decider.transact(Decide.override(new Date(), this.checkpointFreqS, position))
   }
 
@@ -204,8 +208,8 @@ export class DynamoCheckpoints implements ICheckpointer {
     const access = AccessStrategy.Custom(Fold.isOrigin, Fold.transmute)
     const caching = CachingStrategy.Cache(cache)
     const category = DynamoStoreCategory.create(context, Stream.category, Events.codec, Fold.fold, Fold.initial, caching, access)
-    const resolve = (trancheId: AppendsTrancheId, groupName: string) =>
-      Decider.forStream(category, Stream.streamId(trancheId, groupName), null)
+    const resolve = (partition: AppendsPartitionId, groupName: string) =>
+      Decider.forStream(category, Stream.streamId(partition, groupName), null)
     return new DynamoCheckpoints(resolve, checkpointFreqS)
   }
 }
