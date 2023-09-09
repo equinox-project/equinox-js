@@ -137,31 +137,38 @@ namespace Impl {
   }
 }
 
+type ReadEvents = (sn: StreamName, i: number, count: number) => Promise<ITimelineEvent<Buffer>[]>
 export type LoadMode =
   | { type: "IndexOnly" }
   | {
       type: "WithData"
       degreeOfParallelism: number
-      /** Defines the Context to use when loading the Event Data/Meta */
-      context: DynamoStoreContext
+      /** Defines the function to use when loading the Event Data/Meta */
+      read: ReadEvents
     }
 
 export namespace LoadMode {
   /** Skip loading of Data/Meta for events; this is the most efficient mode as it means the Source only needs to read from the index */
   export const IndexOnly = (): LoadMode => ({ type: "IndexOnly" })
-  /** Populates the Data/Meta fields for events; necessitates loads of all individual streams that pass the categoryFilter before they can be handled */
-  export const WithData = (degreeOfParallelism: number, context: DynamoStoreContext): LoadMode => ({
+
+  export const WithDataEx = (degreeOfParallelism: number, read: ReadEvents): LoadMode => ({
     type: "WithData",
     degreeOfParallelism,
-    context,
+    read,
   })
+  /** Populates the Data/Meta fields for events; necessitates loads of all individual streams that pass the categoryFilter before they can be handled */
+  export const WithData = (degreeOfParallelism: number, context: DynamoStoreContext): LoadMode => {
+    const eventContext = new EventsContext(context)
+    const read: ReadEvents = (sn, i, count) => eventContext.read(sn, i, undefined, count, undefined)
+    return WithDataEx(degreeOfParallelism, read)
+  }
 
   const withBodies =
-    (eventsContext: EventsContext, categoryFilter: (cat: string) => boolean) =>
+    (read: ReadEvents, categoryFilter: (cat: string) => boolean) =>
     (sn: StreamName, i: number, c: string[]) => {
       const category = StreamName.category(sn)
       if (categoryFilter(category)) {
-        return async () => eventsContext.read(sn, i, undefined, c.length, undefined)
+        return () => read(sn, i, c.length)
       }
     }
   const withoutBodies =
@@ -190,7 +197,7 @@ export namespace LoadMode {
       case "WithData":
         return {
           hydrating: true,
-          tryLoad: withBodies(new EventsContext(loadMode.context), categoryFilter),
+          tryLoad: withBodies(loadMode.read, categoryFilter),
           degreeOfParallelism: loadMode.degreeOfParallelism,
         }
     }

@@ -9,15 +9,15 @@ const createPool = (connectionString?: string) =>
 
 const messageDbPool = createPool(process.env.MDB_RO_CONN_STR || process.env.MDB_CONN_STR)!
 const pool = createPool(process.env.CP_CONN_STR)!
-const checkpointer = new PgCheckpoints(pool)
-checkpointer.ensureTable().then(() => console.log("table created"))
+const checkpoints = new PgCheckpoints(pool)
+checkpoints.ensureTable().then(() => console.log("table created"))
 
 const source = MessageDbSource.create({
   pool: messageDbPool, 
   batchSize: 500,
   categories: [Payer.Stream.category],
   groupName: "PayerReadModel",
-  checkpointer,
+  checkpoints,
   handler: PayerReadModel.createHandler(pool),
   tailSleepIntervalMs: 100,
   maxConcurrentStreams: 10,

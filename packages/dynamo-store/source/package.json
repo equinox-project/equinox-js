@@ -14,12 +14,12 @@
     "build": "tsup src/index.mts --sourcemap --format esm,cjs --dts --clean"
   },
   "devDependencies": {
-    "@types/node": "^18.11.18",
     "@equinox-js/memory-store": "workspace:*",
+    "@types/node": "^18.11.18",
     "p-limit": "^4.0.0",
     "tsup": "^7.2.0",
     "typescript": "^5.2.2",
-    "vitest": "^0.25.3"
+    "vitest": "^0.34.4"
   },
   "dependencies": {
     "@equinox-js/core": "workspace:*",

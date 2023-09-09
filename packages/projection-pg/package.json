@@ -19,12 +19,11 @@
     "./dist"
   ],
   "devDependencies": {
-    "@types/knex": "^0.16.1",
     "@types/node": "^18.11.18",
     "@types/pg": "^8.6.6",
     "tsup": "^7.2.0",
     "typescript": "^5.2.2",
-    "vitest": "^0.34.1"
+    "vitest": "^0.34.4"
   },
   "dependencies": {
     "pg": "^8.8.0"
