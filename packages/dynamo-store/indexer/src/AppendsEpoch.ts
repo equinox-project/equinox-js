@@ -214,52 +214,29 @@ export class Service {
   }
 }
 
+// prettier-ignore
 export namespace Config {
   const createCategory = (context: DynamoStoreContext, cache?: ICachingStrategy) =>
-    DynamoStoreCategory.create(
-      context,
-      Stream.category,
-      Events.codec,
-      Fold.fold,
-      Fold.initial,
-      cache,
-      AccessStrategy.Unoptimized(),
-    )
+    DynamoStoreCategory.create(context, Stream.category, Events.codec, Fold.fold, Fold.initial, cache, AccessStrategy.Unoptimized())
 
-  // prettier-ignore
   function fromCategory(category: Category<Events.Event, Fold.State>, maxBytes: number, maxVersion: bigint, maxStreams: number) {
     let shouldClose = (totalBytes: bigint | undefined, version: bigint, totalStreams: number) => {
       return (totalBytes || 0n) > maxBytes || version >= maxVersion || totalStreams >= maxStreams
     }
-
     return new Service(shouldClose, (trancheId, epochId) =>
       Decider.forStream(category, Stream.streamId(trancheId, epochId), null),
     )
   }
 
-  export const create = (
-    maxBytes: number,
-    maxVersion: bigint,
-    maxStreams: number,
-    context: DynamoStoreContext,
-    cache?: ICachingStrategy,
-  ) => {
+  export const create = (maxBytes: number, maxVersion: bigint, maxStreams: number, context: DynamoStoreContext, cache?: ICachingStrategy) => {
     const category = createCategory(context, cache)
     return fromCategory(category, maxBytes, maxVersion, maxStreams)
   }
 
-  export const createMem = (
-    maxBytes: number,
-    maxVersion: bigint,
-    maxStreams: number,
-    store: VolatileStore<any>,
-  ) =>
-    fromCategory(
-      MemoryStoreCategory.create(store, Stream.category, Events.codec, Fold.fold, Fold.initial),
-      maxBytes,
-      maxVersion,
-      maxStreams,
-    )
+  export const createMem = (maxBytes: number, maxVersion: bigint, maxStreams: number, store: VolatileStore<any>) => {
+    const category = MemoryStoreCategory.create(store, Stream.category, Events.codec, Fold.fold, Fold.initial)
+    return fromCategory(category, maxBytes, maxVersion, maxStreams)
+  }
 }
 
 export namespace Reader {
