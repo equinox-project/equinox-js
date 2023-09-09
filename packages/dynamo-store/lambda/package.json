@@ -1,16 +1,13 @@
 {
   "name": "@equinox-js/dynamo-store-indexer-lambda",
+  "version": "1.0.0-alpha.27.1",
+  "main": "src/index.ts",
   "scripts": {
-    "build": "tsup src/index.ts --format esm --clean"
+    "lint": "tsc -p . --noEmit"
   },
   "devDependencies": {
-    "@equinox-js/core": "workspace:*",
-    "@equinox-js/dynamo-store": "workspace:*",
-    "@equinox-js/dynamo-store-indexer": "workspace:*",
     "@types/aws-lambda": "^8.10.110",
     "@types/node": "^18.11.18",
-    "@vercel/ncc": "^0.36.1",
-    "tsup": "^7.2.0",
     "typescript": "^5.2.2"
   },
   "dependencies": {
@@ -18,7 +15,8 @@
     "@aws-sdk/client-dynamodb-streams": "^3.262.0",
     "@aws-sdk/smithy-client": "^3.257.0",
     "@aws-sdk/types": "^3.257.0",
+    "@equinox-js/dynamo-store-indexer": "workspace:*",
+    "@equinox-js/dynamo-store": "workspace:*",
     "@opentelemetry/api": "^1.4.0"
-  },
-  "version": "1.0.0-alpha.27"
+  }
 }
