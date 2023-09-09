@@ -134,6 +134,13 @@ describe("With version numbers", () => {
     const { rows } = await pool.query("select * from with_version where id = $1", [id])
     expect(rows).toEqual([{ id, name: "bob", version: "10" }])
   })
+  test("Delete", async () => {
+    const id = randomUUID()
+    await executeChanges(projection, pool, [Insert({ id, version: 0, name: "bob" })])
+    await executeChanges(projection, pool, [Delete({ id, version: 1 })])
+    const { rows } = await pool.query("select * from with_version where id = $1", [id])
+    expect(rows).toEqual([])
+  })
   test("Delete with expired version", async () => {
     const id = randomUUID()
     await executeChanges(projection, pool, [Insert({ id, version: 10, name: "bob" })])
