@@ -141,6 +141,16 @@ describe("With version numbers", () => {
     const { rows } = await pool.query("select * from with_version where id = $1", [id])
     expect(rows).toEqual([{ id, name: "bob", version: "10" }])
   })
+  test("Delete with lower version", async () => {
+    const id = randomUUID()
+    await executeChanges(projection, pool, [Insert({ id, version: 0, name: "bob" })])
+    await executeChanges(projection, pool, [Update({ id, version: 1, name: "bobby" })])
+    await executeChanges(projection, pool, [Delete({ id, version: 2 })])
+    await executeChanges(projection, pool, [Insert({ id, version: 3, name: "bob" })])
+    await executeChanges(projection, pool, [Delete({ id, version: 2 })])
+    const { rows } = await pool.query("select * from with_version where id = $1", [id])
+    expect(rows).toEqual([{ id, name: "bob", version: "3" }])
+  })
   test("Upsert with expired version", async () => {
     const id = randomUUID()
     await executeChanges(projection, pool, [Insert({ id, version: 10, name: "bob" })])

@@ -69,12 +69,17 @@ function del(projection: Projection, change: Change) {
   const columns: string[] = []
   const values: any[] = []
   for (const [key, value] of Object.entries(change.data)) {
+    if (key === projection.version) continue
     columns.push(ident(key))
     values.push(value)
   }
 
   const whereClause = columns.map((col, i) => `${col} = $${i + 1}`).join(" and ")
-  const query = `delete from ${table} where ${whereClause}`
+  let query = `delete from ${table} where ${whereClause}`
+  if (projection.version) {
+    values.push(change.data[projection.version])
+    query += ` and ${ident(projection.version)} < $${values.length}`
+  }
   return { text: query, values }
 }
 
