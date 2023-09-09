@@ -23,7 +23,7 @@ interface CreateOptions {
   /** The name of the consumer group to use for checkpointing */
   groupName: string
   /** The checkpointer to use for checkpointing */
-  checkpointer: ICheckpointer
+  checkpoints: ICheckpoints
   /** The handler to call for each batch of stream messages */
   handler: (streamName: string, events: ITimelineEvent[]) => Promise<void>
   /** sleep time in ms between reads when at the end of the category */

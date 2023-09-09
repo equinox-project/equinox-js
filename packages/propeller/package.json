@@ -1,5 +1,5 @@
 {
-  "name": "@equinox-js/message-db-consumer",
+  "name": "@equinox-js/propeller",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -11,7 +11,7 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.mts --format esm,cjs --dts --clean",
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --sourcemap",
     "test": "vitest run"
   },
   "version": "1.0.0-alpha.27",
@@ -19,18 +19,12 @@
     "./dist"
   ],
   "devDependencies": {
-    "@equinox-js/message-db": "workspace:*",
-    "@types/node": "^18.11.18",
-    "@types/pg": "^8.6.6",
-    "p-limit": "^4.0.0",
     "tsup": "^7.2.0",
     "typescript": "^5.2.2",
     "vitest": "^0.34.1"
   },
   "dependencies": {
-    "@equinox-js/core": "workspace:*",
-    "@equinox-js/propeller": "workspace:*",
-    "@opentelemetry/api": "^1.4.0",
-    "pg": "^8.8.0"
+    "@equinox-js/core": "workspace:1.0.0-alpha.27",
+    "@opentelemetry/api": "^1.4.0"
   }
 }

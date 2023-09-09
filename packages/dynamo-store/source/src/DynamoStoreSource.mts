@@ -10,7 +10,7 @@ import { ITimelineEvent, StreamName } from "@equinox-js/core"
 import pLimit, { LimitFunction } from "p-limit"
 import { sleep } from "./Sleep.js"
 import zlib from "zlib"
-import type { ICheckpointer } from "./Checkpoints.js"
+import { ICheckpoints } from "@equinox-js/propeller"
 
 function keepMap<T, V>(arr: T[], fn: (x: T) => V | undefined): V[] {
   const out: V[] = []
@@ -27,23 +27,12 @@ type StreamEvent<Format> = [StreamName, ITimelineEvent<Format>]
 type Batch<Event> = { items: StreamEvent<Event>[]; checkpoint: Checkpoint; isTail: boolean }
 
 namespace Impl {
-  const renderPos = (pos: Checkpoint) => {
-    const [epoch, offset] = Checkpoint.toEpochAndOffset(pos)
-    return `${epoch}@${offset}`
-  }
-
-  export const readPartitions = (context: DynamoStoreContext) => {
-    const index = AppendsIndex.Reader.create(context)
-    return index.readKnownPartitions()
-  }
-
   export const readTailPositionForTranche = async (
-    context: DynamoStoreContext,
+    index: ReturnType<typeof AppendsIndex.Reader.create>,
+    epochs: AppendsEpoch.Reader.Service,
     partitionId: AppendsPartitionId,
   ) => {
-    const index = AppendsIndex.Reader.create(context)
     const epochId = await index.readIngestionEpochId(partitionId)
-    const epochs = AppendsEpoch.Reader.Config.create(context)
     const version = await epochs.readVersion(partitionId, epochId)
     return Checkpoint.positionOfEpochAndOffset(epochId, version)
   }
@@ -75,10 +64,10 @@ namespace Impl {
 
   // Includes optional hydrating of events with event bodies and/or metadata (controlled via hydrating/maybeLoad args)
   export async function* materializeIndexEpochAsBatchesOfStreamEvents(
-    context: DynamoStoreContext,
+    epochs: AppendsEpoch.Reader.Service,
     hydrating: boolean,
     maybeLoad: (
-      streamName: string,
+      streamName: StreamName,
       version: number,
       types: string[],
     ) => (() => Promise<ITimelineEvent<Buffer>[]>) | undefined,
@@ -87,7 +76,6 @@ namespace Impl {
     partitionId: AppendsPartitionId,
     position: Checkpoint,
   ) {
-    const epochs = AppendsEpoch.Reader.Config.create(context)
     const [epochId, offset] = Checkpoint.toEpochAndOffset(position)
     const [_size, version, state] = await epochs.read(partitionId, epochId, offset)
     const totalChanges = state.changes.length
@@ -96,7 +84,7 @@ namespace Impl {
       const totalEvents = all.reduce((p, v) => p + v.c.length, 0)
       let chosenEvents = 0
       const chooseStream = (span: AppendsEpoch.Events.StreamSpan) => {
-        const load = maybeLoad(span.p, span.i, span.c)
+        const load = maybeLoad(span.p as any as StreamName, span.i, span.c)
         if (load) {
           chosenEvents += span.c.length
           return [span.p, load] as const
@@ -212,10 +200,15 @@ export namespace LoadMode {
 export class DynamoStoreSourceClient {
   dop: number
   hydrating: boolean
-  tryLoad: any
+  tryLoad: (
+    sn: StreamName,
+    i: number,
+    c: string[],
+  ) => (() => Promise<ITimelineEvent<Buffer>[]>) | undefined
 
   constructor(
-    private readonly indexStoreContext: DynamoStoreContext,
+    private readonly epochs: AppendsEpoch.Reader.Service,
+    private readonly index: AppendsIndex.Reader,
     categoryFilter: (cat: string) => boolean,
     loadMode: LoadMode,
     private readonly partitionIds?: AppendsPartitionId[],
@@ -228,7 +221,7 @@ export class DynamoStoreSourceClient {
 
   crawl(partitionId: AppendsPartitionId, position: Checkpoint): AsyncIterable<Batch<Buffer>> {
     return Impl.materializeIndexEpochAsBatchesOfStreamEvents(
-      this.indexStoreContext,
+      this.epochs,
       this.hydrating,
       this.tryLoad,
       this.dop,
@@ -240,7 +233,7 @@ export class DynamoStoreSourceClient {
 
   async listPartitions(): Promise<AppendsPartitionId[]> {
     if (this.partitionIds) return this.partitionIds
-    const res = await Impl.readPartitions(this.indexStoreContext)
+    const res = await this.index.readKnownPartitions()
     return res.length === 0 ? [AppendsPartitionId.wellKnownId] : res
   }
 }
@@ -252,7 +245,7 @@ interface CreateOptions {
   /** sleep time in ms between reads when at the end of the category */
   tailSleepIntervalMs: number
   /** The checkpointer to use for checkpointing */
-  checkpoints: ICheckpointer
+  checkpoints: ICheckpoints
   mode: LoadMode
   /** The categories to read from */
   categories?: string[]
@@ -278,7 +271,11 @@ function inflate(event: ITimelineEvent<Buffer>): ITimelineEvent {
 export class DynamoStoreSource {
   limiter: LimitFunction
 
-  constructor(private readonly options: CreateOptions) {
+  constructor(
+    private readonly index: AppendsIndex.Reader,
+    private epochs: AppendsEpoch.Reader.Service,
+    private readonly options: Omit<CreateOptions, "context">,
+  ) {
     this.limiter = pLimit(options.maxConcurrentStreams)
   }
 
@@ -294,7 +291,7 @@ export class DynamoStoreSource {
       ),
     )
     if (pos === Checkpoint.initial && this.options.startFromTail) {
-      pos = await Impl.readTailPositionForTranche(this.options.context, partition)
+      pos = await Impl.readTailPositionForTranche(this.index, this.epochs, partition)
     }
     while (!signal.aborted) {
       for await (const batch of client.crawl(partition, pos)) {
@@ -334,7 +331,8 @@ export class DynamoStoreSource {
     const categoryFilter =
       this.options.categoryFilter ?? ((c) => this.options.categories!.includes(c))
     const client = new DynamoStoreSourceClient(
-      this.options.context,
+      this.epochs,
+      this.index,
       categoryFilter,
       this.options.mode,
     )
@@ -343,6 +341,8 @@ export class DynamoStoreSource {
   }
 
   static create(options: CreateOptions): DynamoStoreSource {
-    return new DynamoStoreSource(options)
+    const index = AppendsIndex.Reader.create(options.context)
+    const epochs = AppendsEpoch.Reader.Config.create(options.context)
+    return new DynamoStoreSource(index, epochs, options)
   }
 }

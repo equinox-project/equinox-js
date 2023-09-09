@@ -9,6 +9,7 @@ import {
 import { AppendsEpochId, AppendsPartitionId } from "./Identifiers.js"
 import { DynamoStoreContext, DynamoStoreCategory, AccessStrategy } from "@equinox-js/dynamo-store"
 import { Map } from "immutable"
+import { MemoryStoreCategory, VolatileStore } from "@equinox-js/memory-store"
 
 export namespace Stream {
   export const category = "$AppendsIndex"
@@ -28,7 +29,7 @@ export namespace Events {
         : { partition: x.partition, epoch: x.epoch },
     Snapshotted: (x) => x as any,
   })
-  export const codec = Codec.deflate<Event, null>(Codec.upcast(Codec.json(), upcast))
+  export const codec = Codec.deflate(Codec.upcast<Event>(Codec.json(), upcast))
 }
 
 export namespace Fold {
@@ -85,47 +86,54 @@ export class Service {
     const category = createCategory(context, caching)
     return new Service(() => Decider.forStream(category, Stream.streamId(), null))
   }
+  static createMem(store: VolatileStore<any>) {
+    const category = createMemoryCategory(store)
+    return new Service(() => Decider.forStream(category, Stream.streamId(), null))
+  }
 }
 
+function createMemoryCategory(store: VolatileStore<any>) {
+  return MemoryStoreCategory.create(store, Stream.category, Events.codec, Fold.fold, Fold.initial)
+}
+
+// prettier-ignore
 function createCategory(context: DynamoStoreContext, caching?: ICachingStrategy) {
-  return DynamoStoreCategory.create(
-    context,
-    Stream.category,
-    Events.codec,
-    Fold.fold,
-    Fold.initial,
-    caching,
-    AccessStrategy.Snapshot(Fold.isOrigin, Fold.toSnapshot),
-  )
+  const access = AccessStrategy.Snapshot(Fold.isOrigin, Fold.toSnapshot)
+  return DynamoStoreCategory.create(context, Stream.category, Events.codec, Fold.fold, Fold.initial, caching, access)
 }
 
-export namespace Reader {
-  const readKnownPartitions = (state: Fold.State) => Array.from(state.keys())
+namespace Query {
+  export const readKnownPartitions = (state: Fold.State) => Array.from(state.keys())
 
-  const readIngestionEpochId = (partitionId: AppendsPartitionId) => (state: Fold.State) =>
+  export const readIngestionEpochId = (partitionId: AppendsPartitionId) => (state: Fold.State) =>
     state.get(partitionId) ?? AppendsEpochId.initial
+}
 
-  export class Service {
-    constructor(private readonly resolve: () => Decider<Events.Event, Fold.State>) {}
+export class Reader {
+  constructor(private readonly resolve: () => Decider<Events.Event, Fold.State>) {}
 
-    read() {
-      const decider = this.resolve()
-      return decider.query((x) => x)
-    }
-
-    readKnownPartitions() {
-      const decider = this.resolve()
-      return decider.query(readKnownPartitions)
-    }
-
-    readIngestionEpochId(partitionId: AppendsPartitionId) {
-      const decider = this.resolve()
-      return decider.query(readIngestionEpochId(partitionId))
-    }
+  read() {
+    const decider = this.resolve()
+    return decider.query((x) => x)
   }
 
-  export const create = (context: DynamoStoreContext) => {
+  readKnownPartitions() {
+    const decider = this.resolve()
+    return decider.query(Query.readKnownPartitions)
+  }
+
+  readIngestionEpochId(partitionId: AppendsPartitionId) {
+    const decider = this.resolve()
+    return decider.query(Query.readIngestionEpochId(partitionId))
+  }
+
+  static create(context: DynamoStoreContext) {
     const category = createCategory(context, CachingStrategy.NoCache())
-    return new Service(() => Decider.forStream(category, Stream.streamId(), null))
+    return new Reader(() => Decider.forStream(category, Stream.streamId(), null))
+  }
+
+  static createMem(store: VolatileStore<any>) {
+    const category = createMemoryCategory(store)
+    return new Reader(() => Decider.forStream(category, Stream.streamId(), null))
   }
 }

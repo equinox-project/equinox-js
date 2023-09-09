@@ -1,18 +1,17 @@
 import { Pool } from "pg"
+import { ICheckpoints } from "@equinox-js/propeller"
 
-export interface ICheckpointer {
-  commit(groupName: string, category: string, position: bigint): Promise<void>
-
-  load(groupName: string, category: string): Promise<bigint>
-}
-
-export class PgCheckpoints implements ICheckpointer {
+export class PgCheckpoints implements ICheckpoints {
   constructor(
     private readonly pool: Pool,
     private readonly schema = "public",
   ) {}
 
-  async load(groupName: string, category: string): Promise<bigint> {
+  async load(
+    groupName: string,
+    category: string,
+    establishOrigin?: () => Promise<bigint>,
+  ): Promise<bigint> {
     const result = await this.pool.query(
       `select position
        from ${this.schema}.eqx_checkpoint
@@ -22,11 +21,12 @@ export class PgCheckpoints implements ICheckpointer {
       [groupName, category],
     )
     if (result.rows.length) return BigInt(result.rows[0].position)
+    const pos = establishOrigin ? await establishOrigin() : 0n
     await this.pool.query(
       `insert into ${this.schema}.eqx_checkpoint(group_name, category, position)
        values ($1, $2, $3)
        on conflict do nothing;`,
-      [groupName, category, 0],
+      [groupName, category, pos.toString()],
     )
     return 0n
   }

@@ -17,10 +17,12 @@ import {
   StreamName,
   ICachingStrategy,
   ICodec,
+  Category,
 } from "@equinox-js/core"
 import { IngestResult } from "./ExactlyOnceIngester.js"
 import { AccessStrategy, DynamoStoreCategory, DynamoStoreContext } from "@equinox-js/dynamo-store"
 import { Map } from "immutable"
+import { MemoryStoreCategory, VolatileStore } from "@equinox-js/memory-store"
 
 export const maxItemsPerEpoch = Checkpoint.MAX_ITEMS_PER_EPOCH
 
@@ -224,14 +226,8 @@ export namespace Config {
       AccessStrategy.Unoptimized(),
     )
 
-  export const create = (
-    maxBytes: number,
-    maxVersion: bigint,
-    maxStreams: number,
-    context: DynamoStoreContext,
-    cache?: ICachingStrategy,
-  ) => {
-    const category = createCategory(context, cache)
+  // prettier-ignore
+  function fromCategory(category: Category<Events.Event, Fold.State>, maxBytes: number, maxVersion: bigint, maxStreams: number) {
     let shouldClose = (totalBytes: bigint | undefined, version: bigint, totalStreams: number) => {
       return (totalBytes || 0n) > maxBytes || version >= maxVersion || totalStreams >= maxStreams
     }
@@ -240,6 +236,30 @@ export namespace Config {
       Decider.forStream(category, Stream.streamId(trancheId, epochId), null),
     )
   }
+
+  export const create = (
+    maxBytes: number,
+    maxVersion: bigint,
+    maxStreams: number,
+    context: DynamoStoreContext,
+    cache?: ICachingStrategy,
+  ) => {
+    const category = createCategory(context, cache)
+    return fromCategory(category, maxBytes, maxVersion, maxStreams)
+  }
+
+  export const createMem = (
+    maxBytes: number,
+    maxVersion: bigint,
+    maxStreams: number,
+    store: VolatileStore<any>,
+  ) =>
+    fromCategory(
+      MemoryStoreCategory.create(store, Stream.category, Events.codec, Fold.fold, Fold.initial),
+      maxBytes,
+      maxVersion,
+      maxStreams,
+    )
 }
 
 export namespace Reader {
@@ -297,26 +317,30 @@ export namespace Reader {
   }
 
   export namespace Config {
+    const createMemoryCategory = (store: VolatileStore<any>, minIndex: bigint) => {
+      const trimPotentialOverstep = (ev: Event[]) => ev.filter(([i]) => i >= minIndex)
+      const fold_ = (s: State, e: Event[]) => fold(s, trimPotentialOverstep(e))
+      return MemoryStoreCategory.create(store, Stream.category, codec, fold_, initial)
+    }
     const createCategory = (context: DynamoStoreContext, minIndex: bigint) => {
       const isOrigin = ([i, _]: [bigint, unknown]) => i <= minIndex
       const trimPotentialOverstep = (ev: Event[]) => ev.filter(([i]) => i >= minIndex)
-      const accessStrategy = AccessStrategy.MultiSnapshot<Event, State>(isOrigin, () => {
+      const fold_ = (s: State, e: Event[]) => fold(s, trimPotentialOverstep(e))
+      const access = AccessStrategy.MultiSnapshot<Event, State>(isOrigin, () => {
         throw new Error("writing not applicable")
       })
 
-      return DynamoStoreCategory.create(
-        context,
-        Stream.category,
-        codec,
-        (s, e) => fold(s, trimPotentialOverstep(e)),
-        initial,
-        CachingStrategy.NoCache(),
-        accessStrategy,
-      )
+      // prettier-ignore
+      return DynamoStoreCategory.create(context, Stream.category, codec, fold_, initial, CachingStrategy.NoCache(), access)
     }
     export const create = (context: DynamoStoreContext) =>
       new Service((tid, eid, minIndex) =>
         Decider.forStream(createCategory(context, minIndex), Stream.streamId(tid, eid), null),
+      )
+
+    export const createMem = (store: VolatileStore<any>) =>
+      new Service((tid, eid, minIndex) =>
+        Decider.forStream(createMemoryCategory(store, minIndex), Stream.streamId(tid, eid), null),
       )
   }
 }
