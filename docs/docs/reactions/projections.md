@@ -85,7 +85,7 @@ const source = MessageDbSource.create({
   batchSize: 500,
   categories: [Payer.CATEGORY], 
   groupName: "PayerListModel", 
-  checkpointer, 
+  checkpoints, 
   handler,
   tailSleepIntervalMs: 5000, 
   maxConcurrentStreams: 10, 

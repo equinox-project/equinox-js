@@ -8,6 +8,7 @@ export enum Store {
   MessageDb,
   Dynamo,
 }
+
 export type Config =
   | { store: Store.Memory; context: VolatileStore<string> }
   | { store: Store.MessageDb; context: MessageDB.MessageDbContext; cache: ICache }

@@ -1,10 +1,10 @@
 import { MessageDbCategoryReader } from "./MessageDbClient.js"
-import { ICheckpointer } from "./Checkpoints.js"
 import { ITimelineEvent, StreamName, Tags } from "@equinox-js/core"
 import { Pool } from "pg"
-import { SpanKind, SpanStatusCode, trace } from "@opentelemetry/api"
+import { trace } from "@opentelemetry/api"
 import { sleep } from "./Sleep.js"
 import pLimit from "p-limit"
+import { ICheckpoints, traceHandler } from "@equinox-js/propeller"
 
 interface CreateOptions {
   /** The database pool to use to read messages from the category */
@@ -19,7 +19,7 @@ interface CreateOptions {
   /** The name of the consumer group to use for checkpointing */
   groupName: string
   /** The checkpointer to use for checkpointing */
-  checkpointer: ICheckpointer
+  checkpoints: ICheckpoints
   /** The handler to call for each batch of stream messages */
   handler: (streamName: StreamName, events: ITimelineEvent[]) => Promise<void>
   /** sleep time in ms between reads when at the end of the category */
@@ -57,33 +57,20 @@ export class MessageDbSource {
     events: ITimelineEvent[],
     handler: () => Promise<void>,
   ) {
-    const firstEventTimeStamp = events[events.length - 1]!.time.getTime()
-    return tracer.startActiveSpan(
-      `${category} process`,
+    return traceHandler(
+      tracer,
       {
-        kind: SpanKind.CONSUMER,
-        attributes: {
-          [Tags.category]: category,
-          [Tags.stream_name]: streamName,
-          "eqx.consumer_group": this.options.groupName,
-          "eqx.tail_sleep_interval_ms": this.options.tailSleepIntervalMs,
-          "eqx.max_concurrent_streams": this.options.maxConcurrentStreams,
-          [Tags.batch_size]: this.options.batchSize ?? defaultBatchSize,
-          "eqx.stream_version": Number(events[events.length - 1]!.index),
-          [Tags.loaded_count]: events.length,
-        },
+        "eqx.consumer_group": this.options.groupName,
+        "eqx.tail_sleep_interval_ms": this.options.tailSleepIntervalMs,
+        "eqx.max_concurrent_streams": this.options.maxConcurrentStreams,
+        "eqx.source": "MessageDb",
+        [Tags.batch_size]: this.options.batchSize ?? defaultBatchSize,
+        "eqx.stream_version": Number(events[events.length - 1]!.index),
       },
-      (span) =>
-        handler()
-          .catch((err) => {
-            span.recordException(err)
-            span.setStatus({ code: SpanStatusCode.ERROR, message: err.message })
-            throw err
-          })
-          .finally(() => {
-            span.setAttribute("eqx.lead_time_ms", Date.now() - firstEventTimeStamp)
-            span.end()
-          }),
+      category,
+      streamName,
+      events,
+      handler,
     )
   }
 
@@ -91,7 +78,7 @@ export class MessageDbSource {
     const {
       handler,
       groupName,
-      checkpointer,
+      checkpoints,
       tailSleepIntervalMs,
       batchSize = defaultBatchSize,
       condition,
@@ -109,7 +96,7 @@ export class MessageDbSource {
       })
     const checkpointGroupName =
       consumerGroupMember != null ? `${groupName}-${consumerGroupMember}` : groupName
-    let position = await checkpointer.load(checkpointGroupName, category)
+    let position = await checkpoints.load(checkpointGroupName, category)
     while (!signal.aborted) {
       const batch = await readBatch(position)
       if (signal.aborted) return
@@ -131,7 +118,7 @@ export class MessageDbSource {
       }
       await Promise.all(promises)
       if (batch.checkpoint != position) {
-        await checkpointer.commit(checkpointGroupName, category, batch.checkpoint)
+        await checkpoints.commit(checkpointGroupName, category, batch.checkpoint)
         position = batch.checkpoint
       }
       if (batch.isTail) await sleep(tailSleepIntervalMs, signal).catch(() => {})

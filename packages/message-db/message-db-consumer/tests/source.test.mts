@@ -1,11 +1,7 @@
-import { StreamName } from "@equinox-js/core"
-import { describe, test, expect, beforeAll } from "vitest"
-import { ICheckpointer, MessageDbSource } from "../src/index.mjs"
-import { MessageDbConnection } from "@equinox-js/message-db"
+import { test, expect } from "vitest"
+import { MessageDbSource } from "../src/index.mjs"
 import { sleep } from "../src/lib/Sleep.js"
-import { Pool } from "pg"
-import { randomUUID } from "crypto"
-import { MessageDbCategoryReader } from "../src/lib/MessageDbClient.js"
+import { ICheckpoints } from "@equinox-js/propeller"
 
 class MessageDbReaderSubstitute {
   batches: any[] = []
@@ -18,7 +14,7 @@ class MessageDbReaderSubstitute {
     return batch || { messages: [], isTail: true, checkpoint: fromPositionInclusive }
   }
 }
-class MemoryCheckpoints implements ICheckpointer {
+class MemoryCheckpoints implements ICheckpoints {
   checkpoints = new Map<string, bigint>()
   async load(groupName: string, category: string) {
     return this.checkpoints.get(`${groupName}:${category}`) || 0n
@@ -49,7 +45,7 @@ test("Correctly batches stream handling", async () => {
     tailSleepIntervalMs: 10,
     maxConcurrentStreams: 1,
     groupName: "test",
-    checkpointer: new MemoryCheckpoints(),
+    checkpoints: new MemoryCheckpoints(),
     async handler(stream, events) {
       streams.set(stream, (streams.get(stream) || []).concat(events))
       if (++count === 3) resolve()
@@ -91,7 +87,7 @@ test.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])(
       tailSleepIntervalMs: 10,
       maxConcurrentStreams: concurrency,
       groupName: "test",
-      checkpointer: new MemoryCheckpoints(),
+      checkpoints: new MemoryCheckpoints(),
       async handler(stream, events) {
         active.add(stream)
         maxActive = Math.max(maxActive, active.size)
@@ -128,7 +124,7 @@ test("it fails fast", async () => {
     tailSleepIntervalMs: 10,
     maxConcurrentStreams: 10,
     groupName: "test",
-    checkpointer: new MemoryCheckpoints(),
+    checkpoints: new MemoryCheckpoints(),
     async handler(stream, events) {
       throw new Error("failed")
     },

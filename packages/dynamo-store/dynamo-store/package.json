@@ -19,7 +19,7 @@
     "@types/node": "^18.11.18",
     "tsup": "^7.2.0",
     "typescript": "^5.2.2",
-    "vitest": "^0.34.3"
+    "vitest": "^0.34.4"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.258.0",

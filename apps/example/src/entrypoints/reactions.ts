@@ -34,21 +34,22 @@ function createSource() {
   switch (config.store) {
     case Store.Memory:
       throw new Error("Memory store not supported")
-    case Store.MessageDb:
-      const checkpointer = new PgCheckpoints(createPool(process.env.CP_CONN_STR)!)
-      checkpointer.ensureTable().then(() => console.log("table created"))
+    case Store.MessageDb: {
+      const checkpoints = new PgCheckpoints(createPool(process.env.CP_CONN_STR)!)
+      checkpoints.ensureTable().then(() => console.log("table created"))
 
       return MessageDbSource.create({
         pool: followerPool() ?? leaderPool(),
         batchSize: 500,
         categories: [Invoice.Stream.CATEGORY],
         groupName: "InvoiceAutoEmailer",
-        checkpointer,
+        checkpoints,
         handler: handle,
         tailSleepIntervalMs: 100,
         maxConcurrentStreams: 10,
       })
-    case Store.Dynamo:
+    }
+    case Store.Dynamo: {
       const ddb = dynamoDB()
       const context = new DynamoStoreContext({
         client: new DynamoStoreClient(ddb),
@@ -72,6 +73,7 @@ function createSource() {
         batchSizeCutoff: 500,
         mode: LoadMode.WithData(10, config.context),
       })
+    }
   }
 }
 

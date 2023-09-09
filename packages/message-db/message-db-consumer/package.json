@@ -25,10 +25,11 @@
     "p-limit": "^4.0.0",
     "tsup": "^7.2.0",
     "typescript": "^5.2.2",
-    "vitest": "^0.34.1"
+    "vitest": "^0.34.4"
   },
   "dependencies": {
     "@equinox-js/core": "workspace:*",
+    "@equinox-js/propeller": "workspace:*",
     "@opentelemetry/api": "^1.4.0",
     "pg": "^8.8.0"
   }

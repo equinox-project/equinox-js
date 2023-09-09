@@ -9,16 +9,7 @@ import {
 } from "@equinox-js/core"
 import { AccessStrategy, DynamoStoreCategory, DynamoStoreContext } from "@equinox-js/dynamo-store"
 import { AppendsPartitionId } from "@equinox-js/dynamo-store-indexer"
-
-export interface ICheckpointer {
-  commit(groupName: string, category: string, position: bigint): Promise<void>
-
-  load(
-    groupName: string,
-    category: string,
-    establishOrigin?: () => Promise<bigint>,
-  ): Promise<bigint>
-}
+import { ICheckpoints } from "@equinox-js/propeller"
 
 namespace Stream {
   export const category = "$ReaderCheckpoint"
@@ -172,7 +163,7 @@ namespace Decide {
     }
 }
 
-export class DynamoCheckpoints implements ICheckpointer {
+export class DynamoCheckpoints implements ICheckpoints {
   constructor(
     private readonly resolve: (
       partitionId: AppendsPartitionId,
