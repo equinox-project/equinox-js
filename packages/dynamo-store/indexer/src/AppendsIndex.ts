@@ -40,7 +40,6 @@ export namespace Fold {
       case "Snapshotted":
         return Map(event.data.active)
       case "Started":
-        if ("tranche" in event.data) return state.set(event.data.partition, event.data.epoch)
         return state.set(event.data.partition, event.data.epoch)
     }
   }
@@ -56,7 +55,8 @@ export const interpret =
   (partitionId: AppendsPartitionId, epochId: AppendsEpochId) =>
   (state: Fold.State): Events.Event[] => {
     const current = state.get(partitionId)
-    if (current != null && current < epochId && epochId > AppendsEpochId.initial)
+    const isAfterCurrent = current == null ? true : current < epochId
+    if (isAfterCurrent && epochId > AppendsEpochId.initial)
       return [{ type: "Started", data: { partition: partitionId, epoch: epochId } }]
     return []
   }
