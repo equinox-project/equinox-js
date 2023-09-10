@@ -49,7 +49,7 @@ namespace Events {
     | { type: "Updated"; data: Updated }
     | { type: "Snapshotted"; data: Snapshotted }
 
-  export const codec = Codec.deflate(
+  export const codec = Codec.compress(
     Codec.upcast<Event>(
       Codec.json(),
       Codec.Upcast.body({

@@ -29,7 +29,7 @@ export namespace Events {
         : { partition: x.partition, epoch: x.epoch },
     Snapshotted: (x) => x as any,
   })
-  export const codec = Codec.deflate(Codec.upcast<Event>(Codec.json(), upcast))
+  export const codec = Codec.compress(Codec.upcast<Event>(Codec.json(), upcast))
 }
 
 export namespace Fold {

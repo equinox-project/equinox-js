@@ -41,7 +41,7 @@ export namespace Events {
     // Structure mapped from DynamoStore.Batch.Schema: p: stream, i: index, c: array of event types
     { type: "Ingested"; data: Ingested } | { type: "Closed" }
 
-  export const codec = Codec.deflate(Codec.json<Event>())
+  export const codec = Codec.compress(Codec.json<Event>())
   export const isEventTypeClosed = (et: string) => et === "Closed"
 }
 
@@ -250,7 +250,7 @@ export namespace Reader {
       return [event.index, { type: event.type, data: data } as Events.Event]
     },
   }
-  const codec = Codec.deflate(strCodec)
+  const codec = Codec.compress(strCodec)
   export type State = { changes: [number, Events.StreamSpan[]][]; closed: boolean }
 
   const initial: State = { changes: [], closed: false }

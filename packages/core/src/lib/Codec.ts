@@ -61,7 +61,7 @@ export const upcast = <E extends DomainEvent, Ctx = null>(
 export enum Encoding {
   Raw = 0,
   Deflate = 1,
-  Brotli = 2
+  Brotli = 2,
 }
 
 export type EncodedBody = {
@@ -87,13 +87,15 @@ export function smartDecompress(b: EncodedBody) {
 export function smartCompress(buf: Buffer | string): EncodedBody {
   if (buf.length > 48) {
     // Quality level 6 is based on google's nginx default value for on-the-fly compression
-    const compressed = zlib.brotliCompressSync(buf, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 6 } })
+    const compressed = zlib.brotliCompressSync(buf, {
+      params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 6 },
+    })
     if (compressed.length < buf.length) return { encoding: Encoding.Brotli, body: compressed }
   }
   return { encoding: Encoding.Raw, body: Buffer.from(buf) }
 }
 
-export function deflate<E, C>(codec: ICodec<E, string, C>): ICodec<E, EncodedBody, C> {
+export function compress<E, C>(codec: ICodec<E, string, C>): ICodec<E, EncodedBody, C> {
   return {
     tryDecode(e) {
       const data = e.data ? smartDecompress(e.data).toString() : undefined

@@ -49,7 +49,7 @@ export namespace Dynamo {
   type Config = { context: Context; cache: ICache }
   export function createCached<E, S, C>(name: string, codec_: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, access: AccessStrategy<E, S>, { context, cache }: Config) {
     const caching = CachingStrategy.Cache(cache)
-    const codec = Codec.deflate(codec_)
+    const codec = Codec.compress(codec_)
     return Category.create(context, name, codec, fold, initial, caching, access);
   }
 

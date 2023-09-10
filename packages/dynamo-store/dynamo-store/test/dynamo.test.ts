@@ -32,7 +32,7 @@ const defaultBatchSize = 500
 namespace CartService {
   type E = Cart.Events.Event
   type S = Cart.Fold.State
-  const codec = Codec.deflate(Cart.Events.codec)
+  const codec = Codec.compress(Cart.Events.codec)
   const fold = Cart.Fold.fold
   const initial = Cart.Fold.initial
   const cache = new MemoryCache()
@@ -126,7 +126,7 @@ namespace SimplestThing {
     const caching = CachingStrategy.NoCache()
     const access = AccessStrategy.Unoptimized()
     // prettier-ignore
-    const category = Category.create(context, categoryName, Codec.deflate(codec), fold, initial, caching, access)
+    const category = Category.create(context, categoryName, Codec.compress(codec), fold, initial, caching, access)
     return Decider.forStream(category, streamId, undefined)
   }
 }
@@ -139,7 +139,7 @@ namespace ContactPreferencesService {
     const category = Category.create(
       context,
       ContactPreferences.Category,
-      Codec.deflate(codec),
+      Codec.compress(codec),
       fold,
       initial,
       cache ? CachingStrategy.Cache(cache) : CachingStrategy.NoCache(),
