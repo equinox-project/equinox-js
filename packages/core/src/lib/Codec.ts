@@ -75,7 +75,7 @@ export function smartDecompress(b: EncodedBody) {
       return Buffer.from(b.body)
     case Encoding.Deflate:
       // compatible with the F# deflate implementation
-      return zlib.inflateRawSync(b.body, { flush: zlib.constants.Z_SYNC_FLUSH })
+      return zlib.inflateRawSync(b.body, { finishFlush: zlib.constants.Z_SYNC_FLUSH })
     case Encoding.Brotli:
       return zlib.brotliDecompressSync(b.body)
     default:
