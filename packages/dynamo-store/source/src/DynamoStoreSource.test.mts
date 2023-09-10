@@ -15,20 +15,25 @@ import zlib from "zlib"
 
 class DynamoStoreClientSubstitute {
   batches: any[] = []
+
   pushBatch(batch: any) {
     this.batches.push(batch)
   }
+
   async readCategoryMessages({ fromPositionInclusive }: any) {
     const batch = this.batches.find((b) => b.checkpoint >= fromPositionInclusive + 1n)
 
     return batch || { messages: [], isTail: true, checkpoint: fromPositionInclusive }
   }
 }
+
 class MemoryCheckpoints implements ICheckpoints {
   checkpoints = new Map<string, bigint>()
+
   async load(groupName: string, category: string) {
     return this.checkpoints.get(`${groupName}:${category}`) || 0n
   }
+
   async commit(groupName: string, category: string, checkpoint: bigint) {
     this.checkpoints.set(`${groupName}:${category}`, checkpoint)
   }
@@ -218,8 +223,15 @@ test("loading event bodies", async () => {
         ...x,
         data:
           // Randomly pick deflated/raw bodies to ensure both work seemlessly
-          Math.random() < 0.5
-            ? { encoding: 1, body: zlib.deflateSync(Buffer.from(x.data!)) }
+          Math.random() < 1 / 3
+            ? {
+                encoding: 1,
+                body: zlib.deflateRawSync(Buffer.from(x.data!), {
+                  flush: zlib.constants.Z_NO_FLUSH,
+                }),
+              }
+            : Math.random() < 0.5
+            ? { encoding: 2, body: zlib.brotliCompressSync(Buffer.from(x.data!)) }
             : { encoding: 0, body: Buffer.from(x.data!) },
       })),
     )
