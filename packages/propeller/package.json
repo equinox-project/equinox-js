@@ -13,7 +13,7 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --clean --sourcemap"
   },
-  "version": "1.0.0-rc.1",
+  "version": "1.0.0-rc.1.1",
   "files": [
     "./dist"
   ],
@@ -23,7 +23,7 @@
     "vitest": "^0.34.4"
   },
   "dependencies": {
-    "@equinox-js/core": "workspace:1.0.0-alpha.27",
+    "@equinox-js/core": "workspace:*",
     "@opentelemetry/api": "^1.4.0"
   }
 }
