@@ -18,7 +18,7 @@ test("Serialises, writing as expected", () => {
 test("Deserialises with upconversion", () => {
   const data = {
     encoding: 1,
-    body: zlib.deflateSync(Buffer.from(JSON.stringify({ tranche: 3, epoch: 2 }))),
+    body: zlib.deflateRawSync(Buffer.from(JSON.stringify({ tranche: 3, epoch: 2 }))),
   }
   const dec = AppendsIndex.Events.codec.tryDecode({ type: "Started", data } as any)
   expect(dec).toEqual({ type: "Started", data: { partition: 3, epoch: 2 } })

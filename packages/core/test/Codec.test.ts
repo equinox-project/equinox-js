@@ -108,3 +108,11 @@ describe("Codec", () => {
     })
   })
 })
+
+describe("F# interop", () => {
+  test("smartDecompress handles the weird ass headerless unaligned MS format", () => {
+    const helloworld = "8kjNyclXCM8vykkBAAAA//8="
+    const buf = Codec.smartDecompress({ encoding: 1, body: Buffer.from(helloworld, "base64") })
+    expect(buf.toString()).toBe("Hello World")
+  })
+})
