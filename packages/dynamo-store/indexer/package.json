@@ -29,5 +29,5 @@
     "@opentelemetry/api": "^1.4.0",
     "immutable": "5.0.0-beta.4"
   },
-  "version": "1.0.0-alpha.27"
+  "version": "1.0.0-rc.1"
 }
