@@ -1,4 +1,5 @@
 import util from "util"
+import supportsColor from "supports-color"
 const colors = {
   Text: "\x1b[38;5;0253m",
   SecondaryText: "\x1b[38;5;0246m",
@@ -22,7 +23,10 @@ const close = "\x1b[0m"
 
 /** @type {{[P in keyof typeof colors]: (str: string) => string}} */
 export const chalk = Object.fromEntries(
-  Object.entries(colors).map(([key, value]) => [key, (str) => `${value}${str}${close}`]),
+  Object.entries(colors).map(([key, value]) => [
+    key,
+    supportsColor.stdout ? (str) => `${value}${str}${close}` : (s) => s,
+  ]),
 )
 
 function renderValue(value) {

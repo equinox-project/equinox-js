@@ -16,7 +16,8 @@
     "@aws-sdk/types": "^3.257.0",
     "@equinox-js/core": "workspace:*",
     "@equinox-js/dynamo-store": "workspace:*",
-    "commander": "^11.0.0"
+    "commander": "^11.0.0",
+    "supports-color": "^9.4.0"
   },
   "version": "1.0.0-alpha.27"
 }

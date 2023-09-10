@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 
 import { Command } from "commander"
-import zlib from "zlib"
-
 import {
   BillingMode,
   DynamoDB,
