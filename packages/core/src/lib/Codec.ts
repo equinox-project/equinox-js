@@ -1,5 +1,5 @@
 import { IEventData, ITimelineEvent } from "./Types.js"
-import * as zlib from "zlib"
+import zlib from "zlib"
 
 export interface ICodec<E, F, C = undefined> {
   tryDecode(event: ITimelineEvent<F>): E | undefined
@@ -58,17 +58,51 @@ export const upcast = <E extends DomainEvent, Ctx = null>(
   }
 }
 
-export function deflate<E, C>(codec: ICodec<E, string, C>): ICodec<E, Buffer, C> {
+export enum Encoding {
+  Raw = 0,
+  Deflate = 1,
+  Brotli = 2
+}
+
+export type EncodedBody = {
+  encoding: number
+  body: Buffer
+}
+
+export function smartDecompress(b: EncodedBody) {
+  switch (b.encoding) {
+    case Encoding.Raw:
+      return Buffer.from(b.body)
+    case Encoding.Deflate:
+      // compatible with the F# deflate implementation
+      return zlib.inflateRawSync(b.body, { flush: zlib.constants.Z_SYNC_FLUSH })
+    case Encoding.Brotli:
+      return zlib.brotliDecompressSync(b.body)
+    default:
+      // unknown encoding, return as-is
+      return Buffer.from(b.body)
+  }
+}
+
+export function smartCompress(buf: Buffer | string): EncodedBody {
+  if (buf.length > 48) {
+    const compressed = zlib.brotliCompressSync(buf, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 4 } })
+    if (compressed.length < buf.length) return { encoding: Encoding.Brotli, body: compressed }
+  }
+  return { encoding: Encoding.Raw, body: Buffer.from(buf) }
+}
+
+export function deflate<E, C>(codec: ICodec<E, string, C>): ICodec<E, EncodedBody, C> {
   return {
     tryDecode(e) {
-      const data = e.data?.length ? zlib.inflateSync(e.data).toString() : undefined
-      const meta = e.meta?.length ? zlib.inflateSync(e.meta).toString() : undefined
+      const data = e.data ? smartDecompress(e.data).toString() : undefined
+      const meta = e.meta ? smartDecompress(e.meta).toString() : undefined
       return codec.tryDecode({ ...e, data, meta })
     },
     encode(e, ctx) {
       const inner = codec.encode(e, ctx)
-      const data = inner.data ? zlib.deflateSync(inner.data) : undefined
-      const meta = inner.meta ? zlib.deflateSync(inner.meta) : undefined
+      const data = inner.data ? smartCompress(inner.data) : undefined
+      const meta = inner.meta ? smartCompress(inner.meta) : undefined
       return { ...inner, data, meta }
     },
   }

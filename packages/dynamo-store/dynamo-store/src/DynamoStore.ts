@@ -12,6 +12,7 @@ import {
   ICachingStrategy,
   ICodec,
   IEventData,
+  EncodedBody,
   IReloadableCategory,
   ITimelineEvent,
   StreamId,
@@ -37,10 +38,10 @@ type Event = {
   c: string
 
   /** Main event body; required */
-  d: Buffer
+  d: EncodedBody
 
   /** Optional metadata, encoded as per 'd'; can be Empty */
-  m: Buffer
+  m: EncodedBody
 
   /** CorrelationId; stored as x (signifying transactionId), or null */
   correlationId?: string
@@ -55,15 +56,15 @@ namespace Event {
   export function bytes(e: Event): number {
     return (
       e.c.length +
-      e.d.length +
-      e.m.length +
+      e.d.body.length +
+      e.m.body.length +
       (e.correlationId?.length ?? 0) +
       (e.causationId?.length ?? 0) +
       20 + // date
       20 // overhead
     )
   }
-  export function toTimelineEvent(event: Event): ITimelineEvent<Buffer> {
+  export function toTimelineEvent(event: Event): ITimelineEvent<EncodedBody> {
     return {
       type: event.c,
       index: BigInt(event.i),
@@ -77,12 +78,12 @@ namespace Event {
   }
 
   export function ofEventData(baseIndex: number) {
-    return (e: IEventData<Buffer>, i: number): Event => ({
+    return (e: IEventData<EncodedBody>, i: number): Event => ({
       i: baseIndex + i,
       t: new Date(),
       c: e.type,
-      d: e.data ?? Buffer.alloc(0),
-      m: e.meta ?? Buffer.alloc(0),
+      d: e.data ?? { encoding: 0, body: Buffer.alloc(0) },
+      m: e.meta ?? { encoding: 0, body: Buffer.alloc(0) },
     })
   }
 
@@ -105,21 +106,21 @@ type Unfold = {
   c: string // required
 
   /** Event body */
-  d: Buffer
+  d: EncodedBody
 
   /** Optional metadata, can be Empty */
-  m: Buffer
+  m: EncodedBody
 }
 namespace Unfold {
   export function bytes(u: Unfold): number {
-    return u.c.length + u.d.length + u.m.length + 50
+    return u.c.length + u.d.body.length + u.m.body.length + 50
   }
   export function arrayBytes(unfolds: Unfold[]): number {
     let result = 0
     for (let i = 0; i < unfolds.length; i++) result += bytes(unfolds[i])
     return result
   }
-  export function toTimelineEvent(unfold: Unfold): ITimelineEvent<Buffer> {
+  export function toTimelineEvent(unfold: Unfold): ITimelineEvent<EncodedBody> {
     return {
       type: unfold.c,
       index: BigInt(unfold.i),
@@ -133,12 +134,12 @@ namespace Unfold {
   }
 
   export function ofEventData(i: number) {
-    return (x: IEventData<Buffer>): Unfold => ({
+    return (x: IEventData<EncodedBody>): Unfold => ({
       i,
       t: new Date(),
       c: x.type,
-      d: x.data ?? Buffer.alloc(0),
-      m: x.meta ?? Buffer.alloc(0),
+      d: x.data ?? { encoding: 0, body: Buffer.alloc(0) },
+      m: x.meta ?? { encoding: 0, body: Buffer.alloc(0) },
     })
   }
 }
@@ -187,7 +188,9 @@ namespace Batch {
   type EventSchema = {
     t: { S: string } // NOTE there has to be a single non-`option` field per record, or a trailing insert will be stripped
     d?: { B: Buffer }
+    D?: { N: string }
     m?: { B: Buffer }
+    M?: { N: string }
     x?: { S: string }
     y?: { S: string }
   }
@@ -197,7 +200,9 @@ namespace Batch {
     t: { S: string }
     c: { S: string } // required
     d?: { B: Buffer }
+    D?: { N: string }
     m?: { B: Buffer }
+    M?: { N: string }
   }
 
   export type Schema = {
@@ -220,8 +225,14 @@ namespace Batch {
   function toEventSchema(e: Event): EventSchema {
     const result: EventSchema = {} as any
     result.t = { S: e.t.toISOString() }
-    if (e.d.length) result.d = { B: e.d }
-    if (e.m.length) result.m = { B: e.m }
+    if (e.d?.body?.length) {
+      result.d = { B: e.d.body }
+      result.D = { N: String(e.d.encoding) }
+    }
+    if (e.m?.body?.length) {
+      result.m = { B: e.m.body }
+      result.M = { N: String(e.m.encoding) }
+    }
     if (e.correlationId) result.x = { S: e.correlationId }
     if (e.causationId) result.y = { S: e.causationId }
     return result
@@ -241,8 +252,14 @@ namespace Batch {
     result.i = { N: u.i.toString() }
     result.t = { S: u.t.toISOString() }
     result.c = { S: u.c }
-    if (u.d.length) result.d = { B: u.d }
-    if (u.m.length) result.m = { B: u.m }
+    if (u.d?.body?.length) {
+      result.d = { B: u.d.body }
+      result.D = { N: String(u.d.encoding) }
+    }
+    if (u.m?.body?.length) {
+      result.m = { B: u.m.body }
+      result.M = { N: String(u.m.encoding) }
+    }
     return result
   }
   export function unfoldsToSchema(unfolds: Unfold[]): { M: UnfoldSchema }[] {
@@ -255,8 +272,8 @@ namespace Batch {
       i: Number(x.i.N),
       t: new Date(x.t.S),
       c: x.c.S,
-      d: x.d?.B ?? Buffer.alloc(0),
-      m: x.m?.B ?? Buffer.alloc(0),
+      d: { encoding: Number(x.D?.N ?? 0), body: x.d?.B ?? Buffer.alloc(0) },
+      m: { encoding: Number(x.M?.N ?? 0), body: x.m?.B ?? Buffer.alloc(0) },
     }
   }
 
@@ -271,8 +288,8 @@ namespace Batch {
       const c = x.c.L[i].S
       const t = new Date(e.t.S)
       const idx = baseIndex + i
-      const d = e.d ? e.d.B : Buffer.alloc(0)
-      const m = e.m ? e.m.B : Buffer.alloc(0)
+      const d = { encoding: Number(e.D?.N ?? 0), body: e.d?.B ?? Buffer.alloc(0) }
+      const m = { encoding: Number(e.M?.N ?? 0), body: e.m?.B ?? Buffer.alloc(0) }
       events[i] = { i: idx, t, c, d, m, correlationId: e.x?.S, causationId: e.y?.S }
     }
 
@@ -698,8 +715,8 @@ namespace Sync {
     pos: Position | undefined,
     exp: (p?: Position) => ExpectedVersion,
     n_: number,
-    streamEvents: IEventData<Buffer>[],
-    streamUnfolds: IEventData<Buffer>[],
+    streamEvents: IEventData<EncodedBody>[],
+    streamUnfolds: IEventData<EncodedBody>[],
   ): Promise<Result> {
     const baseIndex = n_ - streamEvents.length
     const events = streamEvents.map(Event.ofEventData(baseIndex))
@@ -762,10 +779,10 @@ namespace Tip {
     minIndex: number | undefined,
     maxIndex: number | undefined,
     tip: Batch,
-  ): ITimelineEvent<Buffer>[] => {
+  ): ITimelineEvent<EncodedBody>[] => {
     const span = trace.getActiveSpan()
     const events = Batch.enumEvents(minIndex, maxIndex, tip)
-    const result: ITimelineEvent<Buffer>[] = new Array(events.length + tip.u.length)
+    const result: ITimelineEvent<EncodedBody>[] = new Array(events.length + tip.u.length)
     for (let i = 0; i < tip.e.length; i++) {
       result[i] = Event.toTimelineEvent(tip.e[i])
     }
@@ -781,7 +798,7 @@ namespace Tip {
   export type LoadedTip = {
     position: Position
     baseIndex: number
-    events: ITimelineEvent<Buffer>[]
+    events: ITimelineEvent<EncodedBody>[]
   }
 
   export async function tryLoad(
@@ -819,10 +836,10 @@ namespace Tip {
   }
 }
 
-type TryDecode<E> = (e: ITimelineEvent<Buffer>) => E | undefined
+type TryDecode<E> = (e: ITimelineEvent<EncodedBody>) => E | undefined
 namespace Query {
   // prettier-ignore
-  const mkQuery = (table: StoreTable, stream: string, consistentRead: boolean, maxItems: number, direction: Direction, minIndex?: number, maxIndex?: number) => 
+  const mkQuery = (table: StoreTable, stream: string, consistentRead: boolean, maxItems: number, direction: Direction, minIndex?: number, maxIndex?: number) =>
   // prettier-ignore
     table.queryBatches(stream, consistentRead, minIndex, maxIndex, direction === Direction.Backward, maxItems)
 
@@ -868,7 +885,7 @@ namespace Query {
     tip: Tip.LoadedTip,
   ): ScanResult<E> {
     const items: E[] = []
-    const isOrigin_ = (ev: ITimelineEvent<Buffer>) => {
+    const isOrigin_ = (ev: ITimelineEvent<EncodedBody>) => {
       const x = tryDecode(ev)
       if (x == undefined) return false
       items.unshift(x)
@@ -1224,8 +1241,8 @@ class StoreClient {
     pos: Position | undefined,
     exp: (p?: Position) => Sync.ExpectedVersion,
     n_: number,
-    eventsEncoded: IEventData<Buffer>[],
-    unfoldsEncoded: IEventData<Buffer>[],
+    eventsEncoded: IEventData<EncodedBody>[],
+    unfoldsEncoded: IEventData<EncodedBody>[],
   ): Promise<InternalSyncResult> {
     const res = await Sync.handle(
       this.tip.maxEvents,
@@ -1290,7 +1307,7 @@ class StoreCategory<E, S, C> implements IReloadableCategory<E, S, C> {
   constructor(
     private readonly store: StoreClient,
     private readonly categoryName: string,
-    private readonly codec: ICodec<E, Buffer, C>,
+    private readonly codec: ICodec<E, EncodedBody, C>,
     private readonly fold: (state: S, events: E[]) => S,
     private readonly initial: S,
     private readonly isOrigin: (e: E) => boolean,
@@ -1330,8 +1347,8 @@ class StoreCategory<E, S, C> implements IReloadableCategory<E, S, C> {
     const newState = this.fold(originState, events)
     const pos = Token.unpack(originToken)
     let exp: (pos?: Position) => number | string
-    let unfoldsEncoded: IEventData<Buffer>[] = []
-    let eventsEncoded: IEventData<Buffer>[] = []
+    let unfoldsEncoded: IEventData<EncodedBody>[] = []
+    let eventsEncoded: IEventData<EncodedBody>[] = []
     const encode = (evs: E[]) => evs.map((ev) => this.codec.encode(ev, context))
     switch (this.mapUnfolds.type) {
       case "None":
@@ -1496,7 +1513,7 @@ export class DynamoStoreCategory {
   static create<E, S, C>(
     context: DynamoStoreContext,
     name: string,
-    codec: ICodec<E, Buffer, C>,
+    codec: ICodec<E, EncodedBody, C>,
     fold: (s: S, es: E[]) => S,
     initial: S,
     caching: ICachingStrategy | undefined,
@@ -1546,7 +1563,7 @@ const maxCountPredicate = (count: number) => () => {
 export class EventsContext {
   constructor(private readonly context: DynamoStoreContext) {}
 
-  private getLazy(streamName: StreamName, queryMaxItems?: number, direction = Direction.Forward, minIndex?: number, maxIndex?: number): AsyncIterable<ITimelineEvent<Buffer>[]> { const store = this.context.storeClient
+  private getLazy(streamName: StreamName, queryMaxItems?: number, direction = Direction.Forward, minIndex?: number, maxIndex?: number): AsyncIterable<ITimelineEvent<EncodedBody>[]> { const store = this.context.storeClient
     const batching = queryMaxItems
       ? QueryOptions.create({ maxItems: queryMaxItems })
       : store.queryOptions
@@ -1555,10 +1572,10 @@ export class EventsContext {
     return store.readLazy(batching, streamName, direction, tryDecode, isOrigin, minIndex, maxIndex)
   }
 
-  private async getInternal(streamName: StreamName, minIndex?: number, maxIndex?: number, maxCount?: number, direction = Direction.Forward): Promise<[StreamToken, ITimelineEvent<Buffer>[]]> {
+  private async getInternal(streamName: StreamName, minIndex?: number, maxIndex?: number, maxCount?: number, direction = Direction.Forward): Promise<[StreamToken, ITimelineEvent<EncodedBody>[]]> {
     if (maxCount === 0) {
       const startIdx = direction === Direction.Backward ? maxIndex : minIndex
-      const startPos = startIdx != null ? Position.null_(startIdx) : undefined 
+      const startPos = startIdx != null ? Position.null_(startIdx) : undefined
       return [Token.create(Position.flatten(startPos)), []]
     }
     const store = this.context.storeClient
@@ -1573,18 +1590,18 @@ export class EventsContext {
   /**
     * Establishes the current position of the stream in as efficient a manner as possible
     * (The ideal situation is that the preceding token is supplied as input in order to avail of efficient validation of an unchanged state)
-    */ 
+    */
   async sync(streamName: StreamName, position?: Position): Promise<Position> {
     const store = this.context.storeClient
     const pos = Token.unpack(await store.getPosition(streamName, position))
     return Position.flatten(pos)
   }
 
-  walk(streamName: StreamName, queryMaxItems: number, minIndex?: number, maxIndex?: number, direction = Direction.Forward): AsyncIterable<ITimelineEvent<Buffer>[]> {
+  walk(streamName: StreamName, queryMaxItems: number, minIndex?: number, maxIndex?: number, direction = Direction.Forward): AsyncIterable<ITimelineEvent<EncodedBody>[]> {
     return this.getLazy(streamName, queryMaxItems, direction, minIndex, maxIndex)
   }
 
-  async read(streamName: StreamName, minIndex?: number, maxIndex?: number, maxCount?: number, direction = Direction.Forward): Promise<ITimelineEvent<Buffer>[]> {
+  async read(streamName: StreamName, minIndex?: number, maxIndex?: number, maxCount?: number, direction = Direction.Forward): Promise<ITimelineEvent<EncodedBody>[]> {
     const [_pos, data] = await this.getInternal(streamName, minIndex, maxIndex, maxCount, direction)
     return data
   }

@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 
 import { Command } from "commander"
-import zlib from "zlib"
-
 import {
   BillingMode,
   DynamoDB,
@@ -19,6 +17,7 @@ import {
   TipOptions,
 } from "@equinox-js/dynamo-store"
 import { renderObject, chalk } from "../src/render.js"
+import { Codec } from "@equinox-js/core"
 
 BigInt.prototype.toJSON = function () {
   return this.toString()
@@ -34,11 +33,16 @@ const createDynamoClient = (options) => {
   return new DynamoDB(dynamoOptions)
 }
 
+/**
+ *
+ * @param {import("@equinox-js/core").ITimelineEvent<import("@equinox-js/core").EncodedBody>} ev
+ * @returns {import("@equinox-js/core").ITimelineEvent<Buffer>}
+ */
 function inflate(ev) {
-  if (!ev.data?.length) delete ev.data
-  if (!ev.meta?.length) delete ev.meta
-  if (ev.data) ev.data = JSON.parse(Buffer.from(zlib.inflateSync(ev.data)).toString("utf-8"))
-  if (ev.meta) ev.meta = JSON.parse(Buffer.from(zlib.inflateSync(ev.meta)).toString("utf-8"))
+  if (ev.data && ev.data.body.length)
+    ev.data = JSON.parse(Codec.smartDecompress(ev.data).toString("utf-8"))
+  if (ev.meta && ev.meta.body.length)
+    ev.meta = JSON.parse(Codec.smartDecompress(ev.meta).toString("utf-8"))
   return ev
 }
 
@@ -68,12 +72,11 @@ program
       return
     }
     for (const event of events) {
+      inflate(event)
       const parts = [
         chalk.Scalar(event.time.toLocaleString()),
         chalk.String(event.type),
-        event.data
-          ? renderObject(JSON.parse(Buffer.from(zlib.inflateSync(event.data)).toString("utf-8")))
-          : "",
+        event.data ? renderObject(event.data) : "",
       ]
       console.log(parts.join(" | "))
     }

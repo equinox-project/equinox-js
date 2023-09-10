@@ -6,7 +6,7 @@ import {
 } from "@equinox-js/dynamo-store-indexer"
 import { DynamoStoreContext, EventsContext } from "@equinox-js/dynamo-store"
 import { AppendsIndex, AppendsEpoch } from "@equinox-js/dynamo-store-indexer"
-import { ITimelineEvent, StreamName } from "@equinox-js/core"
+import { EncodedBody, Codec, ITimelineEvent, StreamName } from "@equinox-js/core"
 import pLimit, { LimitFunction } from "p-limit"
 import { sleep } from "./Sleep.js"
 import zlib from "zlib"
@@ -21,7 +21,7 @@ function keepMap<T, V>(arr: T[], fn: (x: T) => V | undefined): V[] {
   return out
 }
 
-type EventBody = Buffer
+type EventBody = EncodedBody
 type StreamEvent<Format> = [StreamName, ITimelineEvent<Format>]
 
 type Batch<Event> = { items: StreamEvent<Event>[]; checkpoint: Checkpoint; isTail: boolean }
@@ -40,21 +40,21 @@ namespace Impl {
   const mkBatch = (
     checkpoint: Checkpoint,
     isTail: boolean,
-    items: StreamEvent<Buffer>[],
-  ): Batch<Buffer> => ({
+    items: StreamEvent<EventBody>[],
+  ): Batch<EventBody> => ({
     checkpoint,
     isTail,
     items,
   })
 
-  const sliceBatch = (epochId: AppendsEpochId, offset: number, items: StreamEvent<Buffer>[]) =>
+  const sliceBatch = (epochId: AppendsEpochId, offset: number, items: StreamEvent<EventBody>[]) =>
     mkBatch(Checkpoint.positionOfEpochAndOffset(epochId, BigInt(offset)), false, items)
 
   const finalBatch = (
     epochId: AppendsEpochId,
     version: bigint,
     state: AppendsEpoch.Reader.State,
-    items: StreamEvent<Buffer>[],
+    items: StreamEvent<EventBody>[],
   ) =>
     mkBatch(
       Checkpoint.positionOfEpochClosedAndVersion(epochId, state.closed, version),
@@ -70,7 +70,7 @@ namespace Impl {
       streamName: StreamName,
       version: number,
       types: string[],
-    ) => (() => Promise<ITimelineEvent<Buffer>[]>) | undefined,
+    ) => (() => Promise<ITimelineEvent<EventBody>[]>) | undefined,
     loadDop: number,
     batchCutoff: number,
     partitionId: AppendsPartitionId,
@@ -95,7 +95,7 @@ namespace Impl {
       return [all.length, chosenEvents, totalEvents, streamEvents] as const
     })()
     const buffer: AppendsEpoch.Events.StreamSpan[] = []
-    const cache = new Map<IndexStreamId, ITimelineEvent<Buffer>[]>()
+    const cache = new Map<IndexStreamId, ITimelineEvent<EventBody>[]>()
     const materializeSpans = async () => {
       const streamsToLoad = new Set(
         keepMap(buffer, (span) => (!cache.has(span.p) ? span.p : undefined)),
@@ -109,7 +109,7 @@ namespace Impl {
         const limit = pLimit(loadDop)
         await Promise.all(loadsRequired.map(limit))
       }
-      const result: StreamEvent<Buffer>[] = []
+      const result: StreamEvent<EventBody>[] = []
       for (const span of buffer) {
         const items = cache.get(span.p)
         if (items == undefined) continue
@@ -137,7 +137,7 @@ namespace Impl {
   }
 }
 
-type ReadEvents = (sn: StreamName, i: number, count: number) => Promise<ITimelineEvent<Buffer>[]>
+type ReadEvents = (sn: StreamName, i: number, count: number) => Promise<ITimelineEvent<EventBody>[]>
 export type LoadMode =
   | { type: "IndexOnly" }
   | {
@@ -211,7 +211,7 @@ export class DynamoStoreSourceClient {
     sn: StreamName,
     i: number,
     c: string[],
-  ) => (() => Promise<ITimelineEvent<Buffer>[]>) | undefined
+  ) => (() => Promise<ITimelineEvent<EventBody>[]>) | undefined
 
   constructor(
     private readonly epochs: AppendsEpoch.Reader.Service,
@@ -226,7 +226,7 @@ export class DynamoStoreSourceClient {
     this.tryLoad = lm.tryLoad
   }
 
-  crawl(partitionId: AppendsPartitionId, position: Checkpoint): AsyncIterable<Batch<Buffer>> {
+  crawl(partitionId: AppendsPartitionId, position: Checkpoint): AsyncIterable<Batch<EventBody>> {
     return Impl.materializeIndexEpochAsBatchesOfStreamEvents(
       this.epochs,
       this.hydrating,
@@ -268,10 +268,10 @@ interface CreateOptions {
   maxConcurrentStreams: number
 }
 
-function inflate(event: ITimelineEvent<Buffer>): ITimelineEvent {
+function inflate(event: ITimelineEvent<EventBody>): ITimelineEvent {
   const e = event as any as ITimelineEvent
-  if (event.data && event.data.length) e.data = zlib.inflateSync(event.data).toString("utf-8")
-  if (event.meta && event.meta.length) e.meta = zlib.inflateSync(event.meta).toString("utf-8")
+  if (event.data) e.data = Codec.smartDecompress(event.data).toString()
+  if (event.meta) e.meta = Codec.smartDecompress(event.meta).toString()
   return e
 }
 
