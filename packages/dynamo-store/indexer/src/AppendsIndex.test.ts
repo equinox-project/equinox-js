@@ -11,12 +11,15 @@ test("Serialises, writing as expected", () => {
     },
     null,
   )
-  const body = zlib.inflateSync(enc.data!).toString()
+  const body = Buffer.from(enc.data!.body).toString()
   expect(body).toEqual(`{"partition":0,"epoch":2}`)
 })
 
 test("Deserialises with upconversion", () => {
-  const data = zlib.deflateSync(Buffer.from(JSON.stringify({ tranche: 3, epoch: 2 })))
+  const data = {
+    encoding: 1,
+    body: zlib.deflateSync(Buffer.from(JSON.stringify({ tranche: 3, epoch: 2 }))),
+  }
   const dec = AppendsIndex.Events.codec.tryDecode({ type: "Started", data } as any)
   expect(dec).toEqual({ type: "Started", data: { partition: 3, epoch: 2 } })
 })
@@ -39,12 +42,3 @@ test("Roundtrips Snapshotted cleanly", () => {
   const dec = AppendsIndex.Events.codec.tryDecode(enc as any)
   expect(dec).toEqual(event)
 })
-
-/*
-[<FsCheck.Xunit.Property>]
-let roundtrips value =
-let e = Events.codec.Encode((), value)
-let t = FsCodec.Core.TimelineEvent.Create(-1L, e.EventType, e.Data)
-let decoded = Events.codec.TryDecode t
-test <@ ValueSome value = decoded @>
-*/

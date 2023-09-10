@@ -1,5 +1,5 @@
 import { IEventData, ITimelineEvent } from "./Types.js"
-import * as zlib from "zlib"
+import zlib from "zlib"
 
 export interface ICodec<E, F, C = undefined> {
   tryDecode(event: ITimelineEvent<F>): E | undefined
@@ -58,17 +58,37 @@ export const upcast = <E extends DomainEvent, Ctx = null>(
   }
 }
 
-export function deflate<E, C>(codec: ICodec<E, string, C>): ICodec<E, Buffer, C> {
+export enum Encoding {
+  Raw = 0,
+  Deflate = 1,
+}
+
+export type EncodedBody = {
+  encoding: number
+  body: Buffer
+}
+
+function deflateBody(buf: Buffer | string): EncodedBody {
+  const deflated = zlib.deflateSync(buf)
+  if (buf.length < deflated.length) return { encoding: Encoding.Raw, body: Buffer.from(buf) }
+  return { encoding: Encoding.Deflate, body: deflated }
+}
+function inflate(body: EncodedBody) {
+  if (body.encoding === Encoding.Deflate) return zlib.inflateSync(body.body)
+  return Buffer.from(body.body)
+}
+
+export function deflate<E, C>(codec: ICodec<E, string, C>): ICodec<E, EncodedBody, C> {
   return {
     tryDecode(e) {
-      const data = e.data?.length ? zlib.inflateSync(e.data).toString() : undefined
-      const meta = e.meta?.length ? zlib.inflateSync(e.meta).toString() : undefined
+      const data = e.data ? inflate(e.data).toString() : undefined
+      const meta = e.meta ? inflate(e.meta).toString() : undefined
       return codec.tryDecode({ ...e, data, meta })
     },
     encode(e, ctx) {
       const inner = codec.encode(e, ctx)
-      const data = inner.data ? zlib.deflateSync(inner.data) : undefined
-      const meta = inner.meta ? zlib.deflateSync(inner.meta) : undefined
+      const data = inner.data ? deflateBody(inner.data) : undefined
+      const meta = inner.meta ? deflateBody(inner.meta) : undefined
       return { ...inner, data, meta }
     },
   }

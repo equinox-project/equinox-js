@@ -232,7 +232,7 @@ namespace CartHelpers {
   ) => addAndThenRemoveItems(true, true, context, cartId, skuId, service, count)
 }
 
-describe("Round-trips against the store", () => {
+describe(" Round-trips against the store", () => {
   test("batches the reads correctly [without any optimizations]", async () => {
     const batchSize = 3
     const context = createContext(client, batchSize)

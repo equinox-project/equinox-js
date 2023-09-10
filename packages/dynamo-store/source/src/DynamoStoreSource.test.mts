@@ -214,7 +214,10 @@ test("loading event bodies", async () => {
     store.sync(
       sn,
       0,
-      events.map((x) => ({ ...x, data: zlib.deflateSync(Buffer.from(x.data!)) })),
+      events.map((x) => ({
+        ...x,
+        data: { encoding: 1, body: zlib.deflateSync(Buffer.from(x.data!)) },
+      })),
     )
     await epochWriter.ingest(AppendsPartitionId.wellKnownId, AppendsEpochId.initial, [
       {
