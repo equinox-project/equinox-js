@@ -38,9 +38,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - uses: pnpm/action-setup@v2
-        with:
-          version: latest
+      - uses: oven-sh/setup-bun@v1
 
       - name: Node setup
         uses: actions/setup-node@v3
@@ -49,7 +47,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm i --frozen-lockfile
+        run: bun install
 
       - name: Build
         run: pnpm dlx turbo build

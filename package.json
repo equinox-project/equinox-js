@@ -3,8 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "workspaces": [
+    "packages/*",
+    "packages/message-db/*",
+    "packages/dynamo-store/*",
     "apps/*",
-    "packages/*"
+    "docs"
   ],
   "scripts": {
     "build": "turbo run build",
