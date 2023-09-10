@@ -5,8 +5,7 @@
   "types": "lib/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "watch": "tsc -w",
-    "test": "jest"
+    "watch": "tsc -w"
   },
   "devDependencies": {
     "@types/node": "20.5.9",
