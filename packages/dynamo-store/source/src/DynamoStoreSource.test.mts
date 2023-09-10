@@ -216,7 +216,11 @@ test("loading event bodies", async () => {
       0,
       events.map((x) => ({
         ...x,
-        data: { encoding: 1, body: zlib.deflateSync(Buffer.from(x.data!)) },
+        data:
+          // Randomly pick deflated/raw bodies to ensure both work seemlessly
+          Math.random() < 0.5
+            ? { encoding: 1, body: zlib.deflateSync(Buffer.from(x.data!)) }
+            : { encoding: 0, body: Buffer.from(x.data!) },
       })),
     )
     await epochWriter.ingest(AppendsPartitionId.wellKnownId, AppendsEpochId.initial, [
