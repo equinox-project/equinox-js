@@ -49,7 +49,7 @@ jobs:
         run: bun install
 
       - name: Build
-        run: pnpm dlx turbo build
+        run: bunx turbo build
 
       - name: Set up message_db
         env:

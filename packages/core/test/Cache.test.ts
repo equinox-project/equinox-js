@@ -33,18 +33,18 @@ describe("Caching", () => {
   })
 
   test("only one reload of a stream is in flight at any given moment", async () => {
-    const reload = vi
-      .fn()
-      .mockImplementationOnce(async () => {
-        await sleep(5)
-        return read(1n)()
-      })
-      .mockRejectedValue(new Error("Unexpected reload"))
+    let count = 0
+    const reload = vi.fn().mockImplementation(async () => {
+      if (count !== 0) new Error("Unexpected reload")
+      count++
+      await sleep(5)
+      return read(1n)()
+    })
 
     const cache = new Cache.MemoryCache(2)
-    const p1 = cache.readThrough("1", anyValue, reload)
-    const p2 = cache.readThrough("1", anyValue, reload)
-    const p3 = cache.readThrough("1", anyValue, reload)
+    const p1 = await cache.readThrough("1", anyValue, reload)
+    const p2 = await cache.readThrough("1", anyValue, reload)
+    const p3 = await cache.readThrough("1", anyValue, reload)
     await Promise.all([p1, p2, p3])
   })
 })
