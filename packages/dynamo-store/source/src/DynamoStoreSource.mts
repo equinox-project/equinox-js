@@ -6,7 +6,7 @@ import {
 } from "@equinox-js/dynamo-store-indexer"
 import { DynamoStoreContext, EventsContext } from "@equinox-js/dynamo-store"
 import { AppendsIndex, AppendsEpoch } from "@equinox-js/dynamo-store-indexer"
-import { EncodedBody, ITimelineEvent, StreamName } from "@equinox-js/core"
+import { EncodedBody, Codec, ITimelineEvent, StreamName } from "@equinox-js/core"
 import pLimit, { LimitFunction } from "p-limit"
 import { sleep } from "./Sleep.js"
 import zlib from "zlib"
@@ -268,16 +268,10 @@ interface CreateOptions {
   maxConcurrentStreams: number
 }
 
-function doInflate(x: EncodedBody): string | undefined {
-  if (x.body.length === 0) return
-  if (x.encoding === 1 /* Deflate */) return zlib.inflateSync(x.body).toString()
-  return Buffer.from(x.body).toString()
-}
-
 function inflate(event: ITimelineEvent<EventBody>): ITimelineEvent {
   const e = event as any as ITimelineEvent
-  if (event.data) e.data = doInflate(event.data)
-  if (event.meta) e.meta = doInflate(event.meta)
+  if (event.data) e.data = Codec.smartDecompress(event.data).toString()
+  if (event.meta) e.meta = Codec.smartDecompress(event.meta).toString()
   return e
 }
 

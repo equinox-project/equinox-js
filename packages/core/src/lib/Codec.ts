@@ -61,6 +61,7 @@ export const upcast = <E extends DomainEvent, Ctx = null>(
 export enum Encoding {
   Raw = 0,
   Deflate = 1,
+  Brotli = 2
 }
 
 export type EncodedBody = {
@@ -68,27 +69,40 @@ export type EncodedBody = {
   body: Buffer
 }
 
-function deflateBody(buf: Buffer | string): EncodedBody {
-  const deflated = zlib.deflateSync(buf)
-  if (buf.length < deflated.length) return { encoding: Encoding.Raw, body: Buffer.from(buf) }
-  return { encoding: Encoding.Deflate, body: deflated }
+export function smartDecompress(b: EncodedBody) {
+  switch (b.encoding) {
+    case Encoding.Raw:
+      return Buffer.from(b.body)
+    case Encoding.Deflate:
+      // compatible with the F# deflate implementation
+      return zlib.inflateRawSync(b.body, { flush: zlib.constants.Z_SYNC_FLUSH })
+    case Encoding.Brotli:
+      return zlib.brotliDecompressSync(b.body)
+    default:
+      // unknown encoding, return as-is
+      return Buffer.from(b.body)
+  }
 }
-function inflate(body: EncodedBody) {
-  if (body.encoding === Encoding.Deflate) return zlib.inflateSync(body.body)
-  return Buffer.from(body.body)
+
+export function smartCompress(buf: Buffer | string): EncodedBody {
+  if (buf.length > 48) {
+    const compressed = zlib.brotliCompressSync(buf, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 4 } })
+    if (compressed.length < buf.length) return { encoding: Encoding.Brotli, body: compressed }
+  }
+  return { encoding: Encoding.Raw, body: Buffer.from(buf) }
 }
 
 export function deflate<E, C>(codec: ICodec<E, string, C>): ICodec<E, EncodedBody, C> {
   return {
     tryDecode(e) {
-      const data = e.data ? inflate(e.data).toString() : undefined
-      const meta = e.meta ? inflate(e.meta).toString() : undefined
+      const data = e.data ? smartDecompress(e.data).toString() : undefined
+      const meta = e.meta ? smartDecompress(e.meta).toString() : undefined
       return codec.tryDecode({ ...e, data, meta })
     },
     encode(e, ctx) {
       const inner = codec.encode(e, ctx)
-      const data = inner.data ? deflateBody(inner.data) : undefined
-      const meta = inner.meta ? deflateBody(inner.meta) : undefined
+      const data = inner.data ? smartCompress(inner.data) : undefined
+      const meta = inner.meta ? smartCompress(inner.meta) : undefined
       return { ...inner, data, meta }
     },
   }
