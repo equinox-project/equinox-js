@@ -41,7 +41,7 @@ function createDynamoClient() {
   const LOCALSTACK_HOSTNAME = process.env.LOCALSTACK_HOSTNAME
   if (LOCALSTACK_HOSTNAME) {
     return new DynamoDB({
-      endpoint: `http://${LOCALSTACK_HOSTNAME}:4566`,
+      endpoint: `http://${LOCALSTACK_HOSTNAME}:8000`,
       region: "us-east-1",
       credentials: {
         accessKeyId: "test",

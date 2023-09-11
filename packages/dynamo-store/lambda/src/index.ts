@@ -12,7 +12,7 @@ import * as Handler from "./Handler.js"
 const itemCutoffKiB = 48
 
 const LOCALSTACK_HOSTNAME = process.env.LOCALSTACK_HOSTNAME
-const ENDPOINT = `http://${LOCALSTACK_HOSTNAME}:4566`
+const ENDPOINT = `http://${LOCALSTACK_HOSTNAME}:8000`
 if (LOCALSTACK_HOSTNAME) {
   process.env.AWS_SECRET_ACCESS_KEY = "test"
   process.env.AWS_ACCESS_KEY_ID = "test"
