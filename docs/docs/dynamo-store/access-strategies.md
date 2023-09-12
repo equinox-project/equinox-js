@@ -4,7 +4,6 @@ The access strategy allows you to opt into custom loading or reloading
 algorithms. For most systems, `Unoptimized` is a safe default; you can always
 switch later.
 
-
 # Unoptimized
 
 The first, and likely most used access strategy is the unoptimized one. It'll
@@ -32,8 +31,8 @@ In Equinox the Snapshot is a member of the Event DU
 
 ```ts
 type Event =
-  | { type: "Increment", data: { amount: number } }
-  | { type: "Snapshot", data: { current: number } }
+  | { type: "Increment"; data: { amount: number } }
+  | { type: "Snapshot"; data: { current: number } }
 
 const codec = Codec.json<Event>()
 ```
@@ -45,8 +44,10 @@ type State = number
 const initial = 0
 const evolve = (state: State, event: Event) => {
   switch (event.type) {
-    case "Increment": return state + event.data.amount
-    case "Snapshot": return event.data.current
+    case "Increment":
+      return state + event.data.amount
+    case "Snapshot":
+      return event.data.current
   }
 }
 const fold = reduce(evolve)
@@ -57,11 +58,11 @@ Snapshot and how to transform the current state into a Snapshot
 
 ```ts
 const isOrigin = (ev: Event) => ev.type === "Snapshot"
-const toSnapshot = (state: State): Event => 
-  ({ type: snapshotEventType, data: { current: state } })
+const toSnapshot = (state: State): Event => ({ type: snapshotEventType, data: { current: state } })
 ```
 
 We can then create the access strategy
+
 ```ts
 const access = AccessStrategy.Snapshot(isOrigin, toSnapshot)
 ```
@@ -70,3 +71,63 @@ With this in place Equinox will maintain and store a Snapshot event in the tip
 document that is guaranteed to always be up to date, and as a result the state
 of the Stream can be reconstructed with a single point-read.
 
+## RollingState(toSnapshot)
+
+`RollingState` will throw away events, only storing the snapshot. This can be
+useful for cases where we do not care about the individual events that led up to
+a state. This is frequently used to build up a read model that spans streams.
+
+<details>
+<summary>Example</summary>
+
+```ts
+namespace Events {
+  export type Event = { type: "Ingested"; data: { version: number; users: string[] } }
+  export const codec = Codec.json<Event>()
+}
+
+namespace Fold {
+  export type State = { version: number; users: Set<string> }
+  export const initial = { version: 0, users: [] }
+  export const fold = (state: State, events: Events.Event[]): State => events[0].data
+  export const toSnapshot = (state: State): Events.Event => ({
+    type: "Ingested",
+    data: {
+      version: state.version,
+      users: Array.from(state.users),
+    },
+  })
+}
+
+namespace Decide {
+  export const addUser = (id: string) => (state: State) => {
+    if (state.users.has(id)) return []
+    const newUsers = new Set(state.users)
+    newUsers.add(id)
+    return [{ version: state.version + 1, users: newUsers }]
+  }
+}
+
+export class Service {
+  constructor(private readonly resolve: () => Decider<Events.Event, Fold.State>) {}
+
+  addUser(id: string) {
+    const decider = this.resolve()
+    return decider.transact(Decide.addUser(id))
+  }
+
+  readUsers() {
+    const decider = this.resolve()
+    return decider.query((state) => Array.from(state.users))
+  }
+
+  static create(context: DynamoStoreContext, cache?: ICachingStrategy) {
+    const access = AccessStrategy.RollingState(Fold.toSnapshot)
+    // prettier-ignore
+    const category = DynamoStoreCategory.create(context, "UserIndex", Events.codec, Fold.fold, Fold.initial, access, cache)
+    const resolve = () => Decider.forStream(category, StreamId.create('0'), null)
+    return new Service(resolve)
+  }
+}
+```
+</details>
