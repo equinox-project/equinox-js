@@ -62,15 +62,30 @@ namespace Impl {
       items,
     )
 
+  type MaybeLoad = (
+    streamName: StreamName,
+    version: number,
+    types: string[],
+  ) => (() => Promise<ITimelineEvent<EventBody>[]>) | undefined
+
+  function streamEventsFromState(maybeLoad: MaybeLoad, state: AppendsEpoch.Reader.State) {
+    const all = AppendsEpoch.flatten(state.changes.flatMap(([_i, xs]) => xs))
+    let chosenEvents = 0
+    const chooseStream = (span: AppendsEpoch.Events.StreamSpan) => {
+      const load = maybeLoad(span.p as any as StreamName, span.i, span.c)
+      if (load) {
+        chosenEvents += span.c.length
+        return [span.p, load] as const
+      }
+    }
+
+    return Object.fromEntries(keepMap(all, chooseStream))
+  }
+
   // Includes optional hydrating of events with event bodies and/or metadata (controlled via hydrating/maybeLoad args)
   export async function* materializeIndexEpochAsBatchesOfStreamEvents(
     epochs: AppendsEpoch.Reader.Service,
-    hydrating: boolean,
-    maybeLoad: (
-      streamName: StreamName,
-      version: number,
-      types: string[],
-    ) => (() => Promise<ITimelineEvent<EventBody>[]>) | undefined,
+    maybeLoad: MaybeLoad,
     loadDop: number,
     batchCutoff: number,
     partitionId: AppendsPartitionId,
@@ -78,22 +93,7 @@ namespace Impl {
   ) {
     const [epochId, offset] = Checkpoint.toEpochAndOffset(position)
     const [_size, version, state] = await epochs.read(partitionId, epochId, offset)
-    const totalChanges = state.changes.length
-    const [totalStreams, chosenEvents, totalEvents, streamEvents] = (() => {
-      const all = AppendsEpoch.flatten(state.changes.flatMap(([_i, xs]) => xs))
-      const totalEvents = all.reduce((p, v) => p + v.c.length, 0)
-      let chosenEvents = 0
-      const chooseStream = (span: AppendsEpoch.Events.StreamSpan) => {
-        const load = maybeLoad(span.p as any as StreamName, span.i, span.c)
-        if (load) {
-          chosenEvents += span.c.length
-          return [span.p, load] as const
-        }
-      }
-
-      const streamEvents = Object.fromEntries(keepMap(all, chooseStream))
-      return [all.length, chosenEvents, totalEvents, streamEvents] as const
-    })()
+    const streamEvents = streamEventsFromState(maybeLoad, state)
     const buffer: AppendsEpoch.Events.StreamSpan[] = []
     const cache = new Map<IndexStreamId, ITimelineEvent<EventBody>[]>()
     const materializeSpans = async () => {
@@ -229,7 +229,6 @@ export class DynamoStoreSourceClient {
   crawl(partitionId: AppendsPartitionId, position: Checkpoint): AsyncIterable<Batch<EventBody>> {
     return Impl.materializeIndexEpochAsBatchesOfStreamEvents(
       this.epochs,
-      this.hydrating,
       this.tryLoad,
       this.dop,
       100,
