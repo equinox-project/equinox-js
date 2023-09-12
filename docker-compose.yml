@@ -8,5 +8,15 @@ services:
     ports:
       - "5432:5432"
 
+  dynamodb:
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal"
+    image: "amazon/dynamodb-local:latest"
+    ports:
+      - "8000:8000"
+    volumes:
+      - "dynamo-data:/home/dynamodblocal/data"
+    working_dir: /home/dynamodblocal
+
 volumes:
   db-data:
+  dynamo-data:
