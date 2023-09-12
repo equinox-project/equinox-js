@@ -58,8 +58,8 @@ const config = {
       navbar: {
         title: "EquinoxJS",
         logo: {
-          alt: 'EquinoxJS Logo',
-          src: './img/Equinox-favicon.png',
+          alt: "EquinoxJS Logo",
+          src: "./img/Equinox-favicon.png",
         },
         items: [
           {
@@ -115,6 +115,24 @@ const config = {
       prism: {
         theme: lightCodeTheme,
         darkTheme: darkCodeTheme,
+      },
+      algolia: {
+        // The application ID provided by Algolia
+        appId: "NUJOXLQP9C",
+
+        // Public API key: it is safe to commit it
+        apiKey: "1a64894600d1d6ac0493ce3333668e68",
+
+        indexName: "equinox-js",
+
+        // Optional: see doc section below
+        contextualSearch: true,
+
+        // Optional: Algolia search parameters
+        searchParameters: {},
+
+        // Optional: path for search page that enabled by default (`false` to disable it)
+        searchPagePath: "search",
       },
     }),
 }
