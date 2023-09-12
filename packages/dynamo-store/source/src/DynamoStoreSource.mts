@@ -9,7 +9,6 @@ import { AppendsIndex, AppendsEpoch } from "@equinox-js/dynamo-store-indexer"
 import { EncodedBody, Codec, ITimelineEvent, StreamName } from "@equinox-js/core"
 import pLimit, { LimitFunction } from "p-limit"
 import { sleep } from "./Sleep.js"
-import zlib from "zlib"
 import { ICheckpoints } from "@equinox-js/propeller"
 
 function keepMap<T, V>(arr: T[], fn: (x: T) => V | undefined): V[] {
@@ -269,8 +268,8 @@ interface CreateOptions {
 
 function inflate(event: ITimelineEvent<EventBody>): ITimelineEvent {
   const e = event as any as ITimelineEvent
-  if (event.data) e.data = Codec.smartDecompress(event.data).toString()
-  if (event.meta) e.meta = Codec.smartDecompress(event.meta).toString()
+  if (event.data) e.data = Codec.smartDecompress(event.data)?.toString()
+  if (event.meta) e.meta = Codec.smartDecompress(event.meta)?.toString()
   return e
 }
 

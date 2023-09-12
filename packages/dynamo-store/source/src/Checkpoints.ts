@@ -8,7 +8,7 @@ import {
   StreamName,
 } from "@equinox-js/core"
 import { AccessStrategy, DynamoStoreCategory, DynamoStoreContext } from "@equinox-js/dynamo-store"
-import { AppendsPartitionId } from "@equinox-js/dynamo-store-indexer"
+import { AppendsPartitionId, Checkpoint } from "@equinox-js/dynamo-store-indexer"
 import { ICheckpoints } from "@equinox-js/propeller"
 
 namespace Stream {
@@ -151,7 +151,10 @@ namespace Decide {
           if (at < state.data.state.nextCheckpointDue) {
             if (pos !== BigInt(state.data.state.pos)) {
               // prettier-ignore
-              result.push({ type: "Updated", data: { config: state.data.config, pos: state.data.state } })
+              result.push({
+                type: "Updated",
+                data: { config: state.data.config, pos: mkCheckpoint(at, state.data.state.nextCheckpointDue, pos) },
+              })
             }
           } else {
             // Checkpoint due => Force a write every N seconds regardless of whether the position has actually changed

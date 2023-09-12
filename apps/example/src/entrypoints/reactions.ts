@@ -58,7 +58,7 @@ function createSource() {
         query: QueryOptions.create({}),
       })
       const checkpoints = DynamoCheckpoints.create(
-        config.context,
+        context,
         config.cache,
         300, // 5 minutes
       )

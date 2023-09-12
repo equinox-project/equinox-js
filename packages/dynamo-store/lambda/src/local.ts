@@ -1,17 +1,18 @@
 import { DynamoDBStreams, ShardIteratorType } from "@aws-sdk/client-dynamodb-streams"
 import { DynamoDB } from "@aws-sdk/client-dynamodb"
 import { handler } from "./index.js"
-import { HttpHandlerOptions } from "@aws-sdk/types"
 
 const streams = new DynamoDBStreams({})
 const ddb = new DynamoDB({})
 
 async function walkShardIterator(iterator: string | undefined, signal: AbortSignal) {
   while (iterator && !signal.aborted) {
-    const httpHandlerOptions: HttpHandlerOptions = { abortSignal: signal }
-    const shard = await streams.getRecords({ ShardIterator: iterator }, httpHandlerOptions)
+    const shard = await streams.getRecords(
+      { ShardIterator: iterator },
+      { abortSignal: signal as any },
+    )
     if (shard.Records?.length) {
-      await handler({ Records: shard.Records })
+      await handler({ Records: shard.Records as any })
     }
     iterator = shard.NextShardIterator
   }
@@ -20,8 +21,7 @@ async function walkShardIterator(iterator: string | undefined, signal: AbortSign
 // Fetches the table information for process.env.TABLE_NAME
 // reads the ddb stream for that table and forwards the events to the handler
 async function main(signal: AbortSignal) {
-  let handled = new Map()
-  const httpOptions = { abortSignal: signal }
+  const httpOptions = { abortSignal: signal as any }
   while (!signal.aborted) {
     try {
       const { Table } = await ddb.describeTable({

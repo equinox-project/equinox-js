@@ -1,4 +1,4 @@
-import { DynamoDBStreamHandler } from "aws-lambda"
+import { DynamoDBRecord, DynamoDBStreamHandler } from "aws-lambda"
 import {
   DynamoStoreClient,
   DynamoStoreContext,
@@ -24,7 +24,7 @@ const context = new DynamoStoreContext({
 })
 export const ingester = new DynamoStoreIngester(context)
 
-export const handler: DynamoDBStreamHandler = async (event, _context) => {
-  console.log("Handling event")
+type Event = { Records: DynamoDBRecord[] }
+export const handler = async (event: Event) => {
   await Handler.handle(ingester.service, event.Records)
 }
