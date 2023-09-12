@@ -11,12 +11,11 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.258.0",
+    "@aws-sdk/client-dynamodb": "^3.410.0",
     "@aws-sdk/client-dynamodb-streams": "^3.262.0",
-    "@aws-sdk/smithy-client": "^3.257.0",
-    "@aws-sdk/types": "^3.257.0",
-    "@equinox-js/dynamo-store-indexer": "workspace:*",
+    "@aws-sdk/types": "^3.410.0",
     "@equinox-js/dynamo-store": "workspace:*",
+    "@equinox-js/dynamo-store-indexer": "workspace:*",
     "@opentelemetry/api": "^1.4.0"
   }
 }

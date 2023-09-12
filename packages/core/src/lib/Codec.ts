@@ -70,6 +70,7 @@ export type EncodedBody = {
 }
 
 export function smartDecompress(b: EncodedBody) {
+  if (!b.body?.length) return undefined
   switch (b.encoding) {
     case Encoding.Raw:
       return Buffer.from(b.body)
@@ -98,8 +99,8 @@ export function smartCompress(buf: Buffer | string): EncodedBody {
 export function compress<E, C>(codec: ICodec<E, string, C>): ICodec<E, EncodedBody, C> {
   return {
     tryDecode(e) {
-      const data = e.data ? smartDecompress(e.data).toString() : undefined
-      const meta = e.meta ? smartDecompress(e.meta).toString() : undefined
+      const data = e.data ? smartDecompress(e.data)?.toString() : undefined
+      const meta = e.meta ? smartDecompress(e.meta)?.toString() : undefined
       return codec.tryDecode({ ...e, data, meta })
     },
     encode(e, ctx) {

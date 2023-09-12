@@ -3,5 +3,7 @@ export interface ISendEmails {
 }
 
 export class EmailSender implements ISendEmails {
-  async sendEmail(to: string, title: string, body: string): Promise<void> {}
+  async sendEmail(to: string, title: string, body: string): Promise<void> {
+    console.log("To: ", to, "Title: ", title, "Body: ", body)
+  }
 }

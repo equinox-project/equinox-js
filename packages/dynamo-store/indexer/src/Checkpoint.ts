@@ -15,8 +15,8 @@ export namespace Checkpoint {
     isClosed: boolean,
     version: bigint,
   ) => {
-    const offset = isClosed ? 0n : version
-    return positionOfEpochAndOffset(epoch, offset)
+    if (isClosed) return positionOfEpochAndOffset(AppendsEpochId.next(epoch), 0n)
+    return positionOfEpochAndOffset(epoch, version)
   }
   export const initial = ofPosition(0n)
   export const toEpochAndOffset = (value: Checkpoint): [AppendsEpochId, bigint] => {

@@ -40,9 +40,9 @@ const createDynamoClient = (options) => {
  */
 function inflate(ev) {
   if (ev.data && ev.data.body.length)
-    ev.data = JSON.parse(Codec.smartDecompress(ev.data).toString("utf-8"))
+    ev.data = JSON.parse(Codec.smartDecompress(ev.data)?.toString("utf-8"))
   if (ev.meta && ev.meta.body.length)
-    ev.meta = JSON.parse(Codec.smartDecompress(ev.meta).toString("utf-8"))
+    ev.meta = JSON.parse(Codec.smartDecompress(ev.meta)?.toString("utf-8"))
   return ev
 }
 

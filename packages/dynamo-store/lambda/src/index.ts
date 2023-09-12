@@ -1,4 +1,4 @@
-import { DynamoDBStreamHandler } from "aws-lambda"
+import { DynamoDBRecord, DynamoDBStreamHandler } from "aws-lambda"
 import {
   DynamoStoreClient,
   DynamoStoreContext,
@@ -11,15 +11,7 @@ import * as Handler from "./Handler.js"
 
 const itemCutoffKiB = 48
 
-const LOCALSTACK_HOSTNAME = process.env.LOCALSTACK_HOSTNAME
-const ENDPOINT = `http://${LOCALSTACK_HOSTNAME}:4566`
-if (LOCALSTACK_HOSTNAME) {
-  process.env.AWS_SECRET_ACCESS_KEY = "test"
-  process.env.AWS_ACCESS_KEY_ID = "test"
-  console.log("USING LOCALSTACK CONFIG")
-}
-const CLIENT_CONFIG = LOCALSTACK_HOSTNAME ? { endpoint: ENDPOINT } : {}
-const ddbClient = new DynamoDB(CLIENT_CONFIG)
+const ddbClient = new DynamoDB({})
 
 const indexTableName = process.env.INDEX_TABLE_NAME
 if (indexTableName == null) throw new Error('Missing environment variable "INDEX_TABLE_NAME"')
@@ -32,7 +24,7 @@ const context = new DynamoStoreContext({
 })
 export const ingester = new DynamoStoreIngester(context)
 
-export const handler: DynamoDBStreamHandler = async (event, _context) => {
-  console.log("Handling event")
+type Event = { Records: DynamoDBRecord[] }
+export const handler = async (event: Event) => {
   await Handler.handle(ingester.service, event.Records)
 }
