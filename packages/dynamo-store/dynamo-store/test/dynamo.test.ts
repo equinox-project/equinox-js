@@ -73,9 +73,9 @@ namespace CartService {
 }
 
 const ddb = new DynamoDB({
-  region: "us-east-1",
+  region: "local",
   credentials: { accessKeyId: "test", secretAccessKey: "test" },
-  endpoint: `http://localhost:4566`,
+  endpoint: `http://localhost:8000`,
 })
 
 beforeAll(async () => {

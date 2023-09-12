@@ -11,15 +11,7 @@ import * as Handler from "./Handler.js"
 
 const itemCutoffKiB = 48
 
-const LOCALSTACK_HOSTNAME = process.env.LOCALSTACK_HOSTNAME
-const ENDPOINT = `http://${LOCALSTACK_HOSTNAME}:8000`
-if (LOCALSTACK_HOSTNAME) {
-  process.env.AWS_SECRET_ACCESS_KEY = "test"
-  process.env.AWS_ACCESS_KEY_ID = "test"
-  console.log("USING LOCALSTACK CONFIG")
-}
-const CLIENT_CONFIG = LOCALSTACK_HOSTNAME ? { endpoint: ENDPOINT } : {}
-const ddbClient = new DynamoDB(CLIENT_CONFIG)
+const ddbClient = new DynamoDB({})
 
 const indexTableName = process.env.INDEX_TABLE_NAME
 if (indexTableName == null) throw new Error('Missing environment variable "INDEX_TABLE_NAME"')

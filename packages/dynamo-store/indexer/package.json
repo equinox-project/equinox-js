@@ -21,9 +21,8 @@
     "vitest": "0.34.4"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.258.0",
-    "@aws-sdk/smithy-client": "^3.257.0",
-    "@aws-sdk/types": "^3.257.0",
+    "@aws-sdk/client-dynamodb": "^3.410.0",
+    "@aws-sdk/types": "^3.410.0",
     "@equinox-js/core": "workspace:*",
     "@equinox-js/dynamo-store": "workspace:*",
     "@opentelemetry/api": "^1.4.0",

@@ -1,22 +1,15 @@
 import { DynamoDBStreams, ShardIteratorType } from "@aws-sdk/client-dynamodb-streams"
 import { DynamoDB } from "@aws-sdk/client-dynamodb"
 import { handler } from "./index.js"
+import { HttpHandlerOptions } from "@aws-sdk/types"
 
-const opts = {
-  region: "local",
-  endpoint: "http://localhost:8000",
-  credentials: {
-    accessKeyId: "local",
-    secretAccessKey: "local",
-  },
-}
-
-const streams = new DynamoDBStreams(opts)
-const ddb = new DynamoDB(opts)
+const streams = new DynamoDBStreams({})
+const ddb = new DynamoDB({})
 
 async function walkShardIterator(iterator: string | undefined, signal: AbortSignal) {
   while (iterator && !signal.aborted) {
-    const shard = await streams.getRecords({ ShardIterator: iterator }, { abortSignal: signal })
+    const httpHandlerOptions: HttpHandlerOptions = { abortSignal: signal }
+    const shard = await streams.getRecords({ ShardIterator: iterator }, httpHandlerOptions)
     if (shard.Records?.length) {
       await handler({ Records: shard.Records })
     }
