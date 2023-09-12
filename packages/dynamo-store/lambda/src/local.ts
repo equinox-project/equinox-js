@@ -14,11 +14,9 @@ const opts = {
 const streams = new DynamoDBStreams(opts)
 const ddb = new DynamoDB(opts)
 
-async function walkShardIterator(iterator?: string) {
-  while (iterator) {
-    const shard = await streams.getRecords({
-      ShardIterator: iterator,
-    })
+async function walkShardIterator(iterator: string | undefined, signal: AbortSignal) {
+  while (iterator && !signal.aborted) {
+    const shard = await streams.getRecords({ ShardIterator: iterator }, { abortSignal: signal })
     if (shard.Records?.length) {
       await handler({ Records: shard.Records })
     }
@@ -30,6 +28,7 @@ async function walkShardIterator(iterator?: string) {
 // reads the ddb stream for that table and forwards the events to the handler
 async function main(signal: AbortSignal) {
   let handled = new Map()
+  const httpOptions = { abortSignal: signal }
   while (!signal.aborted) {
     try {
       const { Table } = await ddb.describeTable({
@@ -37,18 +36,22 @@ async function main(signal: AbortSignal) {
       })
       const { LatestStreamArn } = Table || {}
       if (LatestStreamArn) {
-        const { StreamDescription } = await streams.describeStream({
-          StreamArn: LatestStreamArn,
-        })
+        const { StreamDescription } = await streams.describeStream(
+          { StreamArn: LatestStreamArn },
+          httpOptions,
+        )
         const shards = StreamDescription?.Shards
         console.log(shards?.[0].SequenceNumberRange)
         for (const shard of shards || []) {
-          const iter = await streams.getShardIterator({
-            StreamArn: LatestStreamArn,
-            ShardId: shard.ShardId,
-            ShardIteratorType: ShardIteratorType.TRIM_HORIZON,
-          })
-          await walkShardIterator(iter?.ShardIterator)
+          const iter = await streams.getShardIterator(
+            {
+              StreamArn: LatestStreamArn,
+              ShardId: shard.ShardId,
+              ShardIteratorType: ShardIteratorType.TRIM_HORIZON,
+            },
+            httpOptions,
+          )
+          await walkShardIterator(iter?.ShardIterator, signal)
         }
         await new Promise((resolve) => setTimeout(resolve, 1000))
       }
