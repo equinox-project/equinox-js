@@ -82,52 +82,62 @@ a state. Such a mechanism is useful for storing derived data built from things t
 
 ```ts
 namespace Events {
-  export type Event = { type: "Ingested"; data: { version: number; users: string[] } }
+  type User = { id: string; name: string; version: number; deleted?: boolean }
+  export type Event = { type: "Ingested"; data: { users: Record<string, User> } }
   export const codec = Codec.json<Event>()
 }
 
 namespace Fold {
-  export type State = { version: number; users: Set<string> }
-  export const initial = { version: 0, users: [] }
+  export type State = Record<string, Events.User>
+  export const initial = {}
   export const fold = (state: State, events: Events.Event[]): State => events[0].data
   export const toSnapshot = (state: State): Events.Event => ({
     type: "Ingested",
-    data: {
-      version: state.version,
-      users: Array.from(state.users),
-    },
+    data: { users: state.users },
   })
 }
 
 namespace Decide {
-  export const addUser = (id: string) => (state: State) => {
-    if (state.users.has(id)) return []
-    const newUsers = new Set(state.users)
-    newUsers.add(id)
-    return [{ version: state.version + 1, users: newUsers }]
+  const Ingested = (users: Record<string, Events.User>): Events.Event => ({
+    type: "Ingested",
+    data: { users },
+  })
+  export const addUser = (user: Events.User) => (state: State) => {
+    if (equals(state[id], user)) return []
+    return [Ingested({ ...state, [user.id]: user })]
+  }
+  export const removeUser = (id: string) => (state: State) => {
+    if (!state[id] || state[i].deleted) return []
+    return [Ingested({ ...state, [id]: { ...state[id], deleted: true } })]
   }
 }
 
 export class Service {
   constructor(private readonly resolve: () => Decider<Events.Event, Fold.State>) {}
 
-  addUser(id: string) {
+  addUser(id: string, version: number, name: string) {
     const decider = this.resolve()
-    return decider.transact(Decide.addUser(id))
+    return decider.transact(Decide.addUser({ id, version, name }))
+  }
+
+  removeUser(id: string) {
+    const decider = this.resolve()
+    return decider.transact(Decide.addUser({ id, version, name }))
   }
 
   readUsers() {
     const decider = this.resolve()
-    return decider.query((state) => Array.from(state.users))
+    return decider.query((state) => Object.values(state.users))
   }
 
   static create(context: DynamoStoreContext, cache?: ICachingStrategy) {
     const access = AccessStrategy.RollingState(Fold.toSnapshot)
     // prettier-ignore
     const category = DynamoStoreCategory.create(context, "UserIndex", Events.codec, Fold.fold, Fold.initial, access, cache)
-    const resolve = () => Decider.forStream(category, StreamId.create('0'), null)
+    const resolve = () => Decider.forStream(category, StreamId.create("0"), null)
     return new Service(resolve)
   }
 }
 ```
+
 </details>
