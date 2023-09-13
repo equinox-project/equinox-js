@@ -73,9 +73,9 @@ of the Stream can be reconstructed with a single point-read.
 
 ## RollingState(toSnapshot)
 
-`RollingState` will throw away events, only storing the snapshot. This can be
+`RollingState` builds state from events, just like the other modes. The key difference is that it discards the events, only storing the snapshot. This can be
 useful for cases where we do not care about the individual events that led up to
-a state. This is frequently used to build up a read model that spans streams.
+a state. Such a mechanism is useful for storing derived data built from things that you do have a log of events for, e.g. an summary that indexes data from across multiple streams. The main thing to bear in mind is that the total (compressed) size of the state is limited to the DynamoDB Item size limit of 400K.
 
 <details>
 <summary>Example</summary>
