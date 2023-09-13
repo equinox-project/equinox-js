@@ -103,10 +103,18 @@ namespace Decide {
     data: { users },
   })
   export const addUser = (user: Events.User) => (state: State) => {
+    if (state[id] && state[id].version >= user.version) return []
     if (equals(state[id], user)) return []
     return [Ingested({ ...state, [user.id]: user })]
   }
-  export const removeUser = (id: string) => (state: State) => {
+  export const renameUser = (user: Events.User) => (state: State) => {
+    if (state[id] && state[id].version >= user.version) return []
+    if (!state[id] || state[id].deleted) throw new Error("User not found")
+    if (state[id]?.name === user.name) return []
+    return [Ingested({ ...state, [user.id]: user })]
+  }
+  export const removeUser = (id: string, version: number) => (state: State) => {
+    if (state[id] && state[id].version >= version) return []
     if (!state[id] || state[i].deleted) return []
     return [Ingested({ ...state, [id]: { ...state[id], deleted: true } })]
   }
@@ -120,9 +128,14 @@ export class Service {
     return decider.transact(Decide.addUser({ id, version, name }))
   }
 
+  renameUser(id: string, version: number, name: string) {
+    const decider = this.resolve()
+    return decider.transact(Decide.renameUser({ id, version, name }))
+  }
+
   removeUser(id: string) {
     const decider = this.resolve()
-    return decider.transact(Decide.addUser({ id, version, name }))
+    return decider.transact(Decide.removeUser({ id, version, name }))
   }
 
   readUsers() {
