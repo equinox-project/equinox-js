@@ -7,9 +7,8 @@ import {
 import { DynamoStoreContext, EventsContext } from "@equinox-js/dynamo-store"
 import { AppendsIndex, AppendsEpoch } from "@equinox-js/dynamo-store-indexer"
 import { EncodedBody, Codec, ITimelineEvent, StreamName } from "@equinox-js/core"
-import pLimit, { LimitFunction } from "p-limit"
-import { sleep } from "./Sleep.js"
-import { ICheckpoints } from "@equinox-js/propeller"
+import pLimit from "p-limit"
+import { ICheckpoints, StreamsSink, TailingFeedSource } from "@equinox-js/propeller"
 
 function keepMap<T, V>(arr: T[], fn: (x: T) => V | undefined): V[] {
   const out: V[] = []
@@ -21,9 +20,9 @@ function keepMap<T, V>(arr: T[], fn: (x: T) => V | undefined): V[] {
 }
 
 type EventBody = EncodedBody
-type StreamEvent<Format> = [StreamName, ITimelineEvent<Format>]
+type StreamEvent = [StreamName, ITimelineEvent]
 
-type Batch<Event> = { items: StreamEvent<Event>[]; checkpoint: Checkpoint; isTail: boolean }
+type Batch = { items: StreamEvent[]; checkpoint: Checkpoint; isTail: boolean }
 
 namespace Impl {
   export const readTailPositionForTranche = async (
@@ -36,24 +35,20 @@ namespace Impl {
     return Checkpoint.positionOfEpochAndOffset(epochId, version)
   }
 
-  const mkBatch = (
-    checkpoint: Checkpoint,
-    isTail: boolean,
-    items: StreamEvent<EventBody>[],
-  ): Batch<EventBody> => ({
+  const mkBatch = (checkpoint: Checkpoint, isTail: boolean, items: StreamEvent[]): Batch => ({
     checkpoint,
     isTail,
     items,
   })
 
-  const sliceBatch = (epochId: AppendsEpochId, offset: number, items: StreamEvent<EventBody>[]) =>
+  const sliceBatch = (epochId: AppendsEpochId, offset: number, items: StreamEvent[]) =>
     mkBatch(Checkpoint.positionOfEpochAndOffset(epochId, BigInt(offset)), false, items)
 
   const finalBatch = (
     epochId: AppendsEpochId,
     version: bigint,
     state: AppendsEpoch.Reader.State,
-    items: StreamEvent<EventBody>[],
+    items: StreamEvent[],
   ) =>
     mkBatch(
       Checkpoint.positionOfEpochClosedAndVersion(epochId, state.closed, version),
@@ -108,7 +103,7 @@ namespace Impl {
         const limit = pLimit(loadDop)
         await Promise.all(loadsRequired.map(limit))
       }
-      const result: StreamEvent<EventBody>[] = []
+      const result: StreamEvent[] = []
       for (const span of buffer) {
         const items = cache.get(span.p)
         if (items == undefined) continue
@@ -117,7 +112,7 @@ namespace Impl {
         // TOCONSIDER revise logic to share session key etc to rule this out
         const sliceFrom = span.i - Number(items[0].index)
         const events = items.slice(sliceFrom, sliceFrom + span.c.length)
-        for (const event of events) result.push([StreamName.parse(span.p), event])
+        for (const event of events) result.push([StreamName.parse(span.p), inflate(event)])
       }
       return result
     }
@@ -225,7 +220,7 @@ export class DynamoStoreSourceClient {
     this.tryLoad = lm.tryLoad
   }
 
-  crawl(partitionId: AppendsPartitionId, position: Checkpoint): AsyncIterable<Batch<EventBody>> {
+  crawl(partitionId: AppendsPartitionId, position: Checkpoint): AsyncIterable<Batch> {
     return Impl.materializeIndexEpochAsBatchesOfStreamEvents(
       this.epochs,
       this.tryLoad,
@@ -274,65 +269,35 @@ function inflate(event: ITimelineEvent<EventBody>): ITimelineEvent {
 }
 
 export class DynamoStoreSource {
-  limiter: LimitFunction
-
+  private inner: TailingFeedSource
   constructor(
     private readonly index: AppendsIndex.Reader,
     private epochs: AppendsEpoch.Reader.Service,
     private readonly options: Omit<CreateOptions, "context">,
   ) {
-    this.limiter = pLimit(options.maxConcurrentStreams)
-  }
-
-  async handleTranche(
-    client: DynamoStoreSourceClient,
-    partition: AppendsPartitionId,
-    signal: AbortSignal,
-  ) {
-    let pos = Checkpoint.ofPosition(
-      await this.options.checkpoints.load(
-        this.options.groupName,
-        AppendsPartitionId.toString(partition),
-      ),
-    )
-    if (pos === Checkpoint.initial && this.options.startFromTail) {
-      pos = await Impl.readTailPositionForTranche(this.index, this.epochs, partition)
-    }
-    while (!signal.aborted) {
-      for await (const batch of client.crawl(partition, pos)) {
-        const streams = new Map<StreamName, ITimelineEvent[]>()
-        for (const [stream, event] of batch.items) {
-          const events = streams.get(stream)
-          if (events) {
-            events.push(inflate(event))
-          } else {
-            streams.set(stream, [inflate(event)])
-          }
-        }
-
-        const promises = []
-        for (const [stream, events] of streams) {
-          promises.push(this.limiter(() => this.options.handler(stream, events)))
-        }
-
-        await Promise.all(promises)
-        if (batch.checkpoint !== pos) {
-          await this.options.checkpoints.commit(
-            this.options.groupName,
-            AppendsPartitionId.toString(partition),
-            batch.checkpoint,
-          )
-          pos = batch.checkpoint
-        }
-        if (batch.isTail) await sleep(this.options.tailSleepIntervalMs, signal).catch(() => {})
-      }
-    }
-  }
-
-  async start(signal: AbortSignal) {
     if (!this.options.categories && !this.options.categoryFilter) {
       throw new Error("Either categories or categoryFilter must be specified")
     }
+    const sink = new StreamsSink(this.options.handler, this.options.maxConcurrentStreams)
+    const categoryFilter = options.categoryFilter ?? ((c) => options.categories!.includes(c))
+    const client = new DynamoStoreSourceClient(epochs, index, categoryFilter, options.mode)
+    const crawl = (tranche: string, position: bigint, _signal: AbortSignal) =>
+      client.crawl(AppendsPartitionId.parse(tranche), Checkpoint.ofPosition(position))
+    this.inner = new TailingFeedSource(
+      "DynamoStore",
+      options.tailSleepIntervalMs,
+      options.groupName,
+      options.checkpoints,
+      sink,
+      crawl,
+      options.startFromTail
+        ? (tranche: string) =>
+            Impl.readTailPositionForTranche(index, epochs, AppendsPartitionId.parse(tranche))
+        : undefined,
+    )
+  }
+
+  async start(signal: AbortSignal) {
     const categoryFilter =
       this.options.categoryFilter ?? ((c) => this.options.categories!.includes(c))
     const client = new DynamoStoreSourceClient(
@@ -342,7 +307,11 @@ export class DynamoStoreSource {
       this.options.mode,
     )
     const partitions = await client.listPartitions()
-    await Promise.all(partitions.map((partition) => this.handleTranche(client, partition, signal)))
+    await Promise.all(
+      partitions.map((partition) =>
+        this.inner.start(AppendsPartitionId.toString(partition), signal),
+      ),
+    )
   }
 
   static create(options: CreateOptions): DynamoStoreSource {

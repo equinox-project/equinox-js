@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeAll } from "vitest"
-import { StreamName } from "@equinox-js/core"
+import { StreamId, StreamName } from "@equinox-js/core"
 import { MessageDbConnection } from "@equinox-js/message-db"
 import { randomUUID } from "crypto"
 import { Pool } from "pg"
@@ -11,7 +11,7 @@ describe("MessageDbCategoryReader", () => {
   const pool = new Pool({ connectionString })
   const conn = MessageDbConnection.create(pool)
   const category = randomUUID().replace(/-/g, "")
-  const streamId = randomUUID().replace(/-/g, "")
+  const streamId = StreamId.create(randomUUID().replace(/-/g, ""))
   const streamName = StreamName.create(category, streamId)
   beforeAll(async () => {
     await conn.write.writeMessages(streamName, Array(100).fill({ type: "TestEvent" }), -1n)
@@ -24,33 +24,8 @@ describe("MessageDbCategoryReader", () => {
       fromPositionInclusive: 0n,
       batchSize: 10,
     })
-    expect(batch.messages).toHaveLength(10)
+    expect(batch.items).toHaveLength(10)
     expect(batch.isTail).toBe(false)
-    expect(batch.checkpoint).toBeGreaterThan(0n)
-  })
-  test("Can not read a category with a condition if sql_condition is off", async () => {
-    const reader = new MessageDbCategoryReader(pool)
-    const batch = reader.readCategoryMessages({
-      category,
-      fromPositionInclusive: 0n,
-      batchSize: 10,
-      condition: "messages.type = 'ExclusiveEvent'",
-    })
-
-    await expect(batch).rejects.toThrow("SQL condition is not activated")
-  })
-
-  test("Can read a category with a condition", async () => {
-    await pool.query("SELECT set_config('message_store.sql_condition', 'on', true)", [])
-    const reader = new MessageDbCategoryReader(pool)
-    const batch = await reader.readCategoryMessages({
-      category,
-      fromPositionInclusive: 0n,
-      batchSize: 10,
-      condition: "messages.type = 'ExclusiveEvent'",
-    })
-    expect(batch.messages).toHaveLength(1)
-    expect(batch.isTail).toBe(true)
     expect(batch.checkpoint).toBeGreaterThan(0n)
   })
 
@@ -58,7 +33,7 @@ describe("MessageDbCategoryReader", () => {
     const category = randomUUID().replace(/-/g, "")
     beforeAll(async () => {
       for (let i = 0; i < 100; i++) {
-        const streamId = randomUUID().replace(/-/g, "")
+        const streamId = StreamId.create(randomUUID().replace(/-/g, ""))
         const streamName = StreamName.create(category, streamId)
         await conn.write.writeSingleMessage(streamName, { type: "TestEvent" }, -1n)
       }
@@ -79,10 +54,10 @@ describe("MessageDbCategoryReader", () => {
           consumerGroupMember: group.consumerGroupMember,
           consumerGroupSize: group.consumerGroupSize,
         })
-        expect(batch.isTail).toBe(true)
-        expect(batch.messages.length).toBeGreaterThan(0)
+        expect(batch.isTail).toBe(false)
+        expect(batch.items.length).toBeGreaterThan(0)
         expect(batch.checkpoint).toBeGreaterThan(0n)
-        messages[group.consumerGroupMember] = new Set(batch.messages.map((m) => m[1].id))
+        messages[group.consumerGroupMember] = new Set(batch.items.map((m) => m[1].id))
       }
 
       expect(setIntersection(messages[0], messages[1])).toHaveLength(0)

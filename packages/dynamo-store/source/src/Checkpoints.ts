@@ -181,13 +181,16 @@ export class DynamoCheckpoints implements ICheckpoints {
   load(
     groupName: string,
     tranche: string,
-    establishOrigin_?: () => Promise<bigint>,
+    establishOrigin?: (tranche: string) => Promise<bigint>,
   ): Promise<bigint> {
     const decider = this.resolve(AppendsPartitionId.parse(tranche), groupName)
-    const establishOrigin = establishOrigin_ ?? (() => Promise.resolve(BigInt(0)))
     const now = new Date()
     return decider.transactResultAsync(
-      Decide.start(establishOrigin, now, this.checkpointFreqS),
+      Decide.start(
+        () => establishOrigin?.(tranche) ?? Promise.resolve(0n),
+        now,
+        this.checkpointFreqS,
+      ),
       LoadOption.AnyCachedValue,
     )
   }

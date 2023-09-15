@@ -1,4 +1,4 @@
-import { describe, test, expect } from "vitest"
+import { test, expect } from "vitest"
 import { DynamoStoreSource, LoadMode } from "./DynamoStoreSource.mjs"
 import { ICheckpoints } from "@equinox-js/propeller"
 import { VolatileStore } from "@equinox-js/memory-store"
@@ -9,29 +9,20 @@ import {
   AppendsPartitionId,
   IndexStreamId,
 } from "@equinox-js/dynamo-store-indexer"
-import { sleep } from "./Sleep.js"
 import { ITimelineEvent, StreamId, StreamName } from "@equinox-js/core"
 import zlib from "zlib"
 
-class DynamoStoreClientSubstitute {
-  batches: any[] = []
-
-  pushBatch(batch: any) {
-    this.batches.push(batch)
-  }
-
-  async readCategoryMessages({ fromPositionInclusive }: any) {
-    const batch = this.batches.find((b) => b.checkpoint >= fromPositionInclusive + 1n)
-
-    return batch || { messages: [], isTail: true, checkpoint: fromPositionInclusive }
-  }
-}
-
 class MemoryCheckpoints implements ICheckpoints {
   checkpoints = new Map<string, bigint>()
+  loaded = waiter()
 
-  async load(groupName: string, category: string) {
-    return this.checkpoints.get(`${groupName}:${category}`) || 0n
+  async load(groupName: string, category: string, establish?: (t: string) => Promise<bigint>) {
+    let value = this.checkpoints.get(`${groupName}:${category}`)
+    if (value == null) {
+      value = (await establish?.(category)) || 0n
+    }
+    process.nextTick(this.loaded[1])
+    return value
   }
 
   async commit(groupName: string, category: string, checkpoint: bigint) {
@@ -54,7 +45,6 @@ test("Correctly batches stream handling", async () => {
   const index = AppendsIndex.Reader.createMem(store)
   const epochs = AppendsEpoch.Reader.Config.createMem(store)
   const streams = new Map<string, any[]>()
-  const [wait, resolve] = waiter()
   let count = 0
   const src = new DynamoStoreSource(index, epochs, {
     categories: ["Cat"],
@@ -66,12 +56,11 @@ test("Correctly batches stream handling", async () => {
     checkpoints: new MemoryCheckpoints(),
     async handler(stream, events) {
       streams.set(stream, (streams.get(stream) || []).concat(events))
-      if (++count === 3) resolve()
+      if (++count === 3) ctrl.abort()
     },
   })
 
   const ctrl = new AbortController()
-  void src.start(ctrl.signal)
 
   const epochWriter = AppendsEpoch.Config.createMem(1024 * 1024, 5000n, 100_000, store)
 
@@ -81,59 +70,9 @@ test("Correctly batches stream handling", async () => {
     { p: IndexStreamId.ofString("Cat-stream3"), i: 1, c: ["Something", "Something"] },
   ])
 
-  await wait
-  ctrl.abort()
+  await src.start(ctrl.signal).catch(() => {})
   expect(streams.size).toBe(3)
   expect(Array.from(streams.values()).flat()).toHaveLength(4)
-})
-
-describe("Concurrency", () => {
-  test.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])(
-    "Correctly limits concurrency to %d",
-    async (concurrency) => {
-      const store = new VolatileStore()
-      const index = AppendsIndex.Reader.createMem(store)
-      const epochs = AppendsEpoch.Reader.Config.createMem(store)
-      const active = new Set<string>()
-      let maxActive = 0
-      const [wait, resolve] = waiter()
-      let count = 0
-      const ctrl = new AbortController()
-      const src = new DynamoStoreSource(index, epochs, {
-        categories: ["Cat"],
-        batchSizeCutoff: 10,
-        tailSleepIntervalMs: 10,
-        maxConcurrentStreams: concurrency,
-        mode: LoadMode.IndexOnly(),
-        groupName: "test",
-        checkpoints: new MemoryCheckpoints(),
-        async handler(stream, events) {
-          active.add(stream)
-          maxActive = Math.max(maxActive, active.size)
-          await sleep(10, ctrl.signal)
-          active.delete(stream)
-          count += events.length
-          if (count == 10) resolve()
-        },
-      })
-
-      void src.start(ctrl.signal)
-
-      const epochWriter = AppendsEpoch.Config.createMem(1024 * 1024, 5000n, 100_000, store)
-      await epochWriter.ingest(
-        AppendsPartitionId.wellKnownId,
-        AppendsEpochId.initial,
-        Array.from({ length: 10 }).map((_, i) => ({
-          p: IndexStreamId.ofString("Cat-stream" + i),
-          i: 1,
-          c: ["Something"],
-        })),
-      )
-      await wait
-      ctrl.abort()
-      expect(maxActive).toBe(concurrency)
-    },
-  )
 })
 
 test("it fails fast", async () => {
@@ -149,7 +88,7 @@ test("it fails fast", async () => {
     groupName: "test",
     mode: LoadMode.IndexOnly(),
     checkpoints: new MemoryCheckpoints(),
-    async handler(stream, events) {
+    async handler() {
       throw new Error("failed")
     },
   })
@@ -213,7 +152,7 @@ test("loading event bodies", async () => {
       }
     },
   })
-  void src.start(ctrl.signal)
+  void src.start(ctrl.signal).catch(() => {})
   const epochWriter = AppendsEpoch.Config.createMem(1024 * 1024, 5000n, 100_000, store)
   for (const [sn, events] of expectedStreams) {
     store.sync(
@@ -253,6 +192,7 @@ test("starting from the tail of the store", async () => {
   const epochs = AppendsEpoch.Reader.Config.createMem(store)
   const [wait, resolve] = waiter()
   let received
+  const checkpoints = new MemoryCheckpoints()
   const src = new DynamoStoreSource(index, epochs, {
     categories: ["Cat"],
     batchSizeCutoff: 10,
@@ -261,11 +201,10 @@ test("starting from the tail of the store", async () => {
     mode: LoadMode.IndexOnly(),
     startFromTail: true,
     groupName: "test",
-    checkpoints: new MemoryCheckpoints(),
+    checkpoints,
     async handler(stream, events) {
       received = [stream, events]
       resolve()
-      ctrl.abort()
     },
   })
 
@@ -279,8 +218,8 @@ test("starting from the tail of the store", async () => {
     { p: IndexStreamId.ofString("Cat-stream3"), i: 0, c: ["Something", "Something"] },
   ])
 
-  void src.start(ctrl.signal)
-  await sleep(50, ctrl.signal) // give it a chance to load the checkpoint
+  const p = src.start(ctrl.signal)
+  await checkpoints.loaded[0] // give it a chance to load the checkpoint
   await epochWriter.ingest(AppendsPartitionId.wellKnownId, AppendsEpochId.initial, [
     { p: IndexStreamId.ofString("Cat-stream3"), i: 2, c: ["Something", "Something"] },
   ])
@@ -294,4 +233,5 @@ test("starting from the tail of the store", async () => {
       expect.objectContaining({ type: "Something" }),
     ],
   ])
+  await expect(p).rejects.toThrow("Aborted")
 })

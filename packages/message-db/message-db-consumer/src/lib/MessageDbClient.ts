@@ -9,7 +9,6 @@ type ReadCategoryParams = {
   batchSize: number
   consumerGroupMember?: number
   consumerGroupSize?: number
-  condition?: string
 }
 
 export class MessageDbCategoryReader {
@@ -22,22 +21,21 @@ export class MessageDbCategoryReader {
       params.batchSize,
       params.consumerGroupMember,
       params.consumerGroupSize,
-      params.condition,
     ]
   }
 
   async readCategoryMessages(params: ReadCategoryParams) {
     const result = await this.pool.query({
-      text: "select * from get_category_messages($1, $2, $3, null, $4, $5, $6)",
+      text: "select * from get_category_messages($1, $2, $3, null, $4, $5)",
       name: "get_category_messages",
       values: this.paramsToArray(params),
     })
-    const messages = result.rows.map(fromDb)
-    const isTail = messages.length < params.batchSize
+    const items = result.rows.map(fromDb)
+    const isTail = items.length === 0
     const checkpoint = result.rows.length
       ? BigInt(result.rows[result.rows.length - 1].global_position) + 1n
       : params.fromPositionInclusive
-    return { messages, isTail, checkpoint }
+    return { items, isTail, checkpoint }
   }
 }
 
