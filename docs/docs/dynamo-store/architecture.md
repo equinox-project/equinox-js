@@ -131,5 +131,4 @@ be written to the Tip document.
 The index can be read starting from `$AppendsEpoch-0_0` and traversed up to the
 tail of the store, checkpointing along the way. Each epoch can hold at most
 1,000,000 items and as such we represent the checkpoint as a single `int64`
-where the 20 least significant bits represent the position within the epoch and
-the other 44 represent the epoch index.
+where 1,000,001 is epoch=1, offset=1 whereas 2,000,344 is epoch=2, offset=344.
