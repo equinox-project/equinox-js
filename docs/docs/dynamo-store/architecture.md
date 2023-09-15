@@ -102,13 +102,13 @@ three guarantees:
 
 When reacting to events we need a feed that:
 
-1. all events for a stream must be delivered in order with no gaps (at least
-   once delivery can always happen, but a feed that supplies you event 3 of a
-   stream before it has presented you with event 2 is worse than useless)
-2. there must be a 100% guarantee of all events getting delivered. The
-   alternative is programming by coincidence, littering it with nonsensical
-   defensive "just in case" code, and spending hours checking logs to see if by
-   any chance some event just might have been missed "for any reason".
+1. Guarantees all events for a stream are delivered in order with no gaps (at
+   least once delivery can always happen, but a feed that supplies you event 3
+   of a stream before it has presented you with event 2 is worse than useless)
+2. Has a 100% guarantee that all events get processed. The alternative is
+   programming by coincidence, littering it with nonsensical defensive "just in
+   case" code, and spending hours checking logs to see if by any chance some
+   event just might have been missed "for any reason".
 
 Unfortunately, the DynamoDB stream does not achieve these requirements. Firstly,
 the stream is windowed over the last 24hrs. For event-sourced reactions we need
