@@ -262,10 +262,26 @@ interface CreateOptions {
 }
 
 function inflate(event: ITimelineEvent<EventBody>): ITimelineEvent {
-  const e = event as any as ITimelineEvent
-  if (event.data) e.data = Codec.smartDecompress(event.data)?.toString()
-  if (event.meta) e.meta = Codec.smartDecompress(event.meta)?.toString()
-  return e
+  let decodedData: string | undefined
+  let decodedMeta: string | undefined
+  return {
+    index: event.index,
+    id: event.id,
+    type: event.type,
+    time: event.time,
+    size: event.size,
+    isUnfold: event.isUnfold,
+    get data() {
+      if (!event.data?.body?.length) return undefined
+      if (!decodedData) decodedData = Codec.smartDecompress(event.data)?.toString()
+      return decodedData
+    },
+    get meta() {
+      if (!event.meta?.body?.length) return undefined
+      if (!decodedMeta) decodedMeta = Codec.smartDecompress(event.meta)?.toString()
+      return decodedMeta
+    },
+  }
 }
 
 export class DynamoStoreSource {
