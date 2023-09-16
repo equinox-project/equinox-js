@@ -19,7 +19,6 @@ function keepMap<T, V>(arr: T[], fn: (x: T) => V | undefined): V[] {
   return out
 }
 
-type EventBody = EncodedBody
 type StreamEvent = [StreamName, ITimelineEvent]
 
 type Batch = { items: StreamEvent[]; checkpoint: Checkpoint; isTail: boolean }
@@ -60,7 +59,7 @@ namespace Impl {
     streamName: StreamName,
     version: number,
     types: string[],
-  ) => (() => Promise<ITimelineEvent<EventBody>[]>) | undefined
+  ) => (() => Promise<ITimelineEvent<EncodedBody>[]>) | undefined
 
   function streamEventsFromState(maybeLoad: MaybeLoad, state: AppendsEpoch.Reader.State) {
     const all = AppendsEpoch.flatten(state.changes.flatMap(([_i, xs]) => xs))
@@ -89,7 +88,7 @@ namespace Impl {
     const [_size, version, state] = await epochs.read(partitionId, epochId, offset)
     const streamEvents = streamEventsFromState(maybeLoad, state)
     const buffer: AppendsEpoch.Events.StreamSpan[] = []
-    const cache = new Map<IndexStreamId, ITimelineEvent<EventBody>[]>()
+    const cache = new Map<IndexStreamId, ITimelineEvent<EncodedBody>[]>()
     const materializeSpans = async () => {
       const streamsToLoad = new Set(
         keepMap(buffer, (span) => (!cache.has(span.p) ? span.p : undefined)),
@@ -131,7 +130,11 @@ namespace Impl {
   }
 }
 
-type ReadEvents = (sn: StreamName, i: number, count: number) => Promise<ITimelineEvent<EventBody>[]>
+type ReadEvents = (
+  sn: StreamName,
+  i: number,
+  count: number,
+) => Promise<ITimelineEvent<EncodedBody>[]>
 export type LoadMode =
   | { type: "IndexOnly" }
   | {
@@ -166,7 +169,7 @@ export namespace LoadMode {
     }
   const withoutBodies =
     (streamFilter: (sn: StreamName) => boolean) => (sn: StreamName, i: number, c: string[]) => {
-      const renderEvent = (c: string, offset: number): ITimelineEvent<EventBody> => ({
+      const renderEvent = (c: string, offset: number): ITimelineEvent<EncodedBody> => ({
         type: c,
         index: BigInt(i + offset),
         id: "",
@@ -204,7 +207,7 @@ export class DynamoStoreSourceClient {
     sn: StreamName,
     i: number,
     c: string[],
-  ) => (() => Promise<ITimelineEvent<EventBody>[]>) | undefined
+  ) => (() => Promise<ITimelineEvent<EncodedBody>[]>) | undefined
 
   constructor(
     private readonly epochs: AppendsEpoch.Reader.Service,
@@ -260,7 +263,7 @@ interface CreateOptions {
   maxConcurrentStreams: number
 }
 
-function inflate(event: ITimelineEvent<EventBody>): ITimelineEvent {
+function inflate(event: ITimelineEvent<EncodedBody>): ITimelineEvent {
   let decodedData: string | undefined
   let decodedMeta: string | undefined
   return {
