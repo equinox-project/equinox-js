@@ -158,15 +158,14 @@ export namespace LoadMode {
   }
 
   const withBodies =
-    (read: ReadEvents, categoryFilter: (cat: string) => boolean) =>
+    (read: ReadEvents, streamFilter: (sn: StreamName) => boolean) =>
     (sn: StreamName, i: number, c: string[]) => {
-      const category = StreamName.category(sn)
-      if (categoryFilter(category)) {
+      if (streamFilter(sn)) {
         return () => read(sn, i, c.length)
       }
     }
   const withoutBodies =
-    (categoryFilter: (cat: string) => boolean) => (sn: StreamName, i: number, c: string[]) => {
+    (streamFilter: (sn: StreamName) => boolean) => (sn: StreamName, i: number, c: string[]) => {
       const renderEvent = (c: string, offset: number): ITimelineEvent<EventBody> => ({
         type: c,
         index: BigInt(i + offset),
@@ -175,23 +174,23 @@ export namespace LoadMode {
         size: 0,
         time: new Date(),
       })
-      if (categoryFilter(StreamName.category(sn))) {
+      if (streamFilter(sn)) {
         return async () => c.map(renderEvent)
       }
     }
 
-  export const map = (categoryFilter: (c: string) => boolean, loadMode: LoadMode) => {
+  export const map = (streamFilter: (c: StreamName) => boolean, loadMode: LoadMode) => {
     switch (loadMode.type) {
       case "IndexOnly":
         return {
           hydrating: false,
-          tryLoad: withoutBodies(categoryFilter),
+          tryLoad: withoutBodies(streamFilter),
           degreeOfParallelism: 1,
         }
       case "WithData":
         return {
           hydrating: true,
-          tryLoad: withBodies(loadMode.read, categoryFilter),
+          tryLoad: withBodies(loadMode.read, streamFilter),
           degreeOfParallelism: loadMode.degreeOfParallelism,
         }
     }
@@ -210,11 +209,11 @@ export class DynamoStoreSourceClient {
   constructor(
     private readonly epochs: AppendsEpoch.Reader.Service,
     private readonly index: AppendsIndex.Reader,
-    categoryFilter: (cat: string) => boolean,
+    streamFilter: (sn: StreamName) => boolean,
     loadMode: LoadMode,
     private readonly partitionIds?: AppendsPartitionId[],
   ) {
-    const lm = LoadMode.map(categoryFilter, loadMode)
+    const lm = LoadMode.map(streamFilter, loadMode)
     this.dop = lm.degreeOfParallelism
     this.hydrating = lm.hydrating
     this.tryLoad = lm.tryLoad
@@ -249,7 +248,7 @@ interface CreateOptions {
   mode: LoadMode
   /** The categories to read from */
   categories?: string[]
-  categoryFilter?: (category: string) => boolean
+  streamFilter?: (streamName: StreamName) => boolean
   startFromTail?: boolean
   readFailureSleepIntervalMs?: number
 
@@ -284,21 +283,33 @@ function inflate(event: ITimelineEvent<EventBody>): ITimelineEvent {
   }
 }
 
+const categoryFilter = (categories: string[]) => {
+  const prefixes = categories.map((x) => x + "-")
+  return (sn: StreamName) => {
+    for (let i = 0; i < prefixes.length; ++i) {
+      if (sn.startsWith(prefixes[i])) return true
+    }
+    return false
+  }
+}
+
 export class DynamoStoreSource {
   private inner: TailingFeedSource
+  private client: DynamoStoreSourceClient
+
   constructor(
     private readonly index: AppendsIndex.Reader,
     private epochs: AppendsEpoch.Reader.Service,
     private readonly options: Omit<CreateOptions, "context">,
   ) {
-    if (!this.options.categories && !this.options.categoryFilter) {
+    if (!this.options.categories && !this.options.streamFilter) {
       throw new Error("Either categories or categoryFilter must be specified")
     }
     const sink = new StreamsSink(this.options.handler, this.options.maxConcurrentStreams)
-    const categoryFilter = options.categoryFilter ?? ((c) => options.categories!.includes(c))
-    const client = new DynamoStoreSourceClient(epochs, index, categoryFilter, options.mode)
+    const streamFilter = options.streamFilter ?? categoryFilter(options.categories!)
+    this.client = new DynamoStoreSourceClient(epochs, index, streamFilter, options.mode)
     const crawl = (tranche: string, position: bigint, _signal: AbortSignal) =>
-      client.crawl(AppendsPartitionId.parse(tranche), Checkpoint.ofPosition(position))
+      this.client.crawl(AppendsPartitionId.parse(tranche), Checkpoint.ofPosition(position))
     this.inner = new TailingFeedSource(
       "DynamoStore",
       options.tailSleepIntervalMs,
@@ -314,15 +325,7 @@ export class DynamoStoreSource {
   }
 
   async start(signal: AbortSignal) {
-    const categoryFilter =
-      this.options.categoryFilter ?? ((c) => this.options.categories!.includes(c))
-    const client = new DynamoStoreSourceClient(
-      this.epochs,
-      this.index,
-      categoryFilter,
-      this.options.mode,
-    )
-    const partitions = await client.listPartitions()
+    const partitions = await this.client.listPartitions()
     await Promise.all(
       partitions.map((partition) =>
         this.inner.start(AppendsPartitionId.toString(partition), signal),
