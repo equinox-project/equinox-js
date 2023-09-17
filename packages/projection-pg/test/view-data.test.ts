@@ -1,12 +1,13 @@
 import { randomUUID } from "crypto"
 import { Pool } from "pg"
-import { describe, test, expect, beforeAll } from "vitest"
+import { describe, test, expect, afterAll, beforeAll } from "vitest"
 import { Delete, Insert, Update, Upsert, createProjection, executeChanges } from "../src/index.js"
 
 const pool = new Pool({
   connectionString:
     process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/postgres",
 })
+afterAll(() => pool.end())
 
 describe("User table", () => {
   beforeAll(async () => {

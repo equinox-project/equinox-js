@@ -7,9 +7,8 @@ import {
 import { DynamoStoreContext, EventsContext } from "@equinox-js/dynamo-store"
 import { AppendsIndex, AppendsEpoch } from "@equinox-js/dynamo-store-indexer"
 import { EncodedBody, Codec, ITimelineEvent, StreamName } from "@equinox-js/core"
-import pLimit, { LimitFunction } from "p-limit"
-import { sleep } from "./Sleep.js"
-import { ICheckpoints } from "@equinox-js/propeller"
+import pLimit from "p-limit"
+import { ICheckpoints, StreamsSink, TailingFeedSource } from "@equinox-js/propeller"
 
 function keepMap<T, V>(arr: T[], fn: (x: T) => V | undefined): V[] {
   const out: V[] = []
@@ -20,10 +19,9 @@ function keepMap<T, V>(arr: T[], fn: (x: T) => V | undefined): V[] {
   return out
 }
 
-type EventBody = EncodedBody
-type StreamEvent<Format> = [StreamName, ITimelineEvent<Format>]
+type StreamEvent = [StreamName, ITimelineEvent]
 
-type Batch<Event> = { items: StreamEvent<Event>[]; checkpoint: Checkpoint; isTail: boolean }
+type Batch = { items: StreamEvent[]; checkpoint: Checkpoint; isTail: boolean }
 
 namespace Impl {
   export const readTailPositionForTranche = async (
@@ -36,24 +34,20 @@ namespace Impl {
     return Checkpoint.positionOfEpochAndOffset(epochId, version)
   }
 
-  const mkBatch = (
-    checkpoint: Checkpoint,
-    isTail: boolean,
-    items: StreamEvent<EventBody>[],
-  ): Batch<EventBody> => ({
+  const mkBatch = (checkpoint: Checkpoint, isTail: boolean, items: StreamEvent[]): Batch => ({
     checkpoint,
     isTail,
     items,
   })
 
-  const sliceBatch = (epochId: AppendsEpochId, offset: number, items: StreamEvent<EventBody>[]) =>
+  const sliceBatch = (epochId: AppendsEpochId, offset: number, items: StreamEvent[]) =>
     mkBatch(Checkpoint.positionOfEpochAndOffset(epochId, BigInt(offset)), false, items)
 
   const finalBatch = (
     epochId: AppendsEpochId,
     version: bigint,
     state: AppendsEpoch.Reader.State,
-    items: StreamEvent<EventBody>[],
+    items: StreamEvent[],
   ) =>
     mkBatch(
       Checkpoint.positionOfEpochClosedAndVersion(epochId, state.closed, version),
@@ -65,7 +59,7 @@ namespace Impl {
     streamName: StreamName,
     version: number,
     types: string[],
-  ) => (() => Promise<ITimelineEvent<EventBody>[]>) | undefined
+  ) => (() => Promise<ITimelineEvent<EncodedBody>[]>) | undefined
 
   function streamEventsFromState(maybeLoad: MaybeLoad, state: AppendsEpoch.Reader.State) {
     const all = AppendsEpoch.flatten(state.changes.flatMap(([_i, xs]) => xs))
@@ -94,7 +88,7 @@ namespace Impl {
     const [_size, version, state] = await epochs.read(partitionId, epochId, offset)
     const streamEvents = streamEventsFromState(maybeLoad, state)
     const buffer: AppendsEpoch.Events.StreamSpan[] = []
-    const cache = new Map<IndexStreamId, ITimelineEvent<EventBody>[]>()
+    const cache = new Map<IndexStreamId, ITimelineEvent<EncodedBody>[]>()
     const materializeSpans = async () => {
       const streamsToLoad = new Set(
         keepMap(buffer, (span) => (!cache.has(span.p) ? span.p : undefined)),
@@ -108,7 +102,7 @@ namespace Impl {
         const limit = pLimit(loadDop)
         await Promise.all(loadsRequired.map(limit))
       }
-      const result: StreamEvent<EventBody>[] = []
+      const result: StreamEvent[] = []
       for (const span of buffer) {
         const items = cache.get(span.p)
         if (items == undefined) continue
@@ -117,7 +111,7 @@ namespace Impl {
         // TOCONSIDER revise logic to share session key etc to rule this out
         const sliceFrom = span.i - Number(items[0].index)
         const events = items.slice(sliceFrom, sliceFrom + span.c.length)
-        for (const event of events) result.push([StreamName.parse(span.p), event])
+        for (const event of events) result.push([StreamName.parse(span.p), inflate(event)])
       }
       return result
     }
@@ -136,7 +130,11 @@ namespace Impl {
   }
 }
 
-type ReadEvents = (sn: StreamName, i: number, count: number) => Promise<ITimelineEvent<EventBody>[]>
+type ReadEvents = (
+  sn: StreamName,
+  i: number,
+  count: number,
+) => Promise<ITimelineEvent<EncodedBody>[]>
 export type LoadMode =
   | { type: "IndexOnly" }
   | {
@@ -163,16 +161,15 @@ export namespace LoadMode {
   }
 
   const withBodies =
-    (read: ReadEvents, categoryFilter: (cat: string) => boolean) =>
+    (read: ReadEvents, streamFilter: (sn: StreamName) => boolean) =>
     (sn: StreamName, i: number, c: string[]) => {
-      const category = StreamName.category(sn)
-      if (categoryFilter(category)) {
+      if (streamFilter(sn)) {
         return () => read(sn, i, c.length)
       }
     }
   const withoutBodies =
-    (categoryFilter: (cat: string) => boolean) => (sn: StreamName, i: number, c: string[]) => {
-      const renderEvent = (c: string, offset: number): ITimelineEvent<EventBody> => ({
+    (streamFilter: (sn: StreamName) => boolean) => (sn: StreamName, i: number, c: string[]) => {
+      const renderEvent = (c: string, offset: number): ITimelineEvent<EncodedBody> => ({
         type: c,
         index: BigInt(i + offset),
         id: "",
@@ -180,23 +177,23 @@ export namespace LoadMode {
         size: 0,
         time: new Date(),
       })
-      if (categoryFilter(StreamName.category(sn))) {
+      if (streamFilter(sn)) {
         return async () => c.map(renderEvent)
       }
     }
 
-  export const map = (categoryFilter: (c: string) => boolean, loadMode: LoadMode) => {
+  export const map = (streamFilter: (c: StreamName) => boolean, loadMode: LoadMode) => {
     switch (loadMode.type) {
       case "IndexOnly":
         return {
           hydrating: false,
-          tryLoad: withoutBodies(categoryFilter),
+          tryLoad: withoutBodies(streamFilter),
           degreeOfParallelism: 1,
         }
       case "WithData":
         return {
           hydrating: true,
-          tryLoad: withBodies(loadMode.read, categoryFilter),
+          tryLoad: withBodies(loadMode.read, streamFilter),
           degreeOfParallelism: loadMode.degreeOfParallelism,
         }
     }
@@ -210,22 +207,22 @@ export class DynamoStoreSourceClient {
     sn: StreamName,
     i: number,
     c: string[],
-  ) => (() => Promise<ITimelineEvent<EventBody>[]>) | undefined
+  ) => (() => Promise<ITimelineEvent<EncodedBody>[]>) | undefined
 
   constructor(
     private readonly epochs: AppendsEpoch.Reader.Service,
     private readonly index: AppendsIndex.Reader,
-    categoryFilter: (cat: string) => boolean,
+    streamFilter: (sn: StreamName) => boolean,
     loadMode: LoadMode,
     private readonly partitionIds?: AppendsPartitionId[],
   ) {
-    const lm = LoadMode.map(categoryFilter, loadMode)
+    const lm = LoadMode.map(streamFilter, loadMode)
     this.dop = lm.degreeOfParallelism
     this.hydrating = lm.hydrating
     this.tryLoad = lm.tryLoad
   }
 
-  crawl(partitionId: AppendsPartitionId, position: Checkpoint): AsyncIterable<Batch<EventBody>> {
+  crawl(partitionId: AppendsPartitionId, position: Checkpoint): AsyncIterable<Batch> {
     return Impl.materializeIndexEpochAsBatchesOfStreamEvents(
       this.epochs,
       this.tryLoad,
@@ -254,7 +251,7 @@ interface CreateOptions {
   mode: LoadMode
   /** The categories to read from */
   categories?: string[]
-  categoryFilter?: (category: string) => boolean
+  streamFilter?: (streamName: StreamName) => boolean
   startFromTail?: boolean
   readFailureSleepIntervalMs?: number
 
@@ -266,83 +263,77 @@ interface CreateOptions {
   maxConcurrentStreams: number
 }
 
-function inflate(event: ITimelineEvent<EventBody>): ITimelineEvent {
-  const e = event as any as ITimelineEvent
-  if (event.data) e.data = Codec.smartDecompress(event.data)?.toString()
-  if (event.meta) e.meta = Codec.smartDecompress(event.meta)?.toString()
-  return e
+function inflate(event: ITimelineEvent<EncodedBody>): ITimelineEvent {
+  let decodedData: string | undefined
+  let decodedMeta: string | undefined
+  return {
+    index: event.index,
+    id: event.id,
+    type: event.type,
+    time: event.time,
+    size: event.size,
+    isUnfold: event.isUnfold,
+    get data() {
+      if (!event.data?.body?.length) return undefined
+      if (!decodedData) decodedData = Codec.smartDecompress(event.data)?.toString()
+      return decodedData
+    },
+    get meta() {
+      if (!event.meta?.body?.length) return undefined
+      if (!decodedMeta) decodedMeta = Codec.smartDecompress(event.meta)?.toString()
+      return decodedMeta
+    },
+  }
+}
+
+const categoryFilter = (categories: string[]) => {
+  const prefixes = categories.map((x) => x + "-")
+  return (sn: StreamName) => {
+    for (let i = 0; i < prefixes.length; ++i) {
+      if (sn.startsWith(prefixes[i])) return true
+    }
+    return false
+  }
 }
 
 export class DynamoStoreSource {
-  limiter: LimitFunction
+  private inner: TailingFeedSource
+  private client: DynamoStoreSourceClient
 
   constructor(
     private readonly index: AppendsIndex.Reader,
     private epochs: AppendsEpoch.Reader.Service,
     private readonly options: Omit<CreateOptions, "context">,
   ) {
-    this.limiter = pLimit(options.maxConcurrentStreams)
-  }
-
-  async handleTranche(
-    client: DynamoStoreSourceClient,
-    partition: AppendsPartitionId,
-    signal: AbortSignal,
-  ) {
-    let pos = Checkpoint.ofPosition(
-      await this.options.checkpoints.load(
-        this.options.groupName,
-        AppendsPartitionId.toString(partition),
-      ),
+    if (!this.options.categories && !this.options.streamFilter) {
+      throw new Error("Either categories or categoryFilter must be specified")
+    }
+    const sink = new StreamsSink(this.options.handler, this.options.maxConcurrentStreams)
+    const streamFilter = options.streamFilter ?? categoryFilter(options.categories!)
+    this.client = new DynamoStoreSourceClient(epochs, index, streamFilter, options.mode)
+    const crawl = (tranche: string, position: bigint, _signal: AbortSignal) =>
+      this.client.crawl(AppendsPartitionId.parse(tranche), Checkpoint.ofPosition(position))
+    this.inner = new TailingFeedSource(
+      "DynamoStore",
+      options.tailSleepIntervalMs,
+      options.groupName,
+      options.checkpoints,
+      sink,
+      crawl,
+      options.startFromTail
+        ? (tranche: string) =>
+            Impl.readTailPositionForTranche(index, epochs, AppendsPartitionId.parse(tranche))
+        : undefined,
     )
-    if (pos === Checkpoint.initial && this.options.startFromTail) {
-      pos = await Impl.readTailPositionForTranche(this.index, this.epochs, partition)
-    }
-    while (!signal.aborted) {
-      for await (const batch of client.crawl(partition, pos)) {
-        const streams = new Map<StreamName, ITimelineEvent[]>()
-        for (const [stream, event] of batch.items) {
-          const events = streams.get(stream)
-          if (events) {
-            events.push(inflate(event))
-          } else {
-            streams.set(stream, [inflate(event)])
-          }
-        }
-
-        const promises = []
-        for (const [stream, events] of streams) {
-          promises.push(this.limiter(() => this.options.handler(stream, events)))
-        }
-
-        await Promise.all(promises)
-        if (batch.checkpoint !== pos) {
-          await this.options.checkpoints.commit(
-            this.options.groupName,
-            AppendsPartitionId.toString(partition),
-            batch.checkpoint,
-          )
-          pos = batch.checkpoint
-        }
-        if (batch.isTail) await sleep(this.options.tailSleepIntervalMs, signal).catch(() => {})
-      }
-    }
   }
 
   async start(signal: AbortSignal) {
-    if (!this.options.categories && !this.options.categoryFilter) {
-      throw new Error("Either categories or categoryFilter must be specified")
-    }
-    const categoryFilter =
-      this.options.categoryFilter ?? ((c) => this.options.categories!.includes(c))
-    const client = new DynamoStoreSourceClient(
-      this.epochs,
-      this.index,
-      categoryFilter,
-      this.options.mode,
+    const partitions = await this.client.listPartitions()
+    await Promise.all(
+      partitions.map((partition) =>
+        this.inner.start(AppendsPartitionId.toString(partition), signal),
+      ),
     )
-    const partitions = await client.listPartitions()
-    await Promise.all(partitions.map((partition) => this.handleTranche(client, partition, signal)))
   }
 
   static create(options: CreateOptions): DynamoStoreSource {

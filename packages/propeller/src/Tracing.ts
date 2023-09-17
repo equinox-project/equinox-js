@@ -1,7 +1,7 @@
 import { ITimelineEvent, StreamName, Tags } from "@equinox-js/core"
 import { Attributes, SpanKind, SpanStatusCode, Tracer } from "@opentelemetry/api"
 
-type EventHandler<Format> = (sn: StreamName, events: ITimelineEvent<Format>[]) => Promise<void>
+export type EventHandler<Format> = (sn: StreamName, events: ITimelineEvent<Format>[]) => Promise<void>
 
 export async function traceHandler<Format>(
   tracer: Tracer,

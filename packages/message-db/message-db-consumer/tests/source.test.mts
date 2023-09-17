@@ -1,17 +1,21 @@
-import { test, expect } from "vitest"
+import { test, expect, afterAll } from "vitest"
 import { MessageDbSource } from "../src/index.mjs"
-import { sleep } from "../src/lib/Sleep.js"
-import { ICheckpoints } from "@equinox-js/propeller"
+import { Batch, ICheckpoints } from "@equinox-js/propeller"
+import { randomUUID } from "crypto"
+import { MessageDbCategoryReader } from "../src/lib/MessageDbClient.js"
+import { Pool } from "pg"
+import { MessageDbConnection, MessageDbContext } from "@equinox-js/message-db"
+import { ITimelineEvent, StreamName } from "@equinox-js/core"
 
 class MessageDbReaderSubstitute {
-  batches: any[] = []
+  batches: Batch[] = []
   pushBatch(batch: any) {
     this.batches.push(batch)
   }
   async readCategoryMessages({ fromPositionInclusive }: any) {
     const batch = this.batches.find((b) => b.checkpoint >= fromPositionInclusive + 1n)
 
-    return batch || { messages: [], isTail: true, checkpoint: fromPositionInclusive }
+    return batch || { items: [], isTail: true, checkpoint: fromPositionInclusive }
   }
 }
 class MemoryCheckpoints implements ICheckpoints {
@@ -34,18 +38,33 @@ const waiter = () => {
   ] as const
 }
 
-test("Correctly batches stream handling", async () => {
-  const reader = new MessageDbReaderSubstitute()
-  const streams = new Map<string, any[]>()
+const connectionString =
+  process.env.MDB_CONN_STR ?? "postgres://message_store:@localhost:5432/message_store"
+const pool = new Pool({ connectionString })
+const reader = new MessageDbCategoryReader(pool)
+const conn = MessageDbConnection.create(pool)
+const writer = conn.write
+afterAll(() => pool.end())
+
+test("Ships batches to the sink", async () => {
+  const category = randomUUID().replace(/-/g, "")
+
+  await writer.writeMessages(`${category}-1`, [{ type: "Test" }], null)
+  await writer.writeMessages(`${category}-2`, [{ type: "Test" }], null)
+  await writer.writeMessages(`${category}-3`, [{ type: "Test" }, { type: "Test" }], null)
+
   const [wait, resolve] = waiter()
+
+  const streams = new Map<StreamName, ITimelineEvent[]>()
   let count = 0
-  const src = new MessageDbSource(reader as any, {
-    categories: ["test"],
-    batchSize: 10,
+  const src = MessageDbSource.create({
+    pool,
+    batchSize: 500,
+    maxConcurrentStreams: 10,
     tailSleepIntervalMs: 10,
-    maxConcurrentStreams: 1,
     groupName: "test",
     checkpoints: new MemoryCheckpoints(),
+    categories: [category],
     async handler(stream, events) {
       streams.set(stream, (streams.get(stream) || []).concat(events))
       if (++count === 3) resolve()
@@ -55,88 +74,27 @@ test("Correctly batches stream handling", async () => {
   const ctrl = new AbortController()
   void src.start(ctrl.signal)
 
-  reader.pushBatch({
-    messages: [
-      ["stream1", { index: 1n, time: new Date() }],
-      ["stream2", { index: 4n, time: new Date() }],
-      ["stream3", { index: 5n, time: new Date() }],
-      ["stream3", { index: 6n, time: new Date() }],
-    ],
-    isTail: false,
-    checkpoint: 6n,
-  })
-
   await wait
   ctrl.abort()
   expect(streams.size).toBe(3)
   expect(Array.from(streams.values()).flat()).toHaveLength(4)
 })
-
-test.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])(
-  "Correctly limits concurrency to %d",
-  async (concurrency) => {
-    const reader = new MessageDbReaderSubstitute()
-    const active = new Set<string>()
-    let maxActive = 0
-    const [wait, resolve] = waiter()
-    let count = 0
-    const ctrl = new AbortController()
-    const src = new MessageDbSource(reader as any, {
-      categories: ["test"],
-      batchSize: 10,
-      tailSleepIntervalMs: 10,
-      maxConcurrentStreams: concurrency,
-      groupName: "test",
-      checkpoints: new MemoryCheckpoints(),
-      async handler(stream, events) {
-        active.add(stream)
-        maxActive = Math.max(maxActive, active.size)
-        await sleep(10, ctrl.signal)
-        active.delete(stream)
-        count += events.length
-        if (count == 10) resolve()
-      },
-    })
-
-    void src.start(ctrl.signal)
-
-    reader.pushBatch({
-      messages: Array.from({ length: 10 }).map((_, i) => [
-        "stream" + i,
-        { index: 1n, time: new Date() },
-      ]),
-      isTail: false,
-      checkpoint: 6n,
-    })
-
-    await wait
-    ctrl.abort()
-    expect(maxActive).toBe(concurrency)
-  },
-)
-
 test("it fails fast", async () => {
-  const reader = new MessageDbReaderSubstitute()
+  const category = randomUUID().replace(/-/g, "")
+
+  await writer.writeMessages(`${category}-1`, [{ type: "Test" }], null)
   const ctrl = new AbortController()
-  const src = new MessageDbSource(reader as any, {
-    categories: ["test"],
-    batchSize: 10,
-    tailSleepIntervalMs: 10,
+  const src = MessageDbSource.create({
+    pool,
+    batchSize: 500,
     maxConcurrentStreams: 10,
+    tailSleepIntervalMs: 10,
     groupName: "test",
     checkpoints: new MemoryCheckpoints(),
+    categories: [category],
     async handler(stream, events) {
       throw new Error("failed")
     },
-  })
-
-  reader.pushBatch({
-    messages: Array.from({ length: 10 }).map((_, i) => [
-      "stream" + i,
-      { index: 1n, time: new Date() },
-    ]),
-    isTail: false,
-    checkpoint: 6n,
   })
 
   await expect(src.start(ctrl.signal)).rejects.toThrow("failed")

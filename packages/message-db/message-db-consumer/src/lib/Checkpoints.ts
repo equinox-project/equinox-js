@@ -10,7 +10,7 @@ export class PgCheckpoints implements ICheckpoints {
   async load(
     groupName: string,
     category: string,
-    establishOrigin?: () => Promise<bigint>,
+    establishOrigin?: (tranche: string) => Promise<bigint>,
   ): Promise<bigint> {
     const result = await this.pool.query(
       `select position
@@ -21,7 +21,7 @@ export class PgCheckpoints implements ICheckpoints {
       [groupName, category],
     )
     if (result.rows.length) return BigInt(result.rows[0].position)
-    const pos = establishOrigin ? await establishOrigin() : 0n
+    const pos = establishOrigin ? await establishOrigin(category) : 0n
     await this.pool.query(
       `insert into ${this.schema}.eqx_checkpoint(group_name, category, position)
        values ($1, $2, $3)

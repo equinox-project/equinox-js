@@ -1,10 +1,7 @@
 import { MessageDbCategoryReader } from "./MessageDbClient.js"
 import { ITimelineEvent, StreamName, Tags } from "@equinox-js/core"
 import { Pool } from "pg"
-import { trace } from "@opentelemetry/api"
-import { sleep } from "./Sleep.js"
-import pLimit from "p-limit"
-import { ICheckpoints, traceHandler } from "@equinox-js/propeller"
+import { ICheckpoints, Sink, StreamsSink, TailingFeedSource } from "@equinox-js/propeller"
 
 interface CreateOptions {
   /** The database pool to use to read messages from the category */
@@ -26,11 +23,6 @@ interface CreateOptions {
   tailSleepIntervalMs: number
   /** The maximum number of concurrent streams to process, enforced via p-limit */
   maxConcurrentStreams: number
-  /**
-   * Apply a server side filter condition to the reading of messages
-   * NOTE: you will need to set the `message_store.sql_condition` setting to `"on"` to use this feature
-   */
-  condition?: string
   /** When using consumer groups: the index of the consumer. 0 <= i <= consumerGroupSize
    * each consumer in the group maintains their own checkpoint */
   consumerGroupMember?: number
@@ -39,100 +31,84 @@ interface CreateOptions {
 }
 type Options = Omit<CreateOptions, "pool">
 
-const tracer = trace.getTracer("@equinox-js/message-db-consumer")
 const defaultBatchSize = 500
 
+namespace Impl {
+  type Params = {
+    client: MessageDbCategoryReader
+    batchSize: number
+  }
+  export const crawl = (
+    client: MessageDbCategoryReader,
+    batchSize: number,
+    consumerGroupMember?: number,
+    consumerGroupSize?: number,
+  ) =>
+    async function* crawlCategory(trancheId: string, position: bigint, signal: AbortSignal) {
+      while (!signal.aborted) {
+        const batch = await client.readCategoryMessages({
+          category: trancheId,
+          fromPositionInclusive: position,
+          batchSize,
+          consumerGroupSize,
+          consumerGroupMember,
+        })
+        yield batch
+      }
+    }
+}
+
 export class MessageDbSource {
-  private readonly runHandler: (fn: () => Promise<void>) => Promise<void>
+  private inner: TailingFeedSource
   constructor(
-    private readonly client: MessageDbCategoryReader,
-    private readonly options: Options,
+    client: MessageDbCategoryReader,
+    batchSize: number,
+    tailSleepIntervalMs: number,
+    groupName: string,
+    groupMember: number | undefined,
+    groupSize: number | undefined,
+    checkpoints: ICheckpoints,
+    sink: Sink,
+    private readonly categories: string[],
   ) {
-    this.runHandler = pLimit(options.maxConcurrentStreams)
-  }
-
-  private runHandlerWithTrace(
-    category: string,
-    streamName: StreamName,
-    events: ITimelineEvent[],
-    handler: () => Promise<void>,
-  ) {
-    return traceHandler(
-      tracer,
-      {
-        "eqx.consumer_group": this.options.groupName,
-        "eqx.tail_sleep_interval_ms": this.options.tailSleepIntervalMs,
-        "eqx.max_concurrent_streams": this.options.maxConcurrentStreams,
-        "eqx.source": "MessageDb",
-        [Tags.batch_size]: this.options.batchSize ?? defaultBatchSize,
-        "eqx.stream_version": Number(events[events.length - 1]!.index),
-      },
-      category,
-      streamName,
-      events,
-      handler,
-    )
-  }
-
-  private async pumpCategory(signal: AbortSignal, category: string) {
-    const {
-      handler,
+    const crawl = Impl.crawl(client, batchSize, groupMember, groupSize)
+    this.inner = new TailingFeedSource(
+      "MessageDb",
+      tailSleepIntervalMs,
       groupName,
       checkpoints,
-      tailSleepIntervalMs,
-      batchSize = defaultBatchSize,
-      condition,
-      consumerGroupMember,
-      consumerGroupSize,
-    } = this.options
-    const readBatch = (fromPositionInclusive: bigint) =>
-      this.client.readCategoryMessages({
-        category,
-        fromPositionInclusive,
-        batchSize,
-        condition,
-        consumerGroupSize,
-        consumerGroupMember,
-      })
-    const checkpointGroupName =
-      consumerGroupMember != null ? `${groupName}-${consumerGroupMember}` : groupName
-    let position = await checkpoints.load(checkpointGroupName, category)
-    while (!signal.aborted) {
-      const batch = await readBatch(position)
-      if (signal.aborted) return
-      const byStreamName = new Map<StreamName, ITimelineEvent[]>()
-      for (let i = 0; i < batch.messages.length; ++i) {
-        const [streamName, msg] = batch.messages[i]
-        if (!byStreamName.has(streamName)) byStreamName.set(streamName, [])
-        byStreamName.get(streamName)!.push(msg)
-      }
-
-      const promises = []
-
-      for (const [stream, events] of byStreamName.entries()) {
-        promises.push(
-          this.runHandler(() =>
-            this.runHandlerWithTrace(category, stream, events, () => handler(stream, events)),
-          ),
-        )
-      }
-      await Promise.all(promises)
-      if (batch.checkpoint != position) {
-        await checkpoints.commit(checkpointGroupName, category, batch.checkpoint)
-        position = batch.checkpoint
-      }
-      if (batch.isTail) await sleep(tailSleepIntervalMs, signal).catch(() => {})
-    }
+      sink,
+      crawl,
+    )
   }
 
-  start(signal: AbortSignal) {
-    return Promise.all(
-      this.options.categories.map((category) => this.pumpCategory(signal, category)),
-    )
+  async start(signal: AbortSignal) {
+    const all: Promise<void>[] = []
+    for (const category of this.categories) {
+      all.push(this.inner.start(category, signal))
+    }
+    await Promise.all(all)
   }
 
   static create(options: Options & { pool: Pool }) {
     const client = new MessageDbCategoryReader(options.pool)
-    return new MessageDbSource(client, options)
+    const sink = new StreamsSink(options.handler, options.maxConcurrentStreams, {
+      "eqx.consumer_group": options.groupName,
+      "eqx.tail_sleep_interval_ms": options.tailSleepIntervalMs,
+      "eqx.max_concurrent_streams": options.maxConcurrentStreams,
+      "eqx.source": "MessageDb",
+      [Tags.batch_size]: options.batchSize ?? defaultBatchSize,
+    })
+    return new MessageDbSource(
+      client,
+      options.batchSize ?? 500,
+      options.tailSleepIntervalMs,
+      options.groupName,
+      options.consumerGroupMember,
+      options.consumerGroupSize,
+      options.checkpoints,
+      sink,
+      options.categories,
+    )
   }
 }
