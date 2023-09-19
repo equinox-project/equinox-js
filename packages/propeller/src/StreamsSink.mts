@@ -34,7 +34,7 @@ const getOrAdd = <K, V>(map: Map<K, V>, key: K, val: () => V) => {
 export class StreamsSink implements Sink {
   private queue = new AsyncQueue<Stream>()
   private streams = new Map<StreamName, Stream>()
-  private batchStreams = new Map<IngesterBatch, Set<StreamName>>()
+  private batchStreams = new Map<IngesterBatch, Set<Stream>>()
   private onReady?: () => void
   private inProgressBatches = 0
   constructor(
@@ -59,16 +59,9 @@ export class StreamsSink implements Sink {
         try {
           const stream = await this.queue.tryGetAsync(signal)
           this.streams.delete(stream.name)
-          await traceHandler(
-            tracer,
-            this.tracingAttrs,
-            StreamName.category(stream.name),
-            stream.name,
-            stream.events,
-            this.handle,
-          )
+          await traceHandler(tracer, this.tracingAttrs, stream.name, stream.events, this.handle)
           for (const [batch, streams] of this.batchStreams) {
-            streams.delete(stream.name)
+            streams.delete(stream)
             if (streams.size === 0) {
               batch.onComplete()
               this.batchStreams.delete(batch)
@@ -91,16 +84,16 @@ export class StreamsSink implements Sink {
   pump(batch: IngesterBatch, signal: AbortSignal) {
     return new Promise<void>((resolve, reject) => {
       this.inProgressBatches++
-      const names = new Set<StreamName>()
-      this.batchStreams.set(batch, names)
+      const streamsInBatch = new Set<Stream>()
+      this.batchStreams.set(batch, streamsInBatch)
       for (const [sn, event] of batch.items) {
-        names.add(sn)
         const stream = getOrAdd(this.streams, sn, () => {
           const stream = new Stream(sn)
           this.queue.add(stream)
           return stream
         })
         stream.merge(event)
+        streamsInBatch.add(stream)
       }
 
       if (this.inProgressBatches === this.maxReadAhead) {
