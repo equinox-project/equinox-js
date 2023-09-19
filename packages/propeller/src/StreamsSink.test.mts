@@ -1,9 +1,27 @@
-import { describe, test, expect, vi, Mock } from "vitest"
+import { describe, test, expect, vi } from "vitest"
 import { StreamsSink } from "./StreamsSink.mjs"
 import { ITimelineEvent, StreamId, StreamName } from "@equinox-js/core"
 import { sleep } from "./Sleep.js"
 import { IngesterBatch } from "./Types.js"
-import { MemoryCheckpoints } from "./Checkpoints.js"
+
+const mkEvent = (type: string, index: bigint): ITimelineEvent => ({
+  id: "",
+  time: new Date(),
+  isUnfold: false,
+  size: 0,
+  type,
+  index,
+})
+
+const mkBatch = (onComplete: () => void, index?: bigint): IngesterBatch => ({
+  items: Array.from({ length: 10 }).map((_, i): [StreamName, ITimelineEvent] => [
+    StreamName.create("Cat", StreamId.create("stream" + i)),
+    mkEvent("Something", index ?? BigInt(i)),
+  ]),
+  isTail: false,
+  checkpoint: 5n,
+  onComplete,
+})
 
 describe("Concurrency", () => {
   test.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])(
@@ -12,7 +30,7 @@ describe("Concurrency", () => {
       const active = new Set<string>()
       let maxActive = 0
       const ctrl = new AbortController()
-      async function handler(stream: StreamName, events: ITimelineEvent[]) {
+      async function handler(stream: StreamName) {
         active.add(stream)
         maxActive = Math.max(maxActive, active.size)
         await new Promise(setImmediate)
@@ -23,22 +41,7 @@ describe("Concurrency", () => {
       sink.start(ctrl.signal)
 
       await sink.pump(
-        {
-          items: Array.from({ length: 10 }).map((_, i): [StreamName, ITimelineEvent] => [
-            StreamName.create("Cat", StreamId.create("stream" + i)),
-            {
-              id: "",
-              time: new Date(),
-              isUnfold: false,
-              size: 0,
-              type: "Something",
-              index: BigInt(i),
-            },
-          ]),
-          isTail: false,
-          checkpoint: 5n,
-          onComplete: () => Promise.resolve(),
-        },
+        mkBatch(() => {}),
         ctrl.signal,
       )
 
@@ -50,27 +53,10 @@ describe("Concurrency", () => {
   )
 })
 
-const mkBatch = (checkpoint: Mock, index: bigint): IngesterBatch => ({
-  items: Array.from({ length: 10 }).map((_, i): [StreamName, ITimelineEvent] => [
-    StreamName.create("Cat", StreamId.create("stream" + i)),
-    {
-      id: "",
-      time: new Date(),
-      isUnfold: false,
-      size: 0,
-      type: "Something",
-      index,
-    },
-  ]),
-  isTail: false,
-  checkpoint: 5n * index,
-  onComplete: checkpoint,
-})
-
 test("Correctly merges batches", async () => {
   let invocations = 0
   const ctrl = new AbortController()
-  async function handler(stream: StreamName, events: ITimelineEvent[]) {
+  async function handler() {
     invocations++
     await new Promise(setImmediate)
   }
@@ -79,9 +65,11 @@ test("Correctly merges batches", async () => {
   sink.start(ctrl.signal)
   const checkpoint = vi.fn().mockResolvedValue(undefined)
 
+  // each mkBatch has 1 event in 10 streams
   await sink.pump(mkBatch(checkpoint, 0n), ctrl.signal)
   await sink.pump(mkBatch(checkpoint, 1n), ctrl.signal)
 
+  // sleep triggers after setImmediate
   await sleep(0, ctrl.signal)
   ctrl.abort()
 
@@ -90,51 +78,40 @@ test("Correctly merges batches", async () => {
 })
 
 const mkSingleBatch = (
-  checkpoint: (n: bigint) => () => Promise<void>,
-  index: bigint,
+  onComplete: (n: bigint) => () => Promise<void>,
+  checkpoint: bigint,
 ): IngesterBatch => ({
-  items: [
-    [
-      StreamName.create("Cat", StreamId.create("stream1")),
-      {
-        id: "",
-        time: new Date(),
-        isUnfold: false,
-        size: 0,
-        type: "Something",
-        index,
-      },
-    ],
-  ],
+  items: [[StreamName.create("Cat", StreamId.create("stream1")), mkEvent("Something", 0n)]],
   isTail: false,
-  checkpoint: index,
-  onComplete: checkpoint(index),
+  checkpoint: checkpoint,
+  onComplete: onComplete(checkpoint),
 })
 
 test("Correctly limits in-flight batches", async () => {
   let invocations = 0
   const ctrl = new AbortController()
-  async function handler(stream: StreamName, events: ITimelineEvent[]) {
+  async function handler() {
     invocations++
     await new Promise(setImmediate)
   }
   const sink = new StreamsSink(handler, 10, 2)
 
   sink.start(ctrl.signal)
-  const checkpoints = new MemoryCheckpoints()
-  vi.spyOn(checkpoints, "commit")
-  const checkpoint = (n: bigint) => () => checkpoints.commit("123", "Test", n)
+  const completed = vi.fn().mockResolvedValue(undefined)
+  const complete = (n: bigint) => () => completed(n)
 
-  await sink.pump(mkSingleBatch(checkpoint, 0n), ctrl.signal)
-  await sink.pump(mkSingleBatch(checkpoint, 1n), ctrl.signal)
-  await sink.pump(mkSingleBatch(checkpoint, 2n), ctrl.signal)
-  await sink.pump(mkSingleBatch(checkpoint, 3n), ctrl.signal)
-  await sink.pump(mkSingleBatch(checkpoint, 4n), ctrl.signal)
+  await sink.pump(mkSingleBatch(complete, 0n), ctrl.signal)
+  await sink.pump(mkSingleBatch(complete, 1n), ctrl.signal)
+  await sink.pump(mkSingleBatch(complete, 2n), ctrl.signal)
+  await sink.pump(mkSingleBatch(complete, 3n), ctrl.signal)
+  await sink.pump(mkSingleBatch(complete, 4n), ctrl.signal)
 
   await sleep(0, ctrl.signal)
   ctrl.abort()
 
   expect(invocations).toBe(3)
-  expect(checkpoints.commit).toHaveBeenCalledTimes(5)
-  expect(checkpoints.commit).toHaveBeenLastCalledWith("123", "Test", 4n)
+
+  // onComplete is called in order and for every batch
+  expect(completed).toHaveBeenCalledTimes(5)
+  expect(completed.mock.calls).toEqual([[0n], [1n], [2n], [3n], [4n]])
 })
