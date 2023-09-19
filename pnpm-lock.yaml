@@ -453,9 +453,6 @@ importers:
       '@types/pg':
         specifier: ^8.6.6
         version: 8.6.6
-      p-limit:
-        specifier: ^4.0.0
-        version: 4.0.0
       tsup:
         specifier: ^7.2.0
         version: 7.2.0(supports-color@9.4.0)(typescript@5.2.2)
@@ -500,9 +497,6 @@ importers:
       '@types/node':
         specifier: ^20.6.2
         version: 20.6.2
-      p-limit:
-        specifier: ^4.0.0
-        version: 4.0.0
       p-queue:
         specifier: ^7.4.1
         version: 7.4.1

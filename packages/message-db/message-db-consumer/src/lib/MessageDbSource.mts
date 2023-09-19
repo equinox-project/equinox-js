@@ -23,7 +23,7 @@ interface CreateOptions {
   tailSleepIntervalMs: number
   /** sleep time in ms between checkpoint commits */
   checkpointIntervalMs?: number
-  /** The maximum number of concurrent streams to process, enforced via p-limit */
+  /** The maximum number of concurrent streams to process */
   maxConcurrentStreams: number
   /** The maximum number of batches in-flight */
   maxReadAhead: number

@@ -261,7 +261,7 @@ interface CreateOptions {
   groupName: string
   /** The handler to call for each batch of stream messages */
   handler: (streamName: StreamName, events: ITimelineEvent[]) => Promise<void>
-  /** The maximum number of concurrent streams to process, enforced via p-limit */
+  /** The maximum number of concurrent streams to process */
   maxConcurrentStreams: number
   /** The maximum number of in-flight batches */
   maxReadAhead: number
