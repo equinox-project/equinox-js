@@ -15,10 +15,15 @@ class CheckpointWriter {
   async start(signal: AbortSignal) {
     while (!signal.aborted) {
       await sleep(this.intervalMs, signal)
-      if (this.committedPos !== this.validatedPos) {
-        await this.checkpoints.commit(this.groupName, this.trancheId, this.validatedPos)
-        this.validatedPos = this.committedPos
-      }
+      await this.flush()
+    }
+  }
+
+  async flush() {
+    if (this.committedPos !== this.validatedPos) {
+      const pos = this.validatedPos
+      this.committedPos = pos
+      await this.checkpoints.commit(this.groupName, this.trancheId, pos)
     }
   }
 
@@ -62,6 +67,10 @@ export class TailingFeedSource {
       pos,
     )
     checkpointWriter.start(signal).catch(this.onError)
+    // flush the checkpoint on abort
+    signal.addEventListener("abort", () => {
+      checkpointWriter.flush()
+    })
     let wasTail = false
     while (!signal.aborted) {
       for await (const batch of this.crawl(trancheId, wasTail, pos, signal)) {
