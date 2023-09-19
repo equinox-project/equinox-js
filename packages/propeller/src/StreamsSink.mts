@@ -51,13 +51,19 @@ export class StreamsSink implements Sink {
   }
 
   start(signal: AbortSignal) {
+    // set up a linked abort controller to avoid attaching too many event listeners to the provided signal
+    // node has a default limit of 11 before it emits a warning to the console. We have entirely legitimate reasons
+    // for attaching more than 11 listeners
+    const ctrl = new AbortController()
+    signal.addEventListener("abort", () => ctrl.abort())
+    const _signal = ctrl.signal
     // Starts N workers that will process streams in parallel
     return new Promise<void>((_resolve, reject) => {
       let stopped = false
       const aux = async (): Promise<void> => {
-        if (signal.aborted || stopped) return
+        if (_signal.aborted || stopped) return
         try {
-          const stream = await this.queue.tryGetAsync(signal)
+          const stream = await this.queue.tryGetAsync(_signal)
           this.streams.delete(stream.name)
           await traceHandler(tracer, this.tracingAttrs, stream.name, stream.events, this.handle)
           for (const [batch, streams] of this.batchStreams) {

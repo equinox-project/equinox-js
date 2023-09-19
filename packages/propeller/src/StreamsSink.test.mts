@@ -38,7 +38,7 @@ describe("Concurrency", () => {
       }
       const sink = new StreamsSink(handler, concurrency, 1)
 
-      sink.start(ctrl.signal)
+      sink.start(ctrl.signal).catch(() => {})
 
       await sink.pump(
         mkBatch(() => {}),
@@ -62,9 +62,9 @@ test("Correctly merges batches", async () => {
   }
   const sink = new StreamsSink(handler, 10, 2)
 
-  sink.start(ctrl.signal)
   const checkpoint = vi.fn().mockResolvedValue(undefined)
 
+  sink.start(ctrl.signal).catch(() => {})
   // each mkBatch has 1 event in 10 streams
   await sink.pump(mkBatch(checkpoint, 0n), ctrl.signal)
   await sink.pump(mkBatch(checkpoint, 1n), ctrl.signal)
@@ -96,7 +96,7 @@ test("Correctly limits in-flight batches", async () => {
   }
   const sink = new StreamsSink(handler, 10, 2)
 
-  sink.start(ctrl.signal)
+  sink.start(ctrl.signal).catch(() => {})
   const completed = vi.fn().mockResolvedValue(undefined)
   const complete = (n: bigint) => () => completed(n)
 
