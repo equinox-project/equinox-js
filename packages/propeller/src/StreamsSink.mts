@@ -2,25 +2,9 @@ import { ITimelineEvent, StreamName } from "@equinox-js/core"
 import { traceHandler, EventHandler } from "./Tracing.js"
 import { Attributes, trace } from "@opentelemetry/api"
 import { IngesterBatch, Sink } from "./Types.js"
-import { Queue } from "./Queue.js"
-
-function groupByStream(items: [StreamName, ITimelineEvent][]): Map<StreamName, ITimelineEvent[]> {
-  const streams = new Map<StreamName, ITimelineEvent[]>()
-  for (const [streamName, event] of items) {
-    const events = streams.get(streamName) || []
-    events.push(event)
-    streams.set(streamName, events)
-  }
-  return streams
-}
+import { AsyncQueue } from "./Queue.js"
 
 const tracer = trace.getTracer("@equinox-js/propeller")
-
-const createLinkedAbortController = (signal: AbortSignal) => {
-  const ctrl = new AbortController()
-  signal.addEventListener("abort", () => ctrl.abort())
-  return ctrl
-}
 
 class Stream {
   events: ITimelineEvent[] = []
@@ -48,10 +32,10 @@ const getOrAdd = <K, V>(map: Map<K, V>, key: K, val: () => V) => {
 }
 
 export class StreamsSink implements Sink {
-  private queue = new Queue<Stream>()
+  private queue = new AsyncQueue<Stream>()
   private streams = new Map<StreamName, Stream>()
   private batchStreams = new Map<IngesterBatch, Set<StreamName>>()
-  private onReady?: () => void 
+  private onReady?: () => void
   private inProgressBatches = 0
   constructor(
     private readonly handle: EventHandler<string>,
@@ -67,35 +51,37 @@ export class StreamsSink implements Sink {
   }
 
   start(signal: AbortSignal) {
+    // Starts N workers that will process streams in parallel
     return new Promise<void>((_resolve, reject) => {
       let stopped = false
       const aux = async (): Promise<void> => {
         if (signal.aborted || stopped) return
-        const stream = this.queue.tryGet()
-        if (!stream) return void setImmediate(aux)
-        this.streams.delete(stream.name)
-        await traceHandler(
-          tracer,
-          this.tracingAttrs,
-          StreamName.category(stream.name),
-          stream.name,
-          stream.events,
-          this.handle,
-        ).catch((err) => {
-          reject(err)
-          stopped = true
-        })
-        for (const [batch, streams] of this.batchStreams) {
-          streams.delete(stream.name)
-          if (streams.size === 0) {
-            batch.onComplete()
-            this.batchStreams.delete(batch)
-            this.inProgressBatches--
-            this.onReady?.()
-            delete this.onReady
+        try {
+          const stream = await this.queue.tryGetAsync(signal)
+          this.streams.delete(stream.name)
+          await traceHandler(
+            tracer,
+            this.tracingAttrs,
+            StreamName.category(stream.name),
+            stream.name,
+            stream.events,
+            this.handle,
+          )
+          for (const [batch, streams] of this.batchStreams) {
+            streams.delete(stream.name)
+            if (streams.size === 0) {
+              batch.onComplete()
+              this.batchStreams.delete(batch)
+              this.inProgressBatches--
+              this.onReady?.()
+              delete this.onReady
+            }
           }
+          setImmediate(aux)
+        } catch (err) {
+          stopped = true
+          reject(err)
         }
-        setImmediate(aux)
       }
 
       for (let i = 0; i < this.maxConcurrentStreams; ++i) aux()

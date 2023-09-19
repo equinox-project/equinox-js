@@ -35,3 +35,28 @@ export class Queue<T> {
     }
   }
 }
+
+export class AsyncQueue<T> {
+  private queue = new Queue<T>()
+  private pendingGets = new Queue<(value: T) => void>()
+
+  add(value: T) {
+    const send = this.pendingGets.tryGet()
+    if (send) return send(value)
+    this.queue.add(value)
+  }
+
+  tryGetAsync(signal: AbortSignal) {
+    return new Promise<T>((resolve, reject) => {
+      const value = this.queue.tryGet()
+      if (value) return resolve(value)
+      const abort = () => reject(new Error("Aborted"))
+      if (signal.aborted) return abort()
+      signal.addEventListener("abort", abort)
+      this.pendingGets.add((value) => {
+        signal.removeEventListener("abort", abort)
+        resolve(value)
+      })
+    })
+  }
+}
