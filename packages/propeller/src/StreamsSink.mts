@@ -51,7 +51,7 @@ export class StreamsSink implements Sink {
   private queue = new Queue<Stream>()
   private streams = new Map<StreamName, Stream>()
   private batchStreams = new Map<IngesterBatch, Set<StreamName>>()
-  private onReady: () => void = () => undefined
+  private onReady?: () => void 
   private inProgressBatches = 0
   constructor(
     private readonly handle: EventHandler<string>,
@@ -91,7 +91,8 @@ export class StreamsSink implements Sink {
             batch.onComplete()
             this.batchStreams.delete(batch)
             this.inProgressBatches--
-            this.onReady()
+            this.onReady?.()
+            delete this.onReady
           }
         }
         setImmediate(aux)
