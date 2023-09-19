@@ -189,7 +189,7 @@ test("loading event bodies", async () => {
   expect(received).toEqual(expectedStreams)
 })
 
-test(" starting from the tail of the store", async () => {
+test("starting from the tail of the store", async () => {
   const store = new VolatileStore()
   const index = AppendsIndex.Reader.createMem(store)
   const epochs = AppendsEpoch.Reader.Config.createMem(store)
