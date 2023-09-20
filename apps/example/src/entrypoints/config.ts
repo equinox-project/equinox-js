@@ -11,8 +11,18 @@ import {
   TipOptions,
 } from "@equinox-js/dynamo-store"
 
-export const createPool = (connectionString?: string) =>
-  connectionString ? new pg.Pool({ connectionString, max: 10 }) : undefined
+const pools: pg.Pool[] = []
+export async function endPools() {
+  for (const pool of pools) {
+    await pool.end()
+  }
+}
+export const createPool = (connectionString?: string) => {
+  if (!connectionString) return
+  const pool = new pg.Pool({ connectionString, max: 10 })
+  pools.push(pool)
+  return pool
+}
 
 const lazy = <T>(fn: () => T) => {
   let value: T | undefined
