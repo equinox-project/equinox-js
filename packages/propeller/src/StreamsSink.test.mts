@@ -60,14 +60,15 @@ test("Correctly merges batches", async () => {
     invocations++
     await new Promise(setImmediate)
   }
-  const sink = new StreamsSink(handler, 10, 2)
+  const sink = new StreamsSink(handler, 10, 3)
 
   const checkpoint = vi.fn().mockResolvedValue(undefined)
 
-  sink.start(ctrl.signal).catch(() => {})
   // each mkBatch has 1 event in 10 streams
   await sink.pump(mkBatch(checkpoint, 0n), ctrl.signal)
   await sink.pump(mkBatch(checkpoint, 1n), ctrl.signal)
+
+  sink.start(ctrl.signal).catch(() => {})
 
   // sleep triggers after setImmediate
   await sleep(0, ctrl.signal)
@@ -87,14 +88,14 @@ const mkSingleBatch = (
   onComplete: onComplete(checkpoint),
 })
 
-test("Correctly limits in-flight batches", async () => {
+test(" Correctly limits in-flight batches", async () => {
   let invocations = 0
   const ctrl = new AbortController()
   async function handler() {
     invocations++
-    await new Promise(setImmediate)
+    await new Promise((res) => setTimeout(res, 10))
   }
-  const sink = new StreamsSink(handler, 10, 2)
+  const sink = new StreamsSink(handler, 1, 3)
 
   sink.start(ctrl.signal).catch(() => {})
   const completed = vi.fn().mockResolvedValue(undefined)
@@ -106,7 +107,7 @@ test("Correctly limits in-flight batches", async () => {
   await sink.pump(mkSingleBatch(complete, 3n), ctrl.signal)
   await sink.pump(mkSingleBatch(complete, 4n), ctrl.signal)
 
-  await sleep(0, ctrl.signal)
+  await sleep(10, ctrl.signal)
   ctrl.abort()
 
   expect(invocations).toBe(3)

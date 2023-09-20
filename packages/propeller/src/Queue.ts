@@ -59,7 +59,7 @@ export class AsyncQueue<T> {
       signal.addEventListener("abort", abort)
       this.pendingGets.add((value) => {
         signal.removeEventListener("abort", abort)
-        setImmediate(() => resolve(value))
+        resolve(value)
       })
     })
   }

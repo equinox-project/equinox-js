@@ -76,7 +76,7 @@ export class StreamsSink implements Sink {
               delete this.onReady
             }
           }
-          setImmediate(aux)
+          void aux()
         } catch (err) {
           stopped = true
           reject(err)
@@ -87,31 +87,33 @@ export class StreamsSink implements Sink {
     })
   }
 
-  pump(batch: IngesterBatch, signal: AbortSignal) {
+  private waitForCapacity(signal: AbortSignal) {
+    if (this.inProgressBatches < this.maxReadAhead) return
     return new Promise<void>((resolve, reject) => {
-      this.inProgressBatches++
-      const streamsInBatch = new Set<Stream>()
-      this.batchStreams.set(batch, streamsInBatch)
-      for (const [sn, event] of batch.items) {
-        const stream = getOrAdd(this.streams, sn, () => {
-          const stream = new Stream(sn)
-          this.queue.add(stream)
-          return stream
-        })
-        stream.merge(event)
-        streamsInBatch.add(stream)
-      }
-
-      if (this.inProgressBatches === this.maxReadAhead) {
-        const abort = () => reject(new Error("Aborted"))
-        signal.addEventListener("abort", abort)
-        this.onReady = () => {
-          signal.removeEventListener("abort", abort)
-          resolve()
-        }
-      } else {
+      const abort = () => reject(new Error("Aborted"))
+      signal.addEventListener("abort", abort)
+      this.onReady = () => {
+        signal.removeEventListener("abort", abort)
         resolve()
       }
     })
+  }
+
+  pump(batch: IngesterBatch, signal: AbortSignal): Promise<void> | void {
+    const p = this.waitForCapacity(signal)
+    if (p != null) return p.then(() => this.pump(batch, signal))
+    this.inProgressBatches++
+    const streamsInBatch = new Set<Stream>()
+    this.batchStreams.set(batch, streamsInBatch)
+    for (const [sn, event] of batch.items) {
+      const current = this.streams.get(sn)
+      const stream = current ?? new Stream(sn)
+      stream.merge(event)
+      streamsInBatch.add(stream)
+      if (!current) {
+        this.streams.set(sn, stream)
+        this.queue.add(stream)
+      }
+    }
   }
 }
