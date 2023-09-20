@@ -46,6 +46,10 @@ export class AsyncQueue<T> {
     this.queue.add(value)
   }
 
+  get size() {
+    return this.queue.size
+  }
+
   tryGetAsync(signal: AbortSignal) {
     return new Promise<T>((resolve, reject) => {
       const value = this.queue.tryGet()

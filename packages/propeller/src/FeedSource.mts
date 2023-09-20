@@ -73,18 +73,22 @@ export class TailingFeedSource {
     })
     let wasTail = false
     while (!signal.aborted) {
-      for await (const batch of this.crawl(trancheId, wasTail, pos, signal)) {
-        await sink.pump(
-          {
-            items: batch.items,
-            checkpoint: batch.checkpoint,
-            isTail: batch.isTail,
-            onComplete: () => checkpointWriter.commit(batch.checkpoint),
-          },
-          signal,
-        )
+      for await (const _batch of this.crawl(trancheId, wasTail, pos, signal)) {
+        // Weird TS bug thinks that batch is any
+        const batch: Batch = _batch
+        if (batch.items.length !== 0) {
+          await sink.pump(
+            {
+              items: batch.items,
+              checkpoint: batch.checkpoint,
+              isTail: batch.isTail,
+              onComplete: () => checkpointWriter.commit(batch.checkpoint),
+            },
+            signal,
+          )
+        }
         pos = batch.checkpoint
-        wasTail = true
+        wasTail = batch.isTail 
       }
     }
   }
