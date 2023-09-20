@@ -34,27 +34,21 @@ type Options = Omit<CreateOptions, "pool">
 const defaultBatchSize = 500
 
 namespace Impl {
-  type Params = {
-    client: MessageDbCategoryReader
-    batchSize: number
-  }
   export const crawl = (
     client: MessageDbCategoryReader,
     batchSize: number,
     consumerGroupMember?: number,
     consumerGroupSize?: number,
   ) =>
-    async function* crawlCategory(trancheId: string, position: bigint, signal: AbortSignal) {
-      while (!signal.aborted) {
-        const batch = await client.readCategoryMessages({
-          category: trancheId,
-          fromPositionInclusive: position,
-          batchSize,
-          consumerGroupSize,
-          consumerGroupMember,
-        })
-        yield batch
-      }
+    async function* crawlCategory(trancheId: string, position: bigint) {
+      const batch = await client.readCategoryMessages({
+        category: trancheId,
+        fromPositionInclusive: position,
+        batchSize,
+        consumerGroupSize,
+        consumerGroupMember,
+      })
+      yield batch
     }
 }
 
