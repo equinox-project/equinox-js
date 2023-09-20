@@ -20,7 +20,7 @@ export class Queue<T> {
       this.firstAndLast = [node, node]
     }
 
-    this.size++
+    ++this.size
   }
 
   tryGet() {
@@ -31,6 +31,7 @@ export class Queue<T> {
       } else {
         delete this.firstAndLast
       }
+      --this.size
       return value
     }
   }
