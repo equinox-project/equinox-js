@@ -89,7 +89,7 @@ const mkSingleBatch = (
   onComplete: onComplete(checkpoint),
 })
 
-test(" Correctly limits in-flight batches", async () => {
+test("Correctly limits in-flight batches", async () => {
   let invocations = 0
   const ctrl = new AbortController()
   async function handler() {
@@ -103,18 +103,23 @@ test(" Correctly limits in-flight batches", async () => {
   const completed = vi.fn().mockResolvedValue(undefined)
   const complete = (n: bigint) => () => completed(n)
 
+  // First batch will be immediately picked up
   await sink.pump(mkSingleBatch(complete, 0n), ctrl.signal)
+  // meanwhile we merge two batches together
   await sink.pump(mkSingleBatch(complete, 1n), ctrl.signal)
   await sink.pump(mkSingleBatch(complete, 2n), ctrl.signal)
+
+  // This batch will be immediately picked up
   await sink.pump(mkSingleBatch(complete, 3n), ctrl.signal)
+  // meanwhile we merge two batches together
   await sink.pump(mkSingleBatch(complete, 4n), ctrl.signal)
+  await sink.pump(mkSingleBatch(complete, 5n), ctrl.signal)
 
   await limiter.waitForEmpty()
   ctrl.abort()
 
-  expect(invocations).toBe(3)
+  expect(invocations).toBe(4)
 
   // onComplete is called in order and for every batch
-  expect(completed.mock.calls).toEqual([[0n], [1n], [2n], [3n], [4n]])
-  expect(completed).toHaveBeenCalledTimes(5)
+  expect(completed.mock.calls).toEqual([[0n], [1n], [2n], [3n], [4n], [5n]])
 })

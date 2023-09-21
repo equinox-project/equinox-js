@@ -75,6 +75,7 @@ export class BatchLimiter {
   }
 
   startBatch() {
+    console.debug("Starting batch")
     this.inProgressBatches++
   }
 
@@ -150,7 +151,6 @@ export class StreamsSink implements Sink {
   }
 
   async pump(batch: IngesterBatch, signal: AbortSignal): Promise<void> {
-    await this.batchLimiter.waitForCapacity(signal)
     this.batchLimiter.startBatch()
     const streamsInBatch = new Set<Stream>()
     this.batchStreams.set(batch, streamsInBatch)
@@ -164,6 +164,7 @@ export class StreamsSink implements Sink {
         this.queue.add(stream)
       }
     }
+    await this.batchLimiter.waitForCapacity(signal)
   }
 
   static create(
