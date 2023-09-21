@@ -1,5 +1,5 @@
 export * from "./Checkpoints.js"
 export * from "./Tracing.js"
-export * from "./StreamsSink.mjs"
+export { StreamsSink } from "./StreamsSink.mjs"
 export * from "./Types.js"
 export * from "./FeedSource.mjs"

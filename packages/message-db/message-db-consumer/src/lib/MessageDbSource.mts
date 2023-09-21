@@ -91,7 +91,7 @@ export class MessageDbSource {
 
   static create(options: Options & { pool: Pool }) {
     const client = new MessageDbCategoryReader(options.pool)
-    const sink = new StreamsSink(
+    const sink = StreamsSink.create(
       options.handler,
       options.maxConcurrentStreams,
       options.maxConcurrentBatches ?? 10,

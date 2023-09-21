@@ -1,5 +1,5 @@
 import { describe, test, expect, vi } from "vitest"
-import { StreamsSink } from "./StreamsSink.mjs"
+import { BatchLimiter, StreamsSink } from "./StreamsSink.mjs"
 import { ITimelineEvent, StreamId, StreamName } from "@equinox-js/core"
 import { sleep } from "./Sleep.js"
 import { IngesterBatch } from "./Types.js"
@@ -36,7 +36,8 @@ describe("Concurrency", () => {
         await new Promise(setImmediate)
         active.delete(stream)
       }
-      const sink = new StreamsSink(handler, concurrency, 1)
+      const limiter = new BatchLimiter(1)
+      const sink = new StreamsSink(handler, concurrency, limiter)
 
       sink.start(ctrl.signal).catch(() => {})
 
@@ -45,7 +46,7 @@ describe("Concurrency", () => {
         ctrl.signal,
       )
 
-      await new Promise(setImmediate)
+      await limiter.waitForEmpty()
       ctrl.abort()
 
       expect(maxActive).toBe(concurrency)
@@ -60,7 +61,8 @@ test("Correctly merges batches", async () => {
     invocations++
     await new Promise(setImmediate)
   }
-  const sink = new StreamsSink(handler, 10, 3)
+  const limiter = new BatchLimiter(3)
+  const sink = new StreamsSink(handler, 10, limiter)
 
   const checkpoint = vi.fn().mockResolvedValue(undefined)
 
@@ -70,8 +72,7 @@ test("Correctly merges batches", async () => {
 
   sink.start(ctrl.signal).catch(() => {})
 
-  // sleep triggers after setImmediate
-  await sleep(0, ctrl.signal)
+  await limiter.waitForEmpty()
   ctrl.abort()
 
   expect(invocations).toBe(10)
@@ -95,7 +96,8 @@ test(" Correctly limits in-flight batches", async () => {
     invocations++
     await new Promise((res) => setTimeout(res, 10))
   }
-  const sink = new StreamsSink(handler, 1, 3)
+  const limiter = new BatchLimiter(3)
+  const sink = new StreamsSink(handler, 1, limiter)
 
   sink.start(ctrl.signal).catch(() => {})
   const completed = vi.fn().mockResolvedValue(undefined)
@@ -107,12 +109,12 @@ test(" Correctly limits in-flight batches", async () => {
   await sink.pump(mkSingleBatch(complete, 3n), ctrl.signal)
   await sink.pump(mkSingleBatch(complete, 4n), ctrl.signal)
 
-  await sleep(10, ctrl.signal)
+  await limiter.waitForEmpty()
   ctrl.abort()
 
   expect(invocations).toBe(3)
 
   // onComplete is called in order and for every batch
-  expect(completed).toHaveBeenCalledTimes(5)
   expect(completed.mock.calls).toEqual([[0n], [1n], [2n], [3n], [4n]])
+  expect(completed).toHaveBeenCalledTimes(5)
 })
