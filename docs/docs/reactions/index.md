@@ -83,8 +83,8 @@ The last step is to wire the reaction up to a concrete store
 import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-consumer"
 import pg from "pg"
 
-const checkpointer = new PgCheckpoints(new pg.Pool({ connectionString: "..." }), "public")
-await checkpointer.ensureTable() // creates the checkpoints table if it doesn't exist
+const checkpoints = new PgCheckpoints(new pg.Pool({ connectionString: "..." }), "public")
+await checkpoints.ensureTable() // creates the checkpoints table if it doesn't exist
 
 const pool = new pg.Pool({ connectionString: "..." })
 
@@ -98,7 +98,7 @@ const source = MessageDbSource.create({
   // Consumer group name (used for checkpointing and tracing)
   groupName: "MessageNotifications", 
   // the checkpointer maintains checkpoints on per category per group basis
-  checkpointer, 
+  checkpoints, 
   // Your handler will receive a list of events for a given stream
   handler: react,
   // Once we've processed all events in the store, how long should we wait before requesting a new batch?

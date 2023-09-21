@@ -30,7 +30,7 @@ export class StreamsSink implements Sink {
   constructor(
     private readonly handle: EventHandler<string>,
     private maxConcurrentStreams: number,
-    private maxReadAhead: number,
+    private maxConcurrentBatches: number,
     private readonly tracingAttrs: Attributes = {},
   ) {
     this.addTracingAttrs({ "eqx.max_concurrent_streams": maxConcurrentStreams })
@@ -78,7 +78,7 @@ export class StreamsSink implements Sink {
   }
 
   private waitForCapacity(signal: AbortSignal) {
-    if (this.inProgressBatches < this.maxReadAhead) return
+    if (this.inProgressBatches < this.maxConcurrentBatches) return
     return new Promise<void>((resolve, reject) => {
       const abort = () => reject(new Error("Aborted"))
       signal.addEventListener("abort", abort)
