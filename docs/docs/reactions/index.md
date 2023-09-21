@@ -106,6 +106,8 @@ const source = MessageDbSource.create({
   tailSleepIntervalMs: 100, 
   // How many streams are we OK to process concurrently?
   maxConcurrentStreams: 10, 
+  // How many batches can be processod concurrently, checkpointing will always happen in-order
+  maxConcurrentStreams: 10, 
 })
 
 const ctrl = new AbortController()
