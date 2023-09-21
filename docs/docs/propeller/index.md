@@ -4,9 +4,10 @@ sidebar_position: 4
 
 # Propeller
 
-Propeller is EquinoxJS's "[propulsion](https://github.com/jet/propulsion) lite".
-It's a set of abstractions for building reactive event processing pipelines. It
-caters specifically for event sourced reactions from Equinox's stores.
+Propeller is EquinoxJS's "[propulsion](https://github.com/jet/propulsion)
+lite". It's a set of abstractions for building reactive event processing
+pipelines catering specifically for event sourced reactions from Equinox's
+stores.
 
 ## StreamsSink
 
