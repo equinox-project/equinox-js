@@ -50,6 +50,7 @@ test("Correctly batches stream handling", async () => {
     categories: ["Cat"],
     batchSizeCutoff: 10,
     tailSleepIntervalMs: 10,
+    maxReadAhead: 10,
     maxConcurrentStreams: 1,
     mode: LoadMode.IndexOnly(),
     groupName: "test",
@@ -85,6 +86,7 @@ test("it fails fast", async () => {
     batchSizeCutoff: 10,
     tailSleepIntervalMs: 10,
     maxConcurrentStreams: 10,
+    maxReadAhead: 10,
     groupName: "test",
     mode: LoadMode.IndexOnly(),
     checkpoints: new MemoryCheckpoints(),
@@ -136,6 +138,7 @@ test("loading event bodies", async () => {
     batchSizeCutoff: 10,
     tailSleepIntervalMs: 10,
     maxConcurrentStreams: 10,
+    maxReadAhead: 10,
     groupName: "test",
     mode: LoadMode.WithDataEx(10, async (sn, i, count) => {
       const events = store.load(sn)
@@ -197,6 +200,7 @@ test("starting from the tail of the store", async () => {
     categories: ["Cat"],
     batchSizeCutoff: 10,
     tailSleepIntervalMs: 10,
+    maxReadAhead: 10,
     maxConcurrentStreams: 1,
     mode: LoadMode.IndexOnly(),
     startFromTail: true,
@@ -226,6 +230,7 @@ test("starting from the tail of the store", async () => {
 
   await wait
   ctrl.abort()
+  await p
   expect(received).toEqual([
     "Cat-stream3",
     [
@@ -233,5 +238,4 @@ test("starting from the tail of the store", async () => {
       expect.objectContaining({ type: "Something" }),
     ],
   ])
-  await expect(p).rejects.toThrow("Aborted")
 })

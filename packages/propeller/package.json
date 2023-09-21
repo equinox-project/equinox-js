@@ -11,14 +11,14 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.mts --format esm,cjs --dts --clean --sourcemap"
+    "build": "tsup src/index.mts --format esm,cjs --dts --clean"
   },
   "version": "1.0.0-rc.4",
   "files": [
     "./dist"
   ],
   "devDependencies": {
-    "p-limit": "^4.0.0",
+    "@types/node": "^20.6.2",
     "p-queue": "^7.4.1",
     "tsup": "^7.2.0",
     "typescript": "^5.2.2",

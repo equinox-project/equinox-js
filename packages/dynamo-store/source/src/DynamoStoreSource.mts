@@ -6,7 +6,7 @@ import {
 } from "@equinox-js/dynamo-store-indexer"
 import { DynamoStoreContext, EventsContext } from "@equinox-js/dynamo-store"
 import { AppendsIndex, AppendsEpoch } from "@equinox-js/dynamo-store-indexer"
-import { EncodedBody, Codec, ITimelineEvent, StreamName } from "@equinox-js/core"
+import { EncodedBody, Codec, ITimelineEvent, StreamName, Tags } from "@equinox-js/core"
 import pLimit from "p-limit"
 import { ICheckpoints, StreamsSink, TailingFeedSource } from "@equinox-js/propeller"
 
@@ -246,6 +246,8 @@ interface CreateOptions {
   batchSizeCutoff: number
   /** sleep time in ms between reads when at the end of the category */
   tailSleepIntervalMs: number
+  /** sleep time in ms between checkpoint commits */
+  checkpointIntervalMs?: number
   /** The checkpointer to use for checkpointing */
   checkpoints: ICheckpoints
   mode: LoadMode
@@ -259,8 +261,10 @@ interface CreateOptions {
   groupName: string
   /** The handler to call for each batch of stream messages */
   handler: (streamName: StreamName, events: ITimelineEvent[]) => Promise<void>
-  /** The maximum number of concurrent streams to process, enforced via p-limit */
+  /** The maximum number of concurrent streams to process */
   maxConcurrentStreams: number
+  /** The maximum number of in-flight batches */
+  maxReadAhead: number
 }
 
 function inflate(event: ITimelineEvent<EncodedBody>): ITimelineEvent {
@@ -308,23 +312,34 @@ export class DynamoStoreSource {
     if (!this.options.categories && !this.options.streamFilter) {
       throw new Error("Either categories or categoryFilter must be specified")
     }
-    const sink = new StreamsSink(this.options.handler, this.options.maxConcurrentStreams)
+    const sink = new StreamsSink(
+      options.handler,
+      options.maxConcurrentStreams,
+      options.maxReadAhead,
+      {
+        "eqx.consumer_group": options.groupName,
+        "eqx.tail_sleep_interval_ms": options.tailSleepIntervalMs,
+        "eqx.max_concurrent_streams": options.maxConcurrentStreams,
+        "eqx.source": "DynamoStore",
+        [Tags.batch_size]: options.batchSizeCutoff,
+      },
+    )
     const streamFilter = options.streamFilter ?? categoryFilter(options.categories!)
     this.client = new DynamoStoreSourceClient(epochs, index, streamFilter, options.mode)
     const crawl = (tranche: string, position: bigint, _signal: AbortSignal) =>
       this.client.crawl(AppendsPartitionId.parse(tranche), Checkpoint.ofPosition(position))
-    this.inner = new TailingFeedSource(
-      "DynamoStore",
-      options.tailSleepIntervalMs,
-      options.groupName,
-      options.checkpoints,
+    this.inner = new TailingFeedSource({
+      tailSleepIntervalMs: options.tailSleepIntervalMs,
+      checkpointIntervalMs: options.checkpointIntervalMs ?? 5000,
+      groupName: options.groupName,
+      checkpoints: options.checkpoints,
       sink,
       crawl,
-      options.startFromTail
+      establishOrigin: options.startFromTail
         ? (tranche: string) =>
             Impl.readTailPositionForTranche(index, epochs, AppendsPartitionId.parse(tranche))
         : undefined,
-    )
+    })
   }
 
   async start(signal: AbortSignal) {

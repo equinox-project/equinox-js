@@ -47,7 +47,7 @@ export class Service {
   sendEmail(invoiceId: InvoiceId, payerId: PayerId, amount: number) {
     const decider = this.resolve(invoiceId)
     return decider.transactAsync(async (state) => {
-      if (state?.type === "EmailSent") return []
+      if (state != null) return []
       const payer = await this.payerService.readProfile(payerId)
       if (!payer)
         return [

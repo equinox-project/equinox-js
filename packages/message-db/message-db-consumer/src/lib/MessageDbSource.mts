@@ -21,8 +21,12 @@ interface CreateOptions {
   handler: (streamName: StreamName, events: ITimelineEvent[]) => Promise<void>
   /** sleep time in ms between reads when at the end of the category */
   tailSleepIntervalMs: number
-  /** The maximum number of concurrent streams to process, enforced via p-limit */
+  /** sleep time in ms between checkpoint commits */
+  checkpointIntervalMs?: number
+  /** The maximum number of concurrent streams to process */
   maxConcurrentStreams: number
+  /** The maximum number of batches in-flight */
+  maxReadAhead: number
   /** When using consumer groups: the index of the consumer. 0 <= i <= consumerGroupSize
    * each consumer in the group maintains their own checkpoint */
   consumerGroupMember?: number
@@ -58,6 +62,7 @@ export class MessageDbSource {
     client: MessageDbCategoryReader,
     batchSize: number,
     tailSleepIntervalMs: number,
+    checkpointIntervalMs: number,
     groupName: string,
     groupMember: number | undefined,
     groupSize: number | undefined,
@@ -66,14 +71,14 @@ export class MessageDbSource {
     private readonly categories: string[],
   ) {
     const crawl = Impl.crawl(client, batchSize, groupMember, groupSize)
-    this.inner = new TailingFeedSource(
-      "MessageDb",
+    this.inner = new TailingFeedSource({
       tailSleepIntervalMs,
+      checkpointIntervalMs,
       groupName,
       checkpoints,
       sink,
       crawl,
-    )
+    })
   }
 
   async start(signal: AbortSignal) {
@@ -86,17 +91,23 @@ export class MessageDbSource {
 
   static create(options: Options & { pool: Pool }) {
     const client = new MessageDbCategoryReader(options.pool)
-    const sink = new StreamsSink(options.handler, options.maxConcurrentStreams, {
-      "eqx.consumer_group": options.groupName,
-      "eqx.tail_sleep_interval_ms": options.tailSleepIntervalMs,
-      "eqx.max_concurrent_streams": options.maxConcurrentStreams,
-      "eqx.source": "MessageDb",
-      [Tags.batch_size]: options.batchSize ?? defaultBatchSize,
-    })
+    const sink = new StreamsSink(
+      options.handler,
+      options.maxConcurrentStreams,
+      options.maxReadAhead ?? 10,
+      {
+        "eqx.consumer_group": options.groupName,
+        "eqx.tail_sleep_interval_ms": options.tailSleepIntervalMs,
+        "eqx.max_concurrent_streams": options.maxConcurrentStreams,
+        "eqx.source": "MessageDb",
+        [Tags.batch_size]: options.batchSize ?? defaultBatchSize,
+      },
+    )
     return new MessageDbSource(
       client,
       options.batchSize ?? 500,
       options.tailSleepIntervalMs,
+      options.checkpointIntervalMs ?? 5000,
       options.groupName,
       options.consumerGroupMember,
       options.consumerGroupSize,

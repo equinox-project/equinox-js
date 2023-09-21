@@ -6,6 +6,14 @@ export type Batch = {
   isTail: boolean
 }
 
+export type IngesterBatch = {
+  items: [StreamName, ITimelineEvent][]
+  checkpoint: bigint
+  onComplete(): void
+  isTail: boolean
+}
+
 export interface Sink {
-  pump(batch: Batch): Promise<void>
+  start?: (signal: AbortSignal) => Promise<void>
+  pump(batch: IngesterBatch, signal: AbortSignal): Promise<void> | void
 }

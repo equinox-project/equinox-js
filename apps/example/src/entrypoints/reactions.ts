@@ -46,6 +46,7 @@ async function createSource() {
         handler: handle,
         tailSleepIntervalMs: 100,
         maxConcurrentStreams: 10,
+        maxReadAhead: 10,
       })
     }
     case Store.Dynamo: {
@@ -69,6 +70,7 @@ async function createSource() {
         handler: handle,
         tailSleepIntervalMs: 100,
         maxConcurrentStreams: 10,
+        maxReadAhead: 10,
         batchSizeCutoff: 500,
         mode: LoadMode.WithData(10, config.context),
       })
