@@ -21,16 +21,6 @@ class Stream {
   }
 }
 
-const getOrAdd = <K, V>(map: Map<K, V>, key: K, val: () => V) => {
-  const current = map.get(key)
-  if (current == null) {
-    const value = val()
-    map.set(key, value)
-    return value
-  }
-  return current
-}
-
 export class StreamsSink implements Sink {
   private queue = new AsyncQueue<Stream>()
   private streams = new Map<StreamName, Stream>()
