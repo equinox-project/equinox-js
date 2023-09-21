@@ -17,9 +17,9 @@ export async function endPools() {
     await pool.end()
   }
 }
-export const createPool = (connectionString?: string) => {
+export const createPool = (connectionString?: string, max = 10) => {
   if (!connectionString) return
-  const pool = new pg.Pool({ connectionString, max: 10 })
+  const pool = new pg.Pool({ connectionString, max })
   pools.push(pool)
   return pool
 }

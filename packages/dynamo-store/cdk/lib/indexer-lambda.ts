@@ -2,7 +2,6 @@ import { Construct } from "constructs"
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs"
 import * as lambda from "aws-cdk-lib/aws-lambda"
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb"
-import * as path from "path"
 
 export interface LambdaOptions {
   eventsTable: dynamodb.Table
@@ -26,7 +25,6 @@ export class IndexerLambda extends Construct {
 
     options.eventsTable.grantReadData(fn)
     options.eventsTable.grantStreamRead(fn)
-    options.eventsTable.grantFullAccess(fn)
     options.indexTable.grantReadWriteData(fn)
 
     fn.addEventSourceMapping("EventSource", {
