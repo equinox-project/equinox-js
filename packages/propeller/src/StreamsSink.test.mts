@@ -127,8 +127,10 @@ test("Correctly limits in-flight batches", async () => {
 test("Ensures at-most one handler is per stream", async () => {
   let active = 0
   let maxActive = 0
+  let invocations = 0
   const ctrl = new AbortController()
   async function handler() {
+    invocations++
     active++
     maxActive = Math.max(maxActive, active)
     await new Promise((res) => setTimeout(res, 10))
@@ -152,6 +154,8 @@ test("Ensures at-most one handler is per stream", async () => {
   await limiter.waitForEmpty()
   ctrl.abort()
 
+  // 1 invocation for the first pump, the other 5 are merged
+  expect(invocations).toBe(2)
   expect(maxActive).toBe(1)
 
   // onComplete is called in order and for every batch

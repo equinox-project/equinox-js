@@ -75,7 +75,6 @@ export class BatchLimiter {
   }
 
   startBatch() {
-    console.debug("Starting batch")
     this.inProgressBatches++
   }
 
