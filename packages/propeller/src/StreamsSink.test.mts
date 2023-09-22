@@ -123,3 +123,37 @@ test("Correctly limits in-flight batches", async () => {
   // onComplete is called in order and for every batch
   expect(completed.mock.calls).toEqual([[0n], [1n], [2n], [3n], [4n], [5n]])
 })
+
+test("Ensures at-most one handler is per stream", async () => {
+  let active = 0
+  let maxActive = 0
+  const ctrl = new AbortController()
+  async function handler() {
+    active++
+    maxActive = Math.max(maxActive, active)
+    await new Promise((res) => setTimeout(res, 10))
+    active--
+  }
+  const limiter = new BatchLimiter(10)
+  const sink = new StreamsSink(handler, 100, limiter)
+
+  sink.start(ctrl.signal).catch(() => {})
+
+  const completed = vi.fn().mockResolvedValue(undefined)
+  const complete = (n: bigint) => () => completed(n)
+
+  await sink.pump(mkSingleBatch(complete, 0n), ctrl.signal)
+  await sink.pump(mkSingleBatch(complete, 1n), ctrl.signal)
+  await sink.pump(mkSingleBatch(complete, 2n), ctrl.signal)
+  await sink.pump(mkSingleBatch(complete, 3n), ctrl.signal)
+  await sink.pump(mkSingleBatch(complete, 4n), ctrl.signal)
+  await sink.pump(mkSingleBatch(complete, 5n), ctrl.signal)
+
+  await limiter.waitForEmpty()
+  ctrl.abort()
+
+  expect(maxActive).toBe(1)
+
+  // onComplete is called in order and for every batch
+  expect(completed.mock.calls).toEqual([[0n], [1n], [2n], [3n], [4n], [5n]])
+})

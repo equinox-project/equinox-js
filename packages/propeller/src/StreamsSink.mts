@@ -93,6 +93,7 @@ export class BatchLimiter {
 export class StreamsSink implements Sink {
   private queue = new AsyncQueue<Stream>()
   private streams = new Map<StreamName, Stream>()
+  private activeStreams = new Set<StreamName>()
   private batchStreams = new Map<IngesterBatch, Set<Stream>>()
   constructor(
     private readonly handle: EventHandler<string>,
@@ -108,6 +109,7 @@ export class StreamsSink implements Sink {
   }
 
   private handleStreamCompletion(stream: Stream) {
+    this.activeStreams.delete(stream.name)
     for (const [batch, streams] of this.batchStreams) {
       streams.delete(stream)
       if (streams.size === 0) {
@@ -132,7 +134,11 @@ export class StreamsSink implements Sink {
     for (let i = 0; i < this.maxConcurrentStreams; ++i) {
       workers[i] = new QueueWorker(
         async (signal) => {
-          const stream = await this.queue.tryGetAsync(signal)
+          const stream = await this.queue.tryFindAsync(
+            (stream) => !this.activeStreams.has(stream.name),
+            signal,
+          )
+          this.activeStreams.add(stream.name)
           this.streams.delete(stream.name)
           return stream
         },
