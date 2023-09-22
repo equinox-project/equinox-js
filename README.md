@@ -10,7 +10,7 @@ Equinox is a set of low dependency libraries that allow for event-sourced proces
 
 ## Resources
 
-- [Documentation](https://nordfjord.github.io/equinox-js/docs/intro)
+- [Documentation](https://equinox-project.github.io/equinox-js/docs/intro)
 - [jet/equinox](https://github.com/jet/equinox)
 - [The-Inevitable-Event-Centric-Book](https://github.com/ylorph/The-Inevitable-Event-Centric-Book/issues)
 
