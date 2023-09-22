@@ -109,9 +109,11 @@ export class StreamsSink implements Sink {
 
   private handleStreamCompletion(stream: Stream) {
     this.activeStreams.delete(stream.name)
+    const batches = Array.from(this.batchStreams)
     for (const [batch, streams] of this.batchStreams) {
       streams.delete(stream)
-      if (streams.size === 0) {
+      if (streams.size === 0 && batches[0][0] === batch) {
+        batches.shift()
         batch.onComplete()
         this.batchStreams.delete(batch)
         this.batchLimiter.endBatch()
