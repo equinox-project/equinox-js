@@ -75,8 +75,8 @@ export class AsyncQueue<T> {
   }>()
 
   add(value: T) {
-    const pending = this.pendingGets.tryGet()
-    if (pending && pending.predicate(value)) return pending.resolve(value)
+    const pending = this.pendingGets.tryFind((x) => x.predicate(value))
+    if (pending) return pending.resolve(value)
     this.queue.add(value)
   }
 
@@ -84,10 +84,10 @@ export class AsyncQueue<T> {
     return this.queue.size
   }
 
-  tryFindAsync(predicate: (x: T) => boolean, signal: AbortSignal) {
+  tryFindAsync(predicate: (x: T) => boolean, signal: AbortSignal): Promise<T> | T {
+    const value = this.queue.tryFind(predicate)
+    if (value) return value
     return new Promise<T>((resolve, reject) => {
-      const value = this.queue.tryFind(predicate)
-      if (value) return resolve(value)
       const abort = () => reject(new Error("Aborted"))
       if (signal.aborted) return abort()
       signal.addEventListener("abort", abort)
