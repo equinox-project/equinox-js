@@ -310,7 +310,7 @@ export class DynamoStoreSource {
     private readonly options: Omit<CreateOptions, "context">,
   ) {
     if (!this.options.categories && !this.options.streamFilter) {
-      throw new Error("Either categories or categoryFilter must be specified")
+      throw new Error("Either categories or streamFilter must be specified")
     }
     const sink = StreamsSink.create(
       options.handler,
