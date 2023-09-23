@@ -2,8 +2,8 @@
 
 ## AsyncQueue
 
-The `StreamsSink` uses an `AsyncQueue` that provides a Node-friendly way to handle a
-queue of items without blocking waits.
+The `StreamsSink` uses an `AsyncQueue` that provides a Node-friendly way to
+handle a queue of items without blocking waits.
 
 It is backed by a basic FIFO Queue, implemented using a linked list. When an
 item is added to the AsyncQueue, it first checks if there are any pending
@@ -18,12 +18,12 @@ For every event within a batch, the StreamsSink checks if its associated Stream
 is already in the processing queue. If it is, the event is combined with it,
 ensuring it's processed alongside previously queued events.
 
-The set of streams associated with the batch are stored in a `Set` so we can
-know when a batch has finished processing and notify the submitter.
+The streams associated with the batch are stored in a `Set` so we can know when
+a batch has finished processing and notify the submitter.
 
 The StreamsSink limits the number of in-flight batches to a configured number.
-When a batch is submitted we check the number of in-flight batches and, if it has reached the threshold,
-reached the threshold delays the introduction of the batch's events until a
+After a batch is submitted we check the number of in-flight batches and, if it
+has reached the threshold, delays the introduction of the next batch until a
 previous batch completes. 
 
 ## Worker loops
@@ -33,5 +33,6 @@ limit, which then pick up and process streams from the AsyncQueue. Once a stream
 is processed some bookkeeping is required.
 
 1. The stream is removed from each batch's `Set` of streams
-2. If the stream removed was the final one, we declare it complete by calling its associated `onComplete` handler.
-   and call its associated `onComplete` handler
+2. If the stream removed was the final one, we declare it complete by calling
+   its associated `onComplete` handler. and call its associated `onComplete`
+   handler

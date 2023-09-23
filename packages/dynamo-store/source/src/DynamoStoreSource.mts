@@ -264,7 +264,7 @@ interface CreateOptions {
   /** The maximum number of concurrent streams to process */
   maxConcurrentStreams: number
   /** The maximum number of in-flight batches */
-  maxConcurrentBatches: number
+  maxReadAhead: number
 }
 
 function inflate(event: ITimelineEvent<EncodedBody>): ITimelineEvent {
@@ -315,7 +315,7 @@ export class DynamoStoreSource {
     const sink = StreamsSink.create(
       options.handler,
       options.maxConcurrentStreams,
-      options.maxConcurrentBatches,
+      options.maxReadAhead,
       {
         "eqx.consumer_group": options.groupName,
         "eqx.tail_sleep_interval_ms": options.tailSleepIntervalMs,
