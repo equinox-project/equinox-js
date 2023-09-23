@@ -21,16 +21,83 @@ class Stream {
   }
 }
 
+class QueueWorker {
+  private stopped = true
+  constructor(
+    private readonly tryGetNext: (signal: AbortSignal) => Promise<Stream>,
+    private readonly handle: EventHandler<string>,
+    private readonly tracingAttrs: Attributes,
+    private readonly onHandled: (stream: Stream) => void,
+  ) {}
+
+  stop() {
+    this.stopped = true
+  }
+
+  async run(signal: AbortSignal): Promise<void> {
+    this.stopped = false
+    while (!signal.aborted && !this.stopped) {
+      const stream = await this.tryGetNext(signal)
+      await traceHandler(tracer, this.tracingAttrs, stream.name, stream.events, this.handle)
+      this.onHandled(stream)
+    }
+  }
+}
+
+export class BatchLimiter {
+  private inProgressBatches = 0
+  private onReady?: () => void
+  private onEmpty?: () => void
+  constructor(private maxConcurrentBatches: number) {}
+
+  waitForCapacity(signal: AbortSignal) {
+    if (this.inProgressBatches < this.maxConcurrentBatches) return
+    return new Promise<void>((resolve, reject) => {
+      const abort = () => {
+        signal.removeEventListener("abort", abort)
+        reject(new Error("Aborted"))
+      }
+      signal.addEventListener("abort", abort)
+      this.onReady = () => {
+        signal.removeEventListener("abort", abort)
+        resolve()
+      }
+    })
+  }
+
+  waitForEmpty() {
+    if (this.inProgressBatches === 0) return
+    return new Promise<void>((resolve) => {
+      this.onEmpty = () => {
+        resolve()
+      }
+    })
+  }
+
+  startBatch() {
+    this.inProgressBatches++
+  }
+
+  endBatch() {
+    this.inProgressBatches--
+    this.onReady?.()
+    delete this.onReady
+    if (this.inProgressBatches === 0) {
+      this.onEmpty?.()
+      delete this.onEmpty
+    }
+  }
+}
+
 export class StreamsSink implements Sink {
   private queue = new AsyncQueue<Stream>()
   private streams = new Map<StreamName, Stream>()
+  private activeStreams = new Set<StreamName>()
   private batchStreams = new Map<IngesterBatch, Set<Stream>>()
-  private onReady?: () => void
-  private inProgressBatches = 0
   constructor(
     private readonly handle: EventHandler<string>,
     private maxConcurrentStreams: number,
-    private maxConcurrentBatches: number,
+    private readonly batchLimiter: BatchLimiter,
     private readonly tracingAttrs: Attributes = {},
   ) {
     this.addTracingAttrs({ "eqx.max_concurrent_streams": maxConcurrentStreams })
@@ -40,7 +107,21 @@ export class StreamsSink implements Sink {
     Object.assign(this.tracingAttrs, attrs)
   }
 
-  start(signal: AbortSignal) {
+  private handleStreamCompletion(stream: Stream) {
+    this.activeStreams.delete(stream.name)
+    const batches = Array.from(this.batchStreams)
+    for (const [batch, streams] of this.batchStreams) {
+      streams.delete(stream)
+      if (streams.size === 0 && batches[0][0] === batch) {
+        batches.shift()
+        batch.onComplete()
+        this.batchStreams.delete(batch)
+        this.batchLimiter.endBatch()
+      }
+    }
+  }
+
+  async start(signal: AbortSignal) {
     // set up a linked abort controller to avoid attaching too many event listeners to the provided signal
     // node has a default limit of 11 before it emits a warning to the console. We have entirely legitimate reasons
     // for attaching more than 11 listeners
@@ -48,51 +129,36 @@ export class StreamsSink implements Sink {
     signal.addEventListener("abort", () => ctrl.abort())
     const _signal = ctrl.signal
     // Starts N workers that will process streams in parallel
-    return new Promise<void>((_resolve, reject) => {
-      let stopped = false
-      const aux = async (): Promise<void> => {
-        if (_signal.aborted || stopped) return
-        try {
-          const stream = await this.queue.tryGetAsync(_signal)
+
+    const workers = new Array<QueueWorker>(this.maxConcurrentStreams)
+
+    for (let i = 0; i < this.maxConcurrentStreams; ++i) {
+      workers[i] = new QueueWorker(
+        async (signal) => {
+          const stream = await this.queue.tryFindAsync(
+            (stream) => !this.activeStreams.has(stream.name),
+            signal,
+          )
+          this.activeStreams.add(stream.name)
           this.streams.delete(stream.name)
-          await traceHandler(tracer, this.tracingAttrs, stream.name, stream.events, this.handle)
-          for (const [batch, streams] of this.batchStreams) {
-            streams.delete(stream)
-            if (streams.size === 0) {
-              batch.onComplete()
-              this.batchStreams.delete(batch)
-              this.inProgressBatches--
-              this.onReady?.()
-              delete this.onReady
-            }
-          }
-          void aux()
-        } catch (err) {
-          stopped = true
-          reject(err)
-        }
-      }
+          return stream
+        },
+        this.handle,
+        this.tracingAttrs,
+        (stream) => this.handleStreamCompletion(stream),
+      )
+    }
 
-      for (let i = 0; i < this.maxConcurrentStreams; ++i) aux()
-    })
+    try {
+      await Promise.all(workers.map((w) => w.run(_signal)))
+    } catch (err) {
+      workers.forEach((w) => w.stop())
+      throw err
+    }
   }
 
-  private waitForCapacity(signal: AbortSignal) {
-    if (this.inProgressBatches < this.maxConcurrentBatches) return
-    return new Promise<void>((resolve, reject) => {
-      const abort = () => reject(new Error("Aborted"))
-      signal.addEventListener("abort", abort)
-      this.onReady = () => {
-        signal.removeEventListener("abort", abort)
-        resolve()
-      }
-    })
-  }
-
-  pump(batch: IngesterBatch, signal: AbortSignal): Promise<void> | void {
-    const p = this.waitForCapacity(signal)
-    if (p != null) return p.then(() => this.pump(batch, signal))
-    this.inProgressBatches++
+  async pump(batch: IngesterBatch, signal: AbortSignal): Promise<void> {
+    this.batchLimiter.startBatch()
     const streamsInBatch = new Set<Stream>()
     this.batchStreams.set(batch, streamsInBatch)
     for (const [sn, event] of batch.items) {
@@ -105,5 +171,16 @@ export class StreamsSink implements Sink {
         this.queue.add(stream)
       }
     }
+    await this.batchLimiter.waitForCapacity(signal)
+  }
+
+  static create(
+    handle: EventHandler<string>,
+    maxConcurrentStreams: number,
+    maxConcurrentBatches: number,
+    tracingAttrs: Attributes = {},
+  ) {
+    const limiter = new BatchLimiter(maxConcurrentBatches)
+    return new StreamsSink(handle, maxConcurrentStreams, limiter, tracingAttrs)
   }
 }
