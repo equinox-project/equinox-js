@@ -107,7 +107,7 @@ const source = MessageDbSource.create({
   // How many streams are we OK to process concurrently?
   maxConcurrentStreams: 10, 
   // How many batches can be pre-loaded beyond what's been completed (checkpointing is always sequential in order of age)
-  maxConcurrentStreams: 10, 
+  maxReadAhead: 10, 
 })
 
 const ctrl = new AbortController()
