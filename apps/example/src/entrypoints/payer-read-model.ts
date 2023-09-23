@@ -17,7 +17,7 @@ const source = MessageDbSource.create({
   checkpoints,
   handler,
   tailSleepIntervalMs: 100,
-  maxConcurrentBatches: 10,
+  maxReadAhead: 3,
   maxConcurrentStreams: 10,
 })
 

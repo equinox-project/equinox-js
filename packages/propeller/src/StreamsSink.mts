@@ -48,10 +48,10 @@ export class BatchLimiter {
   private inProgressBatches = 0
   private onReady?: () => void
   private onEmpty?: () => void
-  constructor(private maxConcurrentBatches: number) {}
+  constructor(private maxReadAhead: number) {}
 
   waitForCapacity(signal: AbortSignal) {
-    if (this.inProgressBatches < this.maxConcurrentBatches) return
+    if (this.inProgressBatches < this.maxReadAhead) return
     return new Promise<void>((resolve, reject) => {
       const abort = () => {
         signal.removeEventListener("abort", abort)
@@ -177,10 +177,10 @@ export class StreamsSink implements Sink {
   static create(
     handle: EventHandler<string>,
     maxConcurrentStreams: number,
-    maxConcurrentBatches: number,
+    maxReadAhead: number,
     tracingAttrs: Attributes = {},
   ) {
-    const limiter = new BatchLimiter(maxConcurrentBatches)
+    const limiter = new BatchLimiter(maxReadAhead)
     return new StreamsSink(handle, maxConcurrentStreams, limiter, tracingAttrs)
   }
 }

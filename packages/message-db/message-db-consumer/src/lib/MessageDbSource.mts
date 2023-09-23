@@ -26,7 +26,7 @@ interface CreateOptions {
   /** The maximum number of concurrent streams to process */
   maxConcurrentStreams: number
   /** The maximum number of batches in-flight */
-  maxConcurrentBatches: number
+  maxReadAhead: number
   /** When using consumer groups: the index of the consumer. 0 <= i <= consumerGroupSize
    * each consumer in the group maintains their own checkpoint */
   consumerGroupMember?: number
@@ -94,7 +94,7 @@ export class MessageDbSource {
     const sink = StreamsSink.create(
       options.handler,
       options.maxConcurrentStreams,
-      options.maxConcurrentBatches ?? 10,
+      options.maxReadAhead ?? 10,
       {
         "eqx.consumer_group": options.groupName,
         "eqx.tail_sleep_interval_ms": options.tailSleepIntervalMs,
