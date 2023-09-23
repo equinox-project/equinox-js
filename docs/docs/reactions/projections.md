@@ -86,7 +86,7 @@ const source = MessageDbSource.create({
   handler,
   tailSleepIntervalMs: 5000,
   maxConcurrentStreams: 10,
-  maxReadAhead: 10,
+  maxReadAhead: 3,
 })
 
 const ctrl = new AbortController()
