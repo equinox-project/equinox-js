@@ -64,7 +64,7 @@ async function handler(streamName: string, events: ITimelineEvent[]) {
   if (statements.length === 0) return
   const client = await pool.connect()
   try {
-    // CAUTION: do not lower the isolation level unless you know what you're doing
+    // CAUTION: do not lower the isolation level unless you are Kimi Raikkonen
     await client.query("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE")
     for (const statement of statements) {
       await client.query(statement)

@@ -15,7 +15,7 @@ The `StreamsSink` receives batches of events from a source and intelligently
 manages handling them.
 
 - **Stream management**: maintains an ordered queue of incoming streams, ensuring
-  that events are processed in an orderly manner.
+  that reactions processing aligns with the ordering of the triggering events; the aim being to be able to checkpoint attained progress ('tick off batches') as soon as possible.
 - **Concurrency control**: To ensure optimal performance, StreamsSink restricts the
   number of streams and event batches that can be processed at once. It
   efficiently handles the inflow of new event batches, ensuring the system
@@ -29,8 +29,8 @@ manages handling them.
 `TailingFeedSource` continuously crawls a feed, submitting batches of events to
 a `Sink`.
 
-- **Crawling**: Continuously crawls a given feed. It pauses momentarily between crawls once
+- **Crawling**: Continuously crawls a given feed forward from a checkpointed position (or the start of the feed if no batches have yet completed processing). It pauses momentarily between crawls once
   it's reached the tail of the feed.
-- **Checkpointing**: Regularly updates the checkpoint position to match the latest
-  processed batch. Flushes the checkpoint when interrupted to minimise reduntant
+- **Checkpointing**: Regularly updates the checkpoint position to reflect the latest completed
+  processed batch. Flushes the checkpoint when interrupted to minimise redundant
   processing on start up.
