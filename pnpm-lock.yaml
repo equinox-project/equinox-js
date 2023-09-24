@@ -54,6 +54,9 @@ importers:
       '@equinox-js/projection-pg':
         specifier: workspace:*
         version: link:../../packages/projection-pg
+      '@equinox-js/propeller':
+        specifier: workspace:*
+        version: link:../../packages/propeller
       '@honeycombio/opentelemetry-node':
         specifier: ^0.5.0
         version: 0.5.0
