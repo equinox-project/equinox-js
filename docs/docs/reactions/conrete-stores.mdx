@@ -21,7 +21,11 @@ const sink = StreamsSink.create({
 })
 ```
 
-## MessageDB
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+<Tabs>
+  <TabItem value="MessageDB">
 
 ```ts
 import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-source"
@@ -58,8 +62,8 @@ process.on("SIGTERM", () => ctrl.abort())
 
 await source.start(ctrl.signal)
 ```
-
-## DynamoStore
+  </TabItem>
+  <TabItem value="DynamoStore">
 
 ```ts
 import { DynamoDB } from "@aws-sdk/client-dynamodb"
@@ -128,4 +132,5 @@ process.on("SIGTERM", () => ctrl.abort())
 
 await source.start(ctrl.signal)
 ```
-
+  </TabItem>
+</Tabs>
