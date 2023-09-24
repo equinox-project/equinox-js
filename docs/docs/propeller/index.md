@@ -5,36 +5,9 @@ sidebar_position: 4
 # Propeller
 
 Propeller is EquinoxJS's "[propulsion](https://github.com/jet/propulsion)
-lite". It's a set of abstractions for building reactive event processing
+lite". It's a set of components for building reactive event processing
 pipelines catering specifically for event sourced reactions from Equinox's
-stores.
+stores. In most cases equinox users will not interact directly with propeller.
+Instead each store exposes a `Source` that is implemented in terms of propeller
+components.
 
-## StreamsSink
-
-The `StreamsSink` receives batches of events from a source and intelligently
-manages handling them.
-
-- **Stream management**: maintains an ordered queue of incoming streams,
-  ensuring that reactions processing aligns with the ordering of the triggering
-  events; the aim being to be able to checkpoint attained progress ('tick off
-  batches') as soon as possible.
-- **Concurrent stream handling**: To ensure optimal performance, `StreamsSink`
-  restricts the number of streams that are processing at any given moment to a
-  configurable limit. Additionally guarantees that each stream can have at most
-  one handler actively processing.
-- **Batch merging**: intelligently merges new events with existing streams.
-  This allows for a more streamlined event processing, ensuring that events
-  from multiple batches related to the same stream are handled together.
-
-## TailingFeedSource
-
-`TailingFeedSource` continuously crawls a feed, submitting batches of events to
-a `Sink`.
-
-- **Crawling**: Continuously crawls a given feed forward from a checkpointed
-  position (or the start of the feed if no batches have yet completed
-  processing). It pauses momentarily between crawls once it's reached the tail
-  of the feed.
-- **Checkpointing**: Regularly updates the checkpoint position to reflect the
-  latest completed processed batch. Flushes the checkpoint when interrupted to
-  minimise redundant processing on start up.
