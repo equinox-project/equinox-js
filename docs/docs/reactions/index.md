@@ -61,8 +61,8 @@ Now that we have a notifier, we need something to actuate it when a message is
 sent.
 
 ```ts
-async function react(streamName: string, events: ITimelineEvent[]) {
-  const [category, streamId] = StreamName.parseCategoryAndId(streamName)
+async function handler(stream: string, events: ITimelineEvent[]) {
+  const [category, streamId] = StreamName.parseCategoryAndId(stream)
   if (category !== Message.CATEGORY) return
   const messageId = MessageId.parse(streamId)
   // We know that the MessageSent event is always the first event in the stream 
@@ -77,46 +77,4 @@ This `react` function is responsible for a couple of things. It receives a
 stream name and a list of events from that stream. It then figures out which 
 events we're interested in and then performs actions on those events.
 
-The last step is to wire the reaction up to a concrete store
-
-```ts
-import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-consumer"
-import pg from "pg"
-
-const checkpoints = new PgCheckpoints(new pg.Pool({ connectionString: "..." }), "public")
-await checkpoints.ensureTable() // creates the checkpoints table if it doesn't exist
-
-const pool = new pg.Pool({ connectionString: "..." })
-
-const source = MessageDbSource.create({
-  // the database pool to use
-  pool, 
-  // under the hood the source polls for baches of events, this controls the batch size
-  batchSize: 500,
-  // list of categories to subscribe to.
-  categories: [Message.CATEGORY], 
-  // Consumer group name (used for checkpointing and tracing)
-  groupName: "MessageNotifications", 
-  // the checkpointer maintains checkpoints on per category per group basis
-  checkpoints, 
-  // Your handler will receive a list of events for a given stream
-  handler: react,
-  // Once we've processed all events in the store, how long should we wait before requesting a new batch?
-  // In this case we want close to real time so will poll after 100ms
-  tailSleepIntervalMs: 100, 
-  // How many streams are we OK to process concurrently?
-  maxConcurrentStreams: 10, 
-  // How many batches can be pre-loaded beyond what's been completed (checkpointing is always sequential in order of age)
-  maxReadAhead: 3, 
-})
-
-const ctrl = new AbortController()
-
-process.on('SIGINT', ()=> ctrl.abort())
-process.on('SIGTERM', ()=> ctrl.abort())
-
-await source.start(ctrl.signal)
-```
-
-Now we've wired up a reaction!
-
+The last step is to wire the reaction up to a concrete store.

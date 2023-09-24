@@ -89,16 +89,28 @@ export class BatchLimiter {
   }
 }
 
+type CreateOptions = {
+  /** The handler to call for each batch of stream messages */
+  handler: EventHandler<string>
+  /** The maximum number of streams that can be processing concurrently
+   * Note: each stream can have at most 1 handler active */
+  maxConcurrentStreams: number
+  /** The number of batches the source can read ahead the currently processing batch */
+  maxReadAhead: number
+  /** Attributes to add to every span */
+  tracingAttrs?: Attributes
+}
+
 export class StreamsSink implements Sink {
   private queue = new AsyncQueue<Stream>()
   private streams = new Map<StreamName, Stream>()
   private activeStreams = new Set<StreamName>()
   private batchStreams = new Map<IngesterBatch, Set<Stream>>()
+  private readonly tracingAttrs: Attributes = {}
   constructor(
     private readonly handle: EventHandler<string>,
     private maxConcurrentStreams: number,
     private readonly batchLimiter: BatchLimiter,
-    private readonly tracingAttrs: Attributes = {},
   ) {
     this.addTracingAttrs({ "eqx.max_concurrent_streams": maxConcurrentStreams })
   }
@@ -174,13 +186,10 @@ export class StreamsSink implements Sink {
     await this.batchLimiter.waitForCapacity(signal)
   }
 
-  static create(
-    handle: EventHandler<string>,
-    maxConcurrentStreams: number,
-    maxReadAhead: number,
-    tracingAttrs: Attributes = {},
-  ) {
-    const limiter = new BatchLimiter(maxReadAhead)
-    return new StreamsSink(handle, maxConcurrentStreams, limiter, tracingAttrs)
+  static create(options: CreateOptions) {
+    const limiter = new BatchLimiter(options.maxReadAhead)
+    const sink = new StreamsSink(options.handler, options.maxConcurrentStreams, limiter)
+    if (options.tracingAttrs) sink.addTracingAttrs(options.tracingAttrs)
+    return sink
   }
 }

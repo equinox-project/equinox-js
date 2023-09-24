@@ -11,6 +11,7 @@ import {
 } from "@equinox-js/dynamo-store-indexer"
 import { ITimelineEvent, StreamId, StreamName } from "@equinox-js/core"
 import zlib from "zlib"
+import { StreamsSink } from "@equinox-js/propeller"
 
 class MemoryCheckpoints implements ICheckpoints {
   checkpoints = new Map<string, bigint>()
@@ -46,19 +47,23 @@ test("Correctly batches stream handling", async () => {
   const epochs = AppendsEpoch.Reader.Config.createMem(store)
   const streams = new Map<string, any[]>()
   let count = 0
-  const src = new DynamoStoreSource(index, epochs, {
-    categories: ["Cat"],
-    batchSizeCutoff: 10,
-    tailSleepIntervalMs: 10,
-    maxReadAhead: 10,
-    maxConcurrentStreams: 1,
-    mode: LoadMode.IndexOnly(),
-    groupName: "test",
-    checkpoints: new MemoryCheckpoints(),
+  const sink = StreamsSink.create({
     async handler(stream, events) {
       streams.set(stream, (streams.get(stream) || []).concat(events))
       if (++count === 3) ctrl.abort()
     },
+    maxReadAhead: 10,
+    maxConcurrentStreams: 1,
+  })
+
+  const src = new DynamoStoreSource(index, epochs, {
+    categories: ["Cat"],
+    batchSizeCutoff: 10,
+    tailSleepIntervalMs: 10,
+    mode: LoadMode.IndexOnly(),
+    groupName: "test",
+    checkpoints: new MemoryCheckpoints(),
+    sink,
   })
 
   const ctrl = new AbortController()
@@ -81,18 +86,22 @@ test("it fails fast", async () => {
   const index = AppendsIndex.Reader.createMem(store)
   const epochs = AppendsEpoch.Reader.Config.createMem(store)
   const ctrl = new AbortController()
+  const sink = StreamsSink.create({
+    async handler() {
+      throw new Error("failed")
+    },
+    maxConcurrentStreams: 10,
+    maxReadAhead: 10,
+  })
+
   const src = new DynamoStoreSource(index, epochs, {
     categories: ["Cat"],
     batchSizeCutoff: 10,
     tailSleepIntervalMs: 10,
-    maxConcurrentStreams: 10,
-    maxReadAhead: 10,
     groupName: "test",
     mode: LoadMode.IndexOnly(),
     checkpoints: new MemoryCheckpoints(),
-    async handler() {
-      throw new Error("failed")
-    },
+    sink,
   })
   const epochWriter = AppendsEpoch.Config.createMem(1024 * 1024, 5000n, 100_000, store)
   await epochWriter.ingest(
@@ -133,18 +142,7 @@ test("loading event bodies", async () => {
     ])
   }
   const [wait, resolve] = waiter()
-  const src = new DynamoStoreSource(index, epochs, {
-    categories: ["Cat"],
-    batchSizeCutoff: 10,
-    tailSleepIntervalMs: 10,
-    maxConcurrentStreams: 10,
-    maxReadAhead: 10,
-    groupName: "test",
-    mode: LoadMode.WithDataEx(10, async (sn, i, count) => {
-      const events = store.load(sn)
-      return events.slice(i, i + count)
-    }),
-    checkpoints: new MemoryCheckpoints(),
+  const sink = StreamsSink.create({
     async handler(stream, evs) {
       const events = received.get(stream) || []
       events.push(...evs)
@@ -154,6 +152,20 @@ test("loading event bodies", async () => {
         ctrl.abort()
       }
     },
+    maxConcurrentStreams: 10,
+    maxReadAhead: 10,
+  })
+  const src = new DynamoStoreSource(index, epochs, {
+    categories: ["Cat"],
+    batchSizeCutoff: 10,
+    tailSleepIntervalMs: 10,
+    groupName: "test",
+    mode: LoadMode.WithDataEx(10, async (sn, i, count) => {
+      const events = store.load(sn)
+      return events.slice(i, i + count)
+    }),
+    checkpoints: new MemoryCheckpoints(),
+    sink,
   })
   void src.start(ctrl.signal).catch(() => {})
   const epochWriter = AppendsEpoch.Config.createMem(1024 * 1024, 5000n, 100_000, store)
@@ -196,20 +208,23 @@ test("starting from the tail of the store", async () => {
   const [wait, resolve] = waiter()
   let received
   const checkpoints = new MemoryCheckpoints()
-  const src = new DynamoStoreSource(index, epochs, {
-    categories: ["Cat"],
-    batchSizeCutoff: 10,
-    tailSleepIntervalMs: 10,
+  const sink = StreamsSink.create({
     maxReadAhead: 10,
     maxConcurrentStreams: 1,
-    mode: LoadMode.IndexOnly(),
-    startFromTail: true,
-    groupName: "test",
-    checkpoints,
     async handler(stream, events) {
       received = [stream, events]
       resolve()
     },
+  })
+  const src = new DynamoStoreSource(index, epochs, {
+    categories: ["Cat"],
+    batchSizeCutoff: 10,
+    tailSleepIntervalMs: 10,
+    mode: LoadMode.IndexOnly(),
+    startFromTail: true,
+    groupName: "test",
+    checkpoints,
+    sink,
   })
 
   const ctrl = new AbortController()

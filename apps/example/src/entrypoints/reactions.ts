@@ -1,7 +1,7 @@
 import "./tracing.js"
 import { ITimelineEvent, StreamName } from "@equinox-js/core"
 import { Invoice, InvoiceAutoEmailer } from "../domain/index.js"
-import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-consumer"
+import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-source"
 import { DynamoStoreSource, DynamoCheckpoints, LoadMode } from "@equinox-js/dynamo-store-source"
 import { createConfig, createPool, dynamoDB, endPools, followerPool, leaderPool } from "./config.js"
 import { Store } from "../config/equinox.js"
@@ -11,6 +11,7 @@ import {
   QueryOptions,
   TipOptions,
 } from "@equinox-js/dynamo-store"
+import { StreamsSink } from "@equinox-js/propeller"
 
 const config = createConfig()
 
@@ -23,11 +24,13 @@ function impliesInvoiceEmailRequired(streamName: StreamName, events: ITimelineEv
   if (ev?.type !== "InvoiceRaised") return
   return { id, payer_id: ev.data.payer_id, amount: ev.data.amount }
 }
-async function handle(streamName: StreamName, events: ITimelineEvent[]) {
+async function handler(streamName: StreamName, events: ITimelineEvent[]) {
   const req = impliesInvoiceEmailRequired(streamName, events)
   if (!req) return
   await invoiceEmailer.sendEmail(req.id, req.payer_id, req.amount)
 }
+
+const sink = StreamsSink.create({ handler, maxConcurrentStreams: 10, maxReadAhead: 3 })
 
 async function createSource() {
   switch (config.store) {
@@ -43,10 +46,8 @@ async function createSource() {
         categories: [Invoice.Stream.CATEGORY],
         groupName: "InvoiceAutoEmailer",
         checkpoints,
-        handler: handle,
+        sink,
         tailSleepIntervalMs: 100,
-        maxConcurrentStreams: 10,
-        maxReadAhead: 3,
       })
     }
     case Store.Dynamo: {
@@ -67,10 +68,8 @@ async function createSource() {
         categories: [Invoice.Stream.CATEGORY],
         groupName: "InvoiceAutoEmailer",
         checkpoints,
-        handler: handle,
+        sink,
         tailSleepIntervalMs: 100,
-        maxConcurrentStreams: 10,
-        maxReadAhead: 3,
         batchSizeCutoff: 500,
         mode: LoadMode.WithData(10, config.context),
       })

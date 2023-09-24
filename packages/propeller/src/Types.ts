@@ -1,4 +1,5 @@
 import { ITimelineEvent, StreamName } from "@equinox-js/core"
+import { Attributes } from "@opentelemetry/api"
 
 export type Batch = {
   items: [StreamName, ITimelineEvent][]
@@ -16,4 +17,5 @@ export type IngesterBatch = {
 export interface Sink {
   start?: (signal: AbortSignal) => Promise<void>
   pump(batch: IngesterBatch, signal: AbortSignal): Promise<void> | void
+  addTracingAttrs(attrs: Attributes): void
 }

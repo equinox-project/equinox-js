@@ -53,7 +53,7 @@ function changes(streamName: string, events: ITimelineEvent[]): Sql[] {
 Having written these function we can now wire them up to a reaction.
 
 ```ts
-import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-consumer"
+import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-source"
 import pg from "pg"
 
 const checkpointer = new PgCheckpoints(new pg.Pool({ connectionString: "..." }), "public")

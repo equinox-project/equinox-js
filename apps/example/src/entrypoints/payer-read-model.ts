@@ -1,4 +1,4 @@
-import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-consumer"
+import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-source"
 import { Payer } from "../domain/index.js"
 import * as PayerReadModel from "../read-models/PayerReadModel.js"
 import { createPool, endPools } from "./config.js"
