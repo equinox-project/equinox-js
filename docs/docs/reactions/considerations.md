@@ -1,12 +1,13 @@
 ---
-sidebar_position: 1
+sidebar_position: 3
 ---
+
 # Considerations
 
 In the previous section we learned about reactions but we omitted some important
 concepts.
 
-# Order of Events
+## Order of Events
 
 While the order of events within a stream is guaranteed, the order of events
 across different streams is not. This is something you need to be aware of when
@@ -18,7 +19,7 @@ This is an easily abstractable problem. Take a look at
 [ntl/aggregate-streams](https://github.com/ntl/aggregate-streams) for
 inspiration.
 
-# Idempotency
+## Idempotency
 
 An idempotent action is one which can be repeated multiple times without
 changing the outcome. Once you become aware of the concept you'll see it in your
@@ -41,18 +42,17 @@ to avoid sending duplicate notifications if the operation was previously
 successful. Idempotent reactions makes it easier to manage state and ensure
 consistent results.
 
-# Checkpointing 
+## Checkpointing
 
 The checkpointer is a crucial component that ensures the state of the event
 processing is preserved. It maintains checkpoints on a per category per group
 basis, recording the progress of event processing. This enables the system to
 resume from where it left off in case of a restart or a failure.
 
-
-# Polling and Batches
+## Polling and Batches
 
 Under the hood the source polls for batches of events. Checkpointing happens on
-a per-batch basis. A simplified version of the subscriber would look like this: 
+a per-batch basis. A simplified version of the subscriber would look like this:
 
 ```ts
 async function start() {
@@ -81,10 +81,9 @@ streams you can have in flight at any given moment. As an example, if your
 reaction involves a database you might use the same value for the database pool
 size and the maximum concurrency.
 
-# Shutdown
+## Shutdown
 
 When running your application, it's good practise to listen for system signals
 like `SIGINT` and `SIGTERM` to gracefully stop the processing. If your source
 fails, you should restart it to ensure that your reactions continue processing
 events.
-

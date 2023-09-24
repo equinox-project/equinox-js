@@ -1,19 +1,25 @@
 ---
-sidebar_position: 2
+sidebar_position: 1
 ---
 
 # Concrete stores
 
-Equinox stores expose a `source` package to wire reactions up. In the previous
-section we created a `handler`. A handler is any function whose signature is
+Equinox stores expose a `source` package to wire reactions up. In the [previous
+section](/docs/reactions) we created a `handler`. Source packages interact with
+`Sink`s rather than handler functions so we must first construct a sink from
+the handler.
 
 ```ts
-type Handler = (stream: StreamName, events: ITimelineEvent[]) => Promise<void>
+import { StreamsSink } from "@equinox-js/propeller"
+const sink = StreamsSink.create({
+  handler,
+  // How many streams are we OK to process concurrently?
+  maxConcurrentStreams: 10,
+  // How many batches can be pre-loaded beyond what's been completed 
+  // (checkpointing is always sequential in order of age)
+  maxReadAhead: 3,
+})
 ```
-
-The source packages accept a handler in addition to store specific options.
-Notably, handlers are store agnostic, so we can wire them up to arbitrary
-concrete stores.
 
 ## MessageDB
 
@@ -29,7 +35,8 @@ const pool = new pg.Pool({ connectionString: "..." })
 const source = MessageDbSource.create({
   // the database pool to use
   pool,
-  // under the hood the source polls for baches of events, this controls the batch size
+  // under the hood the source polls for baches of events, this controls the
+  // batch size
   batchSize: 500,
   // list of categories to subscribe to.
   categories: [Message.CATEGORY],
@@ -37,15 +44,11 @@ const source = MessageDbSource.create({
   groupName: "MessageNotifications",
   // the checkpointer maintains checkpoints on per category per group basis
   checkpoints,
-  // Your handler will receive a list of events for a given stream
-  handler,
-  // Once we've processed all events in the store, how long should we wait before requesting a new batch?
-  // In this case we want close to real time so will poll after 100ms
+  // Once we've processed all events in the store, how long should we wait
+  // before requesting a new batch? In this case we want close to real time so
+  // will poll after 100ms
   tailSleepIntervalMs: 100,
-  // How many streams are we OK to process concurrently?
-  maxConcurrentStreams: 10,
-  // How many batches can be pre-loaded beyond what's been completed (checkpointing is always sequential in order of age)
-  maxReadAhead: 3,
+  sink,
 })
 
 const ctrl = new AbortController()
@@ -55,6 +58,8 @@ process.on("SIGTERM", () => ctrl.abort())
 
 await source.start(ctrl.signal)
 ```
+
+## DynamoStore
 
 ```ts
 import { DynamoDB } from "@aws-sdk/client-dynamodb"
@@ -102,14 +107,9 @@ const source = DynamoStoreSource.create({
   groupName: "MessageNotifications",
   // the checkpointer maintains checkpoints on per category per group basis
   checkpoints,
-  // Your handler will receive a list of events for a given stream
-  handler,
   // Once we've processed all events in the store, how long should we wait before requesting a new batch?
   // In this case we want close to real time so will poll after 100ms
   tailSleepIntervalMs: 1000,
-  // How many streams are we OK to process concurrently?
-  maxConcurrentStreams: 10,
-  // How many batches can be pre-loaded beyond what's been completed (checkpointing is always sequential in order of age)
   maxReadAhead: 3,
   // The index contains the stream name, the type of the event, and the index of
   // the event in the stream. If this is all the information necessary for
@@ -118,6 +118,7 @@ const source = DynamoStoreSource.create({
   // concurrency means we'll be making at most 10 concurrent stream load
   // requests to Dynamo
   mode: LoadMode.WithData(10, eventsContext),
+  sink,
 })
 
 const ctrl = new AbortController()
@@ -127,3 +128,4 @@ process.on("SIGTERM", () => ctrl.abort())
 
 await source.start(ctrl.signal)
 ```
+

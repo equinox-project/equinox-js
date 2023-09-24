@@ -1,11 +1,15 @@
+---
+sidebar_position: 2
+---
+
 # Configuring
 
 ## Controlling throughput
 
-Propeller has three parameters that work together to control throughput,
-`batchSize`, `maxConcurrentStreams` and `maxReadAhead`. Respectively they
-control the size of batches read from the source, how many streams can be
-concurrently processed, and how many batches can be buffered in memory.
+There are three parameters working together to control throughput, `batchSize`,
+`maxConcurrentStreams` and `maxReadAhead`. Respectively they control the size
+of batches read from the source, how many streams can be concurrently
+processed, and how many batches can be buffered in memory.
 
 It is generally useful to set `maxReadAhead` to at least `2` to minimise idle
 time by allowing the feed to fetch the next batch during the handling of the
@@ -54,4 +58,3 @@ starting from a crash state as a rule. This requires a shift in mental-model but
 is an overwhelmingly better program design, albeit one that's not widely
 encouraged. Every system you rely on that reliably transfers data works like
 this.
-
