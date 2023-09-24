@@ -62,6 +62,24 @@ process.on("SIGTERM", () => ctrl.abort())
 
 await source.start(ctrl.signal)
 ```
+
+### Consumer groups
+
+The MessageDB source supports consumer groups. You can use this functionality
+by passing `consumerGroupMember` and `consumerGroupSize` to the source's
+`create`. When passed two things differ from normal operation:
+
+1. The checkpointer will checkpoint to `{groupName}-{member}`
+2. MessageDB will filter messages based on a hash of the stream id
+
+This means that each consumer in the group maintains a distinct checkpoint and
+is therefore not easily autoscaled. In order to expand or contract a consumer
+group you will need to wipe the checkpoints and have all of the consumers in the
+group start from the current lowest checkpoint.
+
+Using a hash of the ID guarantees that all messages for a particular stream will
+be handled in the correct order by the same consumer instance.
+
   </TabItem>
   <TabItem value="DynamoStore">
 
