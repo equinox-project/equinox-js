@@ -1,6 +1,6 @@
-# @equinox-js/message-db-consumer
+# @equinox-js/message-db-source
 
-The `@equinox-js/message-db-consumer` library provides a convenient API for consuming events from a MessageDB instance.
+The `@equinox-js/message-db-source` library provides a convenient API for consuming events from a MessageDB instance.
 It's designed to be used with equinox-js projects but can be used in any node application.
 
 ## Features
@@ -12,7 +12,7 @@ It's designed to be used with equinox-js projects but can be used in any node ap
 - Automatic reconnection and backoff
 
 ```ts
-import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-consumer"
+import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-source"
 import pg from "pg"
 
 const checkpointer = new PgCheckpoints(new pg.Pool({ connectionString: "..." }), "public")

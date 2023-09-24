@@ -1,5 +1,5 @@
 ---
-sidebar_position: 3
+sidebar_position: 6
 ---
 
 # PG Projections
@@ -55,7 +55,7 @@ To wire it up we would do
 
 ```ts
 import "./tracing.js"
-import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-consumer"
+import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-source"
 import pg from "pg"
 import { Payer } from "../domain/index.js"
 import * as PayerReadModel from "../read-models/PayerReadModel.js"

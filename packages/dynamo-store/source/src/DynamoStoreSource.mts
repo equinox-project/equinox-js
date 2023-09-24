@@ -8,7 +8,7 @@ import { DynamoStoreContext, EventsContext } from "@equinox-js/dynamo-store"
 import { AppendsIndex, AppendsEpoch } from "@equinox-js/dynamo-store-indexer"
 import { EncodedBody, Codec, ITimelineEvent, StreamName, Tags } from "@equinox-js/core"
 import pLimit from "p-limit"
-import { ICheckpoints, StreamsSink, TailingFeedSource } from "@equinox-js/propeller"
+import { ICheckpoints, TailingFeedSource, Sink } from "@equinox-js/propeller"
 
 function keepMap<T, V>(arr: T[], fn: (x: T) => V | undefined): V[] {
   const out: V[] = []
@@ -259,12 +259,8 @@ interface CreateOptions {
 
   /** The name of the consumer group to use for checkpointing */
   groupName: string
-  /** The handler to call for each batch of stream messages */
-  handler: (streamName: StreamName, events: ITimelineEvent[]) => Promise<void>
-  /** The maximum number of concurrent streams to process */
-  maxConcurrentStreams: number
-  /** The maximum number of in-flight batches */
-  maxReadAhead: number
+  /** The sink to pump events into */
+  sink: Sink
 }
 
 function inflate(event: ITimelineEvent<EncodedBody>): ITimelineEvent {
@@ -312,18 +308,13 @@ export class DynamoStoreSource {
     if (!this.options.categories && !this.options.streamFilter) {
       throw new Error("Either categories or streamFilter must be specified")
     }
-    const sink = StreamsSink.create(
-      options.handler,
-      options.maxConcurrentStreams,
-      options.maxReadAhead,
-      {
-        "eqx.consumer_group": options.groupName,
-        "eqx.tail_sleep_interval_ms": options.tailSleepIntervalMs,
-        "eqx.max_concurrent_streams": options.maxConcurrentStreams,
-        "eqx.source": "DynamoStore",
-        [Tags.batch_size]: options.batchSizeCutoff,
-      },
-    )
+    const sink = options.sink
+    sink.addTracingAttrs({
+      "eqx.consumer_group": options.groupName,
+      "eqx.tail_sleep_interval_ms": options.tailSleepIntervalMs,
+      "eqx.source": "DynamoStore",
+      [Tags.batch_size]: options.batchSizeCutoff,
+    })
     const streamFilter = options.streamFilter ?? categoryFilter(options.categories!)
     this.client = new DynamoStoreSourceClient(epochs, index, streamFilter, options.mode)
     const crawl = (tranche: string, position: bigint, _signal: AbortSignal) =>

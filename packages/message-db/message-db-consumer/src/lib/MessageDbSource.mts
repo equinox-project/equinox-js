@@ -1,5 +1,5 @@
 import { MessageDbCategoryReader } from "./MessageDbClient.js"
-import { ITimelineEvent, StreamName, Tags } from "@equinox-js/core"
+import { Tags } from "@equinox-js/core"
 import { Pool } from "pg"
 import { ICheckpoints, Sink, StreamsSink, TailingFeedSource } from "@equinox-js/propeller"
 
@@ -17,16 +17,12 @@ interface CreateOptions {
   groupName: string
   /** The checkpointer to use for checkpointing */
   checkpoints: ICheckpoints
-  /** The handler to call for each batch of stream messages */
-  handler: (streamName: StreamName, events: ITimelineEvent[]) => Promise<void>
+  /** The sink to pump with messages */
+  sink: Sink
   /** sleep time in ms between reads when at the end of the category */
   tailSleepIntervalMs: number
   /** sleep time in ms between checkpoint commits */
   checkpointIntervalMs?: number
-  /** The maximum number of concurrent streams to process */
-  maxConcurrentStreams: number
-  /** The maximum number of batches in-flight */
-  maxReadAhead: number
   /** When using consumer groups: the index of the consumer. 0 <= i <= consumerGroupSize
    * each consumer in the group maintains their own checkpoint */
   consumerGroupMember?: number
@@ -91,18 +87,14 @@ export class MessageDbSource {
 
   static create(options: Options & { pool: Pool }) {
     const client = new MessageDbCategoryReader(options.pool)
-    const sink = StreamsSink.create(
-      options.handler,
-      options.maxConcurrentStreams,
-      options.maxReadAhead ?? 10,
-      {
-        "eqx.consumer_group": options.groupName,
-        "eqx.tail_sleep_interval_ms": options.tailSleepIntervalMs,
-        "eqx.max_concurrent_streams": options.maxConcurrentStreams,
-        "eqx.source": "MessageDb",
-        [Tags.batch_size]: options.batchSize ?? defaultBatchSize,
-      },
-    )
+    const sink = options.sink
+    sink.addTracingAttrs({
+      "eqx.consumer_group": options.groupName,
+      "eqx.tail_sleep_interval_ms": options.tailSleepIntervalMs,
+      "eqx.source": "MessageDb",
+      [Tags.batch_size]: options.batchSize ?? defaultBatchSize,
+    })
+
     return new MessageDbSource(
       client,
       options.batchSize ?? 500,

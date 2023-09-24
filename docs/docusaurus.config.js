@@ -11,14 +11,14 @@ const config = {
   favicon: "img/Equinox-favicon.png",
 
   // Set the production url of your site here
-  url: "https://nordfjord.github.io",
+  url: "https://equinox-project.github.io",
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: "/equinox-js/",
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: "nordfjord", // Usually your GitHub org/user name.
+  organizationName: "equinox-project", // Usually your GitHub org/user name.
   projectName: "equinox-js", // Usually your repo name.
 
   onBrokenLinks: "throw",
@@ -41,7 +41,7 @@ const config = {
           sidebarPath: require.resolve("./sidebars.js"),
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
-          editUrl: "https://github.com/nordfjord/equinox-js/tree/main/apps/docs",
+          editUrl: "https://github.com/equinox-project/equinox-js/tree/main/docs",
         },
         theme: {
           customCss: require.resolve("./src/css/custom.css"),
@@ -69,7 +69,7 @@ const config = {
             label: "Docs",
           },
           {
-            href: "https://github.com/nordfjord/equinox-js",
+            href: "https://github.com/equinox-project/equinox-js",
             label: "GitHub",
             position: "right",
           },
@@ -105,7 +105,7 @@ const config = {
             items: [
               {
                 label: "GitHub",
-                href: "https://github.com/nordfjord/equinox-js",
+                href: "https://github.com/equinox-project/equinox-js",
               },
             ],
           },

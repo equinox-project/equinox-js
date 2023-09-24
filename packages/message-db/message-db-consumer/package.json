@@ -1,5 +1,5 @@
 {
-  "name": "@equinox-js/message-db-consumer",
+  "name": "@equinox-js/message-db-source",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

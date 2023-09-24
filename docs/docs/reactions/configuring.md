@@ -1,17 +1,21 @@
+---
+sidebar_position: 2
+---
+
 # Configuring
 
-## Controlling throughput 
+## Controlling throughput
 
-Propeller has three parameters that work together to control throughput,
-`batchSize`, `maxConcurrentStreams` and `maxReadAhead`. The first controls the
-size of batches read from the source, the second how many streams can be
-concurrently processed, and the third how many batches can be buffered in
-memory.
+There are three parameters working together to control throughput, `batchSize`,
+`maxConcurrentStreams` and `maxReadAhead`. Respectively they control the size
+of batches read from the source, how many streams can be concurrently
+processed, and how many batches can be buffered in memory.
 
-It is generally good to set `maxReadAhead` to at least `2` as that minimises
-downtime by allowing the feed to fetch a batch concurrently with stream
-handling. The amount of events held in memory will equial `batchSize *
-maxReadAhead`. As such `maxReadAhead=3,batchSize=1000` is roughly equivalent to
+It is generally useful to set `maxReadAhead` to at least `2` to minimise idle
+time by allowing the feed to fetch the next batch during the handling of the
+streams. The number of events held in memory will be up to `batchSize *
+maxReadAhead` (the last batch may be incomplete). As such
+`maxReadAhead=3,batchSize=1000` is roughly equivalent to
 `maxReadAhead=6,batchSize=500`.
 
 Checkpointing is performed on a per-batch basis so a larger `batchSize` will
@@ -31,9 +35,9 @@ should consider whether the work being performed by the handler:
 - can handle sequences of events efficiently relative to processing them
   individually
 
-## Sleeping at the tail 
+## Sleeping at the tail
 
-When the tail (end) of a feed has been reached propeller will sleep for a
+When the tail (end) of a feed has been reached Propeller will sleep for a
 configurable interval before reading more. In essence this value controls the
 worst-case latency of reaction handling. We've found 1 second to be a sensible
 default in most cases but have gone down to 100ms in cases where near real-time
@@ -48,3 +52,9 @@ that idempotent handling is a requirement, checkpointing is an optimisation and
 your system should behave the same whether it starts from scratch on every start
 or at the last stored checkpointed.
 
+This last point is important, in practise it is exceedingly rare for your system
+to start up from perfect conditions. You should assume that your program is
+starting from a crash state as a rule. This requires a shift in mental-model but
+is an overwhelmingly better program design, albeit one that's not widely
+encouraged. Every system you rely on that reliably transfers data works like
+this.

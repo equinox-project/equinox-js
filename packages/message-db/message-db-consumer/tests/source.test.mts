@@ -1,6 +1,6 @@
 import { test, expect, afterAll } from "vitest"
 import { MessageDbSource } from "../src/index.mjs"
-import { Batch, ICheckpoints } from "@equinox-js/propeller"
+import { Batch, ICheckpoints, StreamsSink } from "@equinox-js/propeller"
 import { randomUUID } from "crypto"
 import { MessageDbCategoryReader } from "../src/lib/MessageDbClient.js"
 import { Pool } from "pg"
@@ -57,19 +57,23 @@ test("Ships batches to the sink", async () => {
 
   const streams = new Map<StreamName, ITimelineEvent[]>()
   let count = 0
-  const src = MessageDbSource.create({
-    pool,
-    batchSize: 500,
-    maxConcurrentStreams: 10,
-    tailSleepIntervalMs: 10,
-    maxReadAhead: 3,
-    groupName: "test",
-    checkpoints: new MemoryCheckpoints(),
-    categories: [category],
+  const sink = StreamsSink.create({
     async handler(stream, events) {
       streams.set(stream, (streams.get(stream) || []).concat(events))
       if (++count === 3) resolve()
     },
+    maxConcurrentStreams: 10,
+    maxReadAhead: 3,
+  })
+
+  const src = MessageDbSource.create({
+    pool,
+    batchSize: 500,
+    tailSleepIntervalMs: 10,
+    groupName: "test",
+    checkpoints: new MemoryCheckpoints(),
+    categories: [category],
+    sink,
   })
 
   const ctrl = new AbortController()
@@ -85,18 +89,22 @@ test("it fails fast", async () => {
 
   await writer.writeMessages(`${category}-1`, [{ type: "Test" }], null)
   const ctrl = new AbortController()
+  const sink = StreamsSink.create({
+    async handler() {
+      throw new Error("failed")
+    },
+    maxConcurrentStreams: 10,
+    maxReadAhead: 3,
+  })
+
   const src = MessageDbSource.create({
     pool,
     batchSize: 500,
-    maxConcurrentStreams: 10,
-    maxReadAhead: 3,
+    sink,
     tailSleepIntervalMs: 10,
     groupName: "test",
     checkpoints: new MemoryCheckpoints(),
     categories: [category],
-    async handler(stream, events) {
-      throw new Error("failed")
-    },
   })
 
   await expect(src.start(ctrl.signal)).rejects.toThrow("failed")
