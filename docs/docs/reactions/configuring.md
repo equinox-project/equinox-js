@@ -52,9 +52,10 @@ that idempotent handling is a requirement, checkpointing is an optimisation and
 your system should behave the same whether it starts from scratch on every start
 or at the last stored checkpointed.
 
-This last point is important, in practise it is exceedingly rare for your system
-to start up from perfect conditions. You should assume that your program is
-starting from a crash state as a rule. This requires a shift in mental-model but
-is an overwhelmingly better program design, albeit one that's not widely
-encouraged. Every system you rely on that reliably transfers data works like
-this.
+This last point is important, paraphrasing [this excellent
+tweet](https://twitter.com/mountain_ghosts/status/1682060880022847493): in
+practise it is exceedingly rare for your system to start up from perfect
+conditions. You should assume that your program is starting from a crash state
+as a rule. This requires a shift in mental-model but is an overwhelmingly
+better program design, albeit one that's not widely encouraged. Every system
+you rely on that reliably transfers data works like this.

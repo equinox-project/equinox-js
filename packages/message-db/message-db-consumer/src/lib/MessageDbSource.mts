@@ -17,7 +17,7 @@ interface CreateOptions {
   groupName: string
   /** The checkpointer to use for checkpointing */
   checkpoints: ICheckpoints
-  /** The sink to pump with messages */
+  /** The sink to pump messages into */
   sink: Sink
   /** sleep time in ms between reads when at the end of the category */
   tailSleepIntervalMs: number
