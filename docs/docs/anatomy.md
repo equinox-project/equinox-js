@@ -17,7 +17,7 @@ An Equinox service is composed of a few modules (namespaces).
   including important information like access strategies.
 
 Let's see what each of these modules looks like for a simple service for
-checking in and out of an appointment.
+checking in and out for an Appointment Booking.
 
 ## The Stream
 
