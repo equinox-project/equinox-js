@@ -13,7 +13,7 @@ An Equinox service is composed of a few modules (namespaces).
 - **Decide**: tells us which actions can be taken upon the state (resulting in
   new events being written)
 - **Service**: the class that wraps the above into a cohesive domain service.
-- **Config**: tells us how to wire the service against concrete stores,
+- **Config**: shows how we've opted to to bind the Service to Streams in a Concrete Store (which Access Strategies to apply, if any)
   including important information like access strategies.
 
 Let's see what each of these modules looks like for a simple service for
