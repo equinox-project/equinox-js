@@ -49,26 +49,21 @@ export class Stats {
   }
 
   dump() {
-    const attributes: Attributes = {}
-    let pagesRead = 0
-    let pagesEmpty = 0
-    let eventsRead = 0
     for (const [trancheId, stat] of this.stats) {
-      pagesRead += stat.pagesRead
-      pagesEmpty += stat.pagesEmpty
-      eventsRead += stat.eventsRead
-      attributes[`eqx.metric.${trancheId}.pages_read`] = stat.pagesRead
-      attributes[`eqx.metric.${trancheId}.pages_empty`] = stat.pagesEmpty
-      attributes[`eqx.metric.${trancheId}.events_read`] = stat.eventsRead
-      attributes[`eqx.metric.${trancheId}.at_tail`] = stat.isAtTail
-      attributes[`eqx.metric.${trancheId}.batch_checkpoint`] = stat.batchLastPosition
+      tracer
+        .startSpan("propeller.metric", {
+          attributes: {
+            "metrics.eqx.tranche_id": trancheId,
+            "metrics.eqx.pages_read": stat.pagesRead,
+            "metrics.eqx.pages_empty": stat.pagesEmpty,
+            "metrics.eqx.events_read": stat.eventsRead,
+            "metrics.eqx.at_tail": stat.isAtTail,
+            "metrics.eqx.batch_checkpoint": stat.batchLastPosition,
+          },
+        })
+        .end()
       Stat.reset(stat)
     }
-    attributes["eqx.metric.pages_read"] = pagesRead
-    attributes["eqx.metric.pages_empty"] = pagesEmpty
-    attributes["eqx.metric.events_read"] = eventsRead
-
-    tracer.startSpan("propeller.metric", { attributes }).end()
   }
 
   dumpOnInterval(intervalMs: number, signal: AbortSignal) {
