@@ -224,7 +224,7 @@ export namespace Config {
       return (totalBytes || 0n) > maxBytes || version >= maxVersion || totalStreams >= maxStreams
     }
     return new Service(shouldClose, (trancheId, epochId) =>
-      Decider.forStream(category, Stream.streamId(trancheId, epochId), null),
+      Decider.forStream(category, Stream.streamId(trancheId, epochId)),
     )
   }
 
@@ -312,12 +312,12 @@ export namespace Reader {
     }
     export const create = (context: DynamoStoreContext) =>
       new Service((tid, eid, minIndex) =>
-        Decider.forStream(createCategory(context, minIndex), Stream.streamId(tid, eid), null),
+        Decider.forStream(createCategory(context, minIndex), Stream.streamId(tid, eid)),
       )
 
     export const createMem = (store: VolatileStore<any>) =>
       new Service((tid, eid, minIndex) =>
-        Decider.forStream(createMemoryCategory(store, minIndex), Stream.streamId(tid, eid), null),
+        Decider.forStream(createMemoryCategory(store, minIndex), Stream.streamId(tid, eid)),
       )
   }
 }

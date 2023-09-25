@@ -93,7 +93,7 @@ export class Service {
     // could inject this via an argument too
     const emailer = emailSender ?? new EmailSender()
     const category = Service.resolveCategory(config)
-    const resolve = (id: InvoiceId) => Decider.forStream(category, streamId(id), null)
+    const resolve = (id: InvoiceId) => Decider.forStream(category, streamId(id))
     return new Service(payerService, emailer, resolve)
   }
 }

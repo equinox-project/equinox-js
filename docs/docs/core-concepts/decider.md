@@ -9,27 +9,29 @@ The best treatment of the concept of a Decider is Jeremie Chassaing's
 on the subject. In EquinoxJS the type `Decider` exposes an API for making
 Consistent Decisions against a Store derived from Events on a Stream. As Jeremie
 explained in his article, a Decider for a counter whose values must be between 0
-and 10 could look like this: 
+and 10 could look like this:
 
 ```ts
-type Event = { type: 'Incremented' } | { type: 'Decremented' }
-type Command = { type: 'Increment' } | { type: 'Decrement' }
+type Event = { type: "Incremented" } | { type: "Decremented" }
+type Command = { type: "Increment" } | { type: "Decrement" }
 type State = { count: number }
 const initial: State = { count: 0 }
 const evolve = (state: State, event: Event): State => {
   switch (event.type) {
-    case 'Incremented': return { count: state.count + 1 }
-    case 'Decremented': return { count: state - 1 }
+    case "Incremented":
+      return { count: state.count + 1 }
+    case "Decremented":
+      return { count: state - 1 }
   }
 }
 const decide = (command: Command, state: State): Event[] => {
   switch (command.type) {
-    case 'Increment': 
-      if (state.count < 10) return [{ type: 'Incremented'  }]
+    case "Increment":
+      if (state.count < 10) return [{ type: "Incremented" }]
       return []
 
-    case 'Decrement': 
-      if (state.count > 0) return [{ type: 'Decremented'  }]
+    case "Decrement":
+      if (state.count > 0) return [{ type: "Decremented" }]
       return []
   }
 }
@@ -39,27 +41,25 @@ You could use the decider pattern as-is with Equinox by wiring it up as so:
 
 ```ts
 class Service {
-  constructor(
-    private readonly resolve: (id: string) => Decider<Event, State>
-  ) {}
+  constructor(private readonly resolve: (id: string) => Decider<Event, State>) {}
 
   increment(id: string) {
     const decider = this.resolve(id)
-    const command: Command = { type: 'Increment' }
-    return decider.transact(state => decide(command, state))
+    const command: Command = { type: "Increment" }
+    return decider.transact((state) => decide(command, state))
   }
 
   decrement(id: string) {
     const decider = this.resolve(id)
-    const command: Command = { type: 'Decrement' }
-    return decider.transact(state => decide(command, state))
+    const command: Command = { type: "Decrement" }
+    return decider.transact((state) => decide(command, state))
   }
 
   // wire up to memory store category
   static create(store: VolatileStore<string>) {
     const fold = (state: State, events: Event[]) => events.reduce(evolve, state)
-    const category = MemoryStoreCategory.create(store, 'Counter', codec, fold, initial)
-    const resolve = (id: string) => Decider.forStream(category, id, null)
+    const category = MemoryStoreCategory.create(store, "Counter", codec, fold, initial)
+    const resolve = (id: string) => Decider.forStream(category, id)
     return new Service(resolve)
   }
 }
@@ -74,10 +74,10 @@ it as a list.
 ```ts
 function evolve(state: string[], event: Event) {
   switch (event.type) {
-    case 'ItemAdded': 
+    case "ItemAdded":
       return [...state, event.data.itemId]
-    case 'ItemRemoved': 
-      return state.filter(x => x !== event.data.itemId)
+    case "ItemRemoved":
+      return state.filter((x) => x !== event.data.itemId)
   }
 }
 ```
@@ -91,8 +91,12 @@ function fold(state: State, events: Event[]) {
   const newState = new Set(state)
   for (const event of events) {
     switch (event.type) {
-      case 'ItemAdded': state.add(event.data.itemId); break
-      case 'ItemRemoved': state.delete(event.data.itemId); break
+      case "ItemAdded":
+        state.add(event.data.itemId)
+        break
+      case "ItemRemoved":
+        state.delete(event.data.itemId)
+        break
     }
   }
   return newState
@@ -114,8 +118,8 @@ single Command DU becomes a burden at that point. Imagine the case of checking
 out of a hotel stay.
 
 ```ts
-type CheckoutResult = 
-  | { type: 'Ok' } 
+type CheckoutResult =
+  | { type: 'Ok' }
   | { type: 'BalanceOutstanding', amount: number }
 
 const checkout = (at: Date) => (state: State): [CheckoutResult, Event[]] => {
@@ -140,36 +144,37 @@ might be responsible for.
 With these modifications in mind, a more proper counter example would look like
 this:
 
-
 ```ts
-type Event = { type: 'Incremented' } | { type: 'Decremented' }
-type Command = { type: 'Increment' } | { type: 'Decrement' }
+type Event = { type: "Incremented" } | { type: "Decremented" }
+type Command = { type: "Increment" } | { type: "Decrement" }
 type State = { count: number }
 const initial: State = 0
-// avoids allocating a new object for each event 
+// avoids allocating a new object for each event
 const fold = (state: State, events: Event[]) => {
   let count = state.count
   switch (event.type) {
-    case 'Incremented': ++count; break
-    case 'Decremented': --count; break
+    case "Incremented":
+      ++count
+      break
+    case "Decremented":
+      --count
+      break
   }
   return { count }
 }
 
 const increment = (state: State) => {
-  if (state < 10) return [{ type: 'Incremented'  }]
+  if (state < 10) return [{ type: "Incremented" }]
   return []
 }
 
 const decrement = (state: State) => {
-  if (state > 0) return [{ type: 'Decremented'  }]
+  if (state > 0) return [{ type: "Decremented" }]
   return []
 }
 
 class Service {
-  constructor(
-    private readonly resolve: (id: string) => Decider<Event, State>
-  ) {}
+  constructor(private readonly resolve: (id: string) => Decider<Event, State>) {}
 
   increment(id: string) {
     const decider = this.resolve(id)
@@ -183,8 +188,8 @@ class Service {
 
   // wire up to memory store category
   static create(store: VolatileStore<string>) {
-    const category = MemoryStoreCategory.create(store, 'Counter', codec, fold, initial)
-    const resolve = (id: string) => Decider.forStream(category, id, null)
+    const category = MemoryStoreCategory.create(store, "Counter", codec, fold, initial)
+    const resolve = (id: string) => Decider.forStream(category, id)
     return new Service(resolve)
   }
 }
@@ -197,10 +202,9 @@ the decider.
 const given (events: Event[], decide: (state: State) => Event[]) =>
   decide(fold(initial, events))
 
-test('Increment', () => 
+test('Increment', () =>
   expect(given([], increment)).toEqual([{ type: 'Incremented' }])
 
-test('Cannot increment over 10', () => 
+test('Cannot increment over 10', () =>
   expect(given(Array(10).fill({type: 'Incremented'}), increment)).toEqual([]))
 ```
-

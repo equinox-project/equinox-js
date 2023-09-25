@@ -14,7 +14,7 @@ const updated: Payer.Events.Event = {
 
 describe("Codec", () => {
   test("roundtrips", () => {
-    const encoded = Payer.Events.codec.encode(updated, null)
+    const encoded = Payer.Events.codec.encode(updated, undefined)
     const decoded = Payer.Events.codec.tryDecode(encoded as any)
     expect(decoded).toEqual(updated)
   })

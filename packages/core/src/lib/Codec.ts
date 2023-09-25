@@ -10,7 +10,7 @@ type DomainEvent = IEventData<Record<string, any>>
 type MapMeta<E, C> = (e: E, ctx: C) => Record<string, any>
 
 /** Naive json codec, will stringify data and meta */
-export function json<E extends DomainEvent>(): ICodec<E, string, null>
+export function json<E extends DomainEvent>(): ICodec<E, string, undefined>
 export function json<E extends DomainEvent, C>(mapMeta: MapMeta<E, C>): ICodec<E, string, C>
 export function json(mapMeta?: MapMeta<any, any>): ICodec<any, string, any> {
   return {
@@ -44,7 +44,7 @@ export namespace Upcast {
     }
 }
 
-export const upcast = <E extends DomainEvent, Ctx = null>(
+export const upcast = <E extends DomainEvent, Ctx = undefined>(
   codec: ICodec<DomainEvent, string, Ctx>,
   upcast: (e: DomainEvent) => E | undefined,
 ): ICodec<E, string, Ctx> => {

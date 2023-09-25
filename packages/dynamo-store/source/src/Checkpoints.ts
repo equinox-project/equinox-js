@@ -206,7 +206,7 @@ export class DynamoCheckpoints implements ICheckpoints {
     const caching = CachingStrategy.Cache(cache)
     const category = DynamoStoreCategory.create(context, Stream.category, Events.codec, Fold.fold, Fold.initial, caching, access)
     const resolve = (partition: AppendsPartitionId, groupName: string) =>
-      Decider.forStream(category, Stream.streamId(partition, groupName), null)
+      Decider.forStream(category, Stream.streamId(partition, groupName))
     return new DynamoCheckpoints(resolve, checkpointFreqS)
   }
 }

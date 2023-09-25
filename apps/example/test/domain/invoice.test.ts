@@ -16,7 +16,7 @@ const raised: Events.Event = {
 
 describe("Codec", () => {
   test("roundtrips", () => {
-    const encoded = Events.codec.encode(raised, null)
+    const encoded = Events.codec.encode(raised, undefined)
     const decoded = Events.codec.tryDecode(encoded as any)
     expect(decoded).toEqual(raised)
   })

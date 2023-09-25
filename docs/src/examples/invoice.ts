@@ -174,13 +174,13 @@ export class Service {
 
   static createMessageDb(context: Mdb.MessageDbContext, caching: ICachingStrategy) {
     const category = Mdb.MessageDbCategory.create(context, Category, codec, fold, initial, caching)
-    const resolve = (invoiceId: InvoiceId) => Decider.forStream(category, streamId(invoiceId), null)
+    const resolve = (invoiceId: InvoiceId) => Decider.forStream(category, streamId(invoiceId))
     return new Service(resolve)
   }
 
   static createMem(store: Mem.VolatileStore<string>) {
     const category = Mem.MemoryStoreCategory.create(store, Category, codec, fold, initial)
-    const resolve = (invoiceId: InvoiceId) => Decider.forStream(category, streamId(invoiceId), null)
+    const resolve = (invoiceId: InvoiceId) => Decider.forStream(category, streamId(invoiceId))
     return new Service(resolve)
   }
 }

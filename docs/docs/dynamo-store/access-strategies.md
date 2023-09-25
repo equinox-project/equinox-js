@@ -147,7 +147,7 @@ export class Service {
     const access = AccessStrategy.RollingState(Fold.toSnapshot)
     // prettier-ignore
     const category = DynamoStoreCategory.create(context, "$UserIndex", Events.codec, Fold.fold, Fold.initial, access, cache)
-    const resolve = () => Decider.forStream(category, StreamId.create("0"), null)
+    const resolve = () => Decider.forStream(category, StreamId.create("0"))
     return new Service(resolve)
   }
 }

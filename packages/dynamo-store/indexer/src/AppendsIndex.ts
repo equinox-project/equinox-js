@@ -84,11 +84,11 @@ export class Service {
 
   static create(context: DynamoStoreContext, caching?: ICachingStrategy) {
     const category = createCategory(context, caching)
-    return new Service(() => Decider.forStream(category, Stream.streamId(), null))
+    return new Service(() => Decider.forStream(category, Stream.streamId()))
   }
   static createMem(store: VolatileStore<any>) {
     const category = createMemoryCategory(store)
-    return new Service(() => Decider.forStream(category, Stream.streamId(), null))
+    return new Service(() => Decider.forStream(category, Stream.streamId()))
   }
 }
 
@@ -129,11 +129,11 @@ export class Reader {
 
   static create(context: DynamoStoreContext) {
     const category = createCategory(context, CachingStrategy.NoCache())
-    return new Reader(() => Decider.forStream(category, Stream.streamId(), null))
+    return new Reader(() => Decider.forStream(category, Stream.streamId()))
   }
 
   static createMem(store: VolatileStore<any>) {
     const category = createMemoryCategory(store)
-    return new Reader(() => Decider.forStream(category, Stream.streamId(), null))
+    return new Reader(() => Decider.forStream(category, Stream.streamId()))
   }
 }

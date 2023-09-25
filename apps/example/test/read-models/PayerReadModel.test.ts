@@ -57,7 +57,7 @@ function scenario(name: string, batches: [StreamName, ITimelineEvent[]][] = [], 
           [
             streamName,
             events.map((event) => {
-              const encoded = Payer.Events.codec.encode(event, null) as ITimelineEvent
+              const encoded = Payer.Events.codec.encode(event, undefined) as ITimelineEvent
               encoded.index = BigInt(version++)
               return encoded
             }),

@@ -25,9 +25,7 @@ export namespace Stream {
 
 export namespace Events {
   export type Amount = { amount: number }
-  export type Event = 
-    | { type: "Deposited"; data: Amount } 
-    | { type: "Withdrawn"; data: Amount }
+  export type Event = { type: "Deposited"; data: Amount } | { type: "Withdrawn"; data: Amount }
   export const codec = Codec.json<Event>()
 }
 
@@ -97,9 +95,9 @@ export function create(context: MessageDbContext, cache: ICache) {
     Fold.fold,
     Fold.initial,
     caching,
-    access
+    access,
   )
-  const resolve = (id: AccountId) => Decider.forStream(category, Stream.id(id), null)
+  const resolve = (id: AccountId) => Decider.forStream(category, Stream.id(id))
   return new Service(resolve)
 }
 ```
