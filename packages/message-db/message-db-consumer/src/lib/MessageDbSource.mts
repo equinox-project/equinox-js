@@ -1,7 +1,7 @@
 import { MessageDbCategoryReader } from "./MessageDbClient.js"
 import { Tags } from "@equinox-js/core"
 import { Pool } from "pg"
-import { ICheckpoints, Sink, StreamsSink, TailingFeedSource } from "@equinox-js/propeller"
+import { ICheckpoints, Sink, TailingFeedSource } from "@equinox-js/propeller"
 
 interface CreateOptions {
   /** The database pool to use to read messages from the category */
@@ -19,6 +19,8 @@ interface CreateOptions {
   checkpoints: ICheckpoints
   /** The sink to pump messages into */
   sink: Sink
+  /** emit a metric span every statsIntervalMs */
+  statsIntervalMs?: number
   /** sleep time in ms between reads when at the end of the category */
   tailSleepIntervalMs: number
   /** sleep time in ms between checkpoint commits */
@@ -57,6 +59,7 @@ export class MessageDbSource {
   constructor(
     client: MessageDbCategoryReader,
     batchSize: number,
+    statsIntervalMs: number | undefined,
     tailSleepIntervalMs: number,
     checkpointIntervalMs: number,
     groupName: string,
@@ -68,6 +71,7 @@ export class MessageDbSource {
   ) {
     const crawl = Impl.crawl(client, batchSize, groupMember, groupSize)
     this.inner = new TailingFeedSource({
+      statsIntervalMs,
       tailSleepIntervalMs,
       checkpointIntervalMs,
       groupName,
@@ -98,6 +102,7 @@ export class MessageDbSource {
     return new MessageDbSource(
       client,
       options.batchSize ?? 500,
+      options.statsIntervalMs,
       options.tailSleepIntervalMs,
       options.checkpointIntervalMs ?? 5000,
       options.groupName,
