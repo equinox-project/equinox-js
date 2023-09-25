@@ -7,7 +7,7 @@ sidebar_position: 3
 An Equinox service is composed of a few modules (namespaces).
 
 - **Stream**: tells us which category the service writes to and how the identity
-  of the stream is composed
+  of the stream is composed (and the reverse operations for when running Reaction logic)
 - **Events**: tells us which events the service writes
 - **Fold**: tells us how the events are folded into state
 - **Decide**: tells us which actions can be taken upon the state (resulting in
