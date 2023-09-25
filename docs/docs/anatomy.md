@@ -12,6 +12,7 @@ An Equinox service is composed of a few modules (namespaces).
 - **Fold**: shows how the events are folded into state
 - **Decide**: shows which actions can be taken upon the state (resulting in
   new events being written)
+- **Queries**: shows how we map the state to answer questions.
 - **Service**: the class that wraps the above into a cohesive domain service.
 - **Config**: shows how we've opted to to bind the Service to Streams in a Concrete Store (which Access Strategies to apply, if any)
   including important information like access strategies.
@@ -24,11 +25,8 @@ anything other than the `Service`.
 
 :::
 
-
 Let's see what each of these modules looks like for a simple service for
 checking in and out for an Appointment Booking.
-
-
 
 ## The Stream
 
@@ -125,6 +123,29 @@ export namespace Decide {
 }
 ```
 
+## The Queries
+
+```ts
+export namespace Query {
+  type Status =
+    | { type: "not-started"; version: bigint }
+    | { type: "in-progress"; version: bigint; startedAt: Date }
+    | { type: "complete"; version: bigint; startedAt: Date; durationMs: number }
+  export const status = ({ state, version }: ISyncContext<Fold.State>): Status => {
+    if (state.checkedIn && state.checkedOut) {
+      return {
+        type: "complete",
+        version,
+        startedAt: state.checkedIn,
+        durationMs: +state.checkedOut - +state.checkedIn,
+      }
+    }
+    if (state.checkedIn) return { type: "in-progress", version, startedAt: state.checkedIn }
+    return { type: "not-started", version }
+  }
+}
+```
+
 ## The Service
 
 ```ts
@@ -155,6 +176,18 @@ export class Service {
     const decider = this.resolve(appointmentId, userId)
     return decider.transact(Decide.manuallyOverride(checkedIn, checkedOut))
   }
+
+  readStatus(appointmentId: AppointmentId, userId: UserId) {
+    const decider = this.resolve(appointmentId, userId)
+    decider.queryEx(Query.status)
+  }
+
+  /** In many cases we do not need to fetch missing events because we can accept a stale value from the cache.
+   *  We prefer making the staleness explicit in the method name */
+  readStatusStale(appointmentId: AppointmentId, userId: UserId) {
+    const decider = this.resolve(appointmentId, userId)
+    decider.queryEx(Query.status, LoadOption.AnyCachedValue)
+  }
 }
 ```
 
@@ -163,7 +196,9 @@ export class Service {
 <details>
 <summary>See the `../equinox-config.ts` snippet</summary>
 
-Feel free to copy-paste this snippet for your own project.
+Most projects will be well served by copying this snippet and removing stores
+that are not in use. That is, have a binding for memory store and a single
+concrete store.
 
 ```ts
 import { ICodec, ICache, CachingStrategy, Codec } from "@equinox-js/core"
@@ -222,16 +257,16 @@ export namespace Dynamo {
     const access = AccessStrategy.Unoptimized()
     return Dynamo.createCached(name, codec, fold, initial, access, config)
   }
-  export function createLatestKnown<E,S,C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, config: Config) {
-    const access = AccessStrategy.LatestKnownEvent()
-    return Dynamo.createCached(name, codec, fold, initial, access, config)
-  }
   export function createSnapshotted<E,S,C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, isOrigin: (e: E) => boolean, toSnapshot: (s: S) => E, config: Config) {
     const access = AccessStrategy.Snapshot(isOrigin, toSnapshot)
     return Dynamo.createCached(name, codec, fold, initial, access, config)
   }
   export function createRollingState<E,S,C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, toSnapshot: (s: S) => E, config: Config) {
     const access = AccessStrategy.RollingState(toSnapshot)
+    return Dynamo.createCached(name, codec, fold, initial, access, config)
+  }
+  export function createLatestKnown<E,S,C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, config: Config) {
+    const access = AccessStrategy.LatestKnownEvent()
     return Dynamo.createCached(name, codec, fold, initial, access, config)
   }
 }
