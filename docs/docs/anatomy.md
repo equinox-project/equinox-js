@@ -6,18 +6,29 @@ sidebar_position: 3
 
 An Equinox service is composed of a few modules (namespaces).
 
-- **Stream**: tells us which category the service writes to and how the identity
+- **Stream**: shows which category the service writes to and how the identity
   of the stream is composed (and the reverse operations for when running Reaction logic)
-- **Events**: tells us which events the service writes
-- **Fold**: tells us how the events are folded into state
-- **Decide**: tells us which actions can be taken upon the state (resulting in
+- **Events**: shows which events the service writes
+- **Fold**: shows how the events are folded into state
+- **Decide**: shows which actions can be taken upon the state (resulting in
   new events being written)
 - **Service**: the class that wraps the above into a cohesive domain service.
 - **Config**: shows how we've opted to to bind the Service to Streams in a Concrete Store (which Access Strategies to apply, if any)
   including important information like access strategies.
 
+:::tip
+
+Everything above `Service` is considered internal to the module. It is exported
+as a conveninence for testing, but other modules should not take a dependency on
+anything other than the `Service`.
+
+:::
+
+
 Let's see what each of these modules looks like for a simple service for
 checking in and out for an Appointment Booking.
+
+
 
 ## The Stream
 
@@ -85,21 +96,25 @@ export namespace Decide {
   export const checkIn =
     (timestamp: Date) =>
     (state: State): Event[] => {
-      if (state.checkedIn) {
-        // no change
-        if (+state.checkedIn === +timestamp) return []
+      // Check if already checked in with a different timestamp
+      // The caller is expected to guard against this
+      if (state.checkedIn && +state.checkedIn !== +timestamp) {
         throw new Error("Already checked in with different timestamp")
       }
+
+      // Silent idempotent handling: We accept retried requests with identical timestamps.
+      // If checked in with the same timestamp, no changes are required.
+      if (state.checkedIn && +state.checkedIn === +timestamp) return []
+
       return [{ type: "CheckedIn", data: { timestamp } }]
     }
   export const checkOut =
     (timestamp: Date) =>
     (state: State): Event[] => {
-      if (state.checkedOut) {
-        // no change
-        if (+state.checkedOut === +timestamp) return []
+      if (state.checkedOut && +state.checkedOut !== +timestamp) {
         throw new Error("Already checked out with different timestamp")
       }
+      if (state.checkedOut && +state.checkedOut === +timestamp) return []
       return [{ type: "CheckedOut", data: { timestamp } }]
     }
 
@@ -148,6 +163,8 @@ export class Service {
 <details>
 <summary>See the `../equinox-config.ts` snippet</summary>
 
+Feel free to copy-paste this snippet for your own project.
+
 ```ts
 import { ICodec, ICache, CachingStrategy, Codec } from "@equinox-js/core"
 import { MemoryStoreCategory, VolatileStore } from "@equinox-js/memory-store"
@@ -168,22 +185,23 @@ export type Config =
 // prettier-ignore
 export namespace MessageDb {
   import AccessStrategy = MessageDB.AccessStrategy
-  import MessageDbCategory = MessageDB.MessageDbCategory
-  import MessageDbContext = MessageDB.MessageDbContext
+  import Category = MessageDB.MessageDbCategory
+  import Context = MessageDB.MessageDbContext
+  type Config = { context: Context; cache: ICache }
 
-  export function createCached<E, S, C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, access: AccessStrategy<E, S>, { context, cache }: { context: MessageDbContext; cache: ICache }) {
+  export function createCached<E, S, C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, access: AccessStrategy<E, S>, { context, cache }: Config) {
     const caching = CachingStrategy.Cache(cache)
-    return MessageDbCategory.create(context, name, codec, fold, initial, caching, access);
+    return Category.create(context, name, codec, fold, initial, caching, access);
   }
-  export function createUnoptimized<E, S, C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, config: { context: MessageDbContext; cache: ICache }) {
+  export function createUnoptimized<E, S, C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, config: Config) {
     const access = AccessStrategy.Unoptimized<E, S>()
     return MessageDb.createCached(name, codec, fold, initial, access, config)
   }
-  export function createSnapshotted<E, S, C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, eventName: string, toSnapshot: (s: S) => E, config: { context: MessageDbContext; cache: ICache }) {
+  export function createSnapshotted<E, S, C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, eventName: string, toSnapshot: (s: S) => E, config: Config) {
     const access = AccessStrategy.AdjacentSnapshots(eventName, toSnapshot)
     return MessageDb.createCached(name, codec, fold, initial, access, config)
   }
-  export function createLatestKnown<E, S, C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, config: { context: MessageDbContext; cache: ICache }) {
+  export function createLatestKnown<E, S, C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, config: Config) {
     const access = AccessStrategy.LatestKnownEvent<E, S>()
     return MessageDb.createCached(name, codec, fold, initial, access, config)
   }
@@ -239,9 +257,9 @@ class Service {
       case Config.Store.Memory:
         return Config.MemoryStore.create(Stream.category, Events.codec, Fold.fold, Fold.initial, config)
       case Config.Store.MessageDB:
-        return Config.MessageDB.createUnoptimized(Stream.name, Events.codec, Fold.fold, Fold.initial, config)
+        return Config.MessageDB.createUnoptimized(Stream.category, Events.codec, Fold.fold, Fold.initial, config)
       case Config.Store.Dynamo:
-        return Config.Dynamo.createUnoptimized(Stream.name, Events.codec, Fold.fold, Fold.initial, config)
+        return Config.Dynamo.createUnoptimized(Stream.category, Events.codec, Fold.fold, Fold.initial, config)
     }
   }
   static create(config: Config.Config) {
