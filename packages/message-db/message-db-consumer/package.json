@@ -20,7 +20,7 @@
   ],
   "devDependencies": {
     "@equinox-js/message-db": "workspace:*",
-    "@types/node": "^18.11.18",
+    "@types/node": "^20.6.5",
     "@types/pg": "^8.6.6",
     "tsup": "^7.2.0",
     "typescript": "^5.2.2",

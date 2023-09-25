@@ -52,7 +52,7 @@ export class TailingFeedSource {
     position: bigint,
     signal: AbortSignal,
   ): AsyncIterable<Batch> {
-    if (wasTail) await sleep(this.options.tailSleepIntervalMs, signal).catch(() => {})
+    if (wasTail) await sleep(this.options.tailSleepIntervalMs, signal)
     yield* this.options.crawl(trancheId, position, signal)
   }
 
@@ -88,7 +88,7 @@ export class TailingFeedSource {
           )
         }
         pos = batch.checkpoint
-        wasTail = batch.isTail 
+        wasTail = batch.isTail
       }
     }
   }
