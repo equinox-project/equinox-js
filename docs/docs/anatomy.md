@@ -237,7 +237,7 @@ class Service {
   static resolveCategory(config: Config.Config) {
     switch (config.store) {
       case Config.Store.Memory:
-        return Config.MemoryStore.create(Stream.name, Events.codec, Fold.fold, Fold.initial, config)
+        return Config.MemoryStore.create(Stream.category, Events.codec, Fold.fold, Fold.initial, config)
       case Config.Store.MessageDB:
         return Config.MessageDB.createUnoptimized(Stream.name, Events.codec, Fold.fold, Fold.initial, config)
       case Config.Store.Dynamo:
