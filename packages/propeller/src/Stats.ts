@@ -60,8 +60,8 @@ export class Stats {
       attributes[`eqx.metric.${trancheId}.pages_read`] = stat.pagesRead
       attributes[`eqx.metric.${trancheId}.pages_empty`] = stat.pagesEmpty
       attributes[`eqx.metric.${trancheId}.events_read`] = stat.eventsRead
-      attributes[`eqx.metric.${trancheId}.is_at_tail`] = stat.isAtTail
-      attributes[`eqx.metric.${trancheId}.batch_last_position`] = stat.batchLastPosition
+      attributes[`eqx.metric.${trancheId}.at_tail`] = stat.isAtTail
+      attributes[`eqx.metric.${trancheId}.batch_checkpoint`] = stat.batchLastPosition
       Stat.reset(stat)
     }
     attributes["eqx.metric.pages_read"] = pagesRead
