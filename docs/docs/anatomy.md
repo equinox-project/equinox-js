@@ -128,7 +128,7 @@ export class Service {
 
   checkOut(appointmentId: AppointmentId, userId: UserId, timestamp: Date) {
     const decider = this.resolve(appointmentId, userId)
-    return decider.transact(Decide.checkOut(timestamp), LoadOption.AssumeEmpty)
+    return decider.transact(Decide.checkOut(timestamp))
   }
 
   manuallyOverride(
