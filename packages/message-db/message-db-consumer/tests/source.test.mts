@@ -1,23 +1,11 @@
 import { test, expect, afterAll } from "vitest"
 import { MessageDbSource } from "../src/index.mjs"
-import { Batch, ICheckpoints, StreamsSink } from "@equinox-js/propeller"
+import { ICheckpoints, StreamsSink } from "@equinox-js/propeller"
 import { randomUUID } from "crypto"
-import { MessageDbCategoryReader } from "../src/lib/MessageDbClient.js"
 import { Pool } from "pg"
-import { MessageDbConnection, MessageDbContext } from "@equinox-js/message-db"
+import { MessageDbConnection} from "@equinox-js/message-db"
 import { ITimelineEvent, StreamName } from "@equinox-js/core"
 
-class MessageDbReaderSubstitute {
-  batches: Batch[] = []
-  pushBatch(batch: any) {
-    this.batches.push(batch)
-  }
-  async readCategoryMessages({ fromPositionInclusive }: any) {
-    const batch = this.batches.find((b) => b.checkpoint >= fromPositionInclusive + 1n)
-
-    return batch || { items: [], isTail: true, checkpoint: fromPositionInclusive }
-  }
-}
 class MemoryCheckpoints implements ICheckpoints {
   checkpoints = new Map<string, bigint>()
   async load(groupName: string, category: string) {
@@ -41,7 +29,6 @@ const waiter = () => {
 const connectionString =
   process.env.MDB_CONN_STR ?? "postgres://message_store:@localhost:5432/message_store"
 const pool = new Pool({ connectionString })
-const reader = new MessageDbCategoryReader(pool)
 const conn = MessageDbConnection.create(pool)
 const writer = conn.write
 afterAll(() => pool.end())
@@ -77,12 +64,13 @@ test("Ships batches to the sink", async () => {
   })
 
   const ctrl = new AbortController()
-  void src.start(ctrl.signal)
+  const sourceP = src.start(ctrl.signal)
 
   await wait
   ctrl.abort()
   expect(streams.size).toBe(3)
   expect(Array.from(streams.values()).flat()).toHaveLength(4)
+  await expect(sourceP).rejects.toThrow("The operation was aborted")
 })
 test("it fails fast", async () => {
   const category = randomUUID().replace(/-/g, "")

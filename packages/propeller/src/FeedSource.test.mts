@@ -2,8 +2,7 @@ import { MemoryCheckpoints } from "./Checkpoints.js"
 import { TailingFeedSource } from "./FeedSource.mjs"
 import { test, expect, vi } from "vitest"
 import { Batch, IngesterBatch, Sink } from "./Types.js"
-import { StreamName } from "@equinox-js/core"
-import { StreamId } from "@equinox-js/core"
+import { StreamName, StreamId } from "@equinox-js/core"
 
 class MemorySink implements Sink {
   async start() {}
@@ -11,6 +10,7 @@ class MemorySink implements Sink {
   async pump(batch: IngesterBatch, signal: AbortSignal): Promise<void> {
     batch.onComplete()
   }
+  addTracingAttrs = vi.fn()
 }
 
 function createCrawl(batches: Batch[]) {
@@ -72,9 +72,10 @@ test("Checkpointing happens asynchronously", async () => {
   })
   vi.spyOn(checkpoints, "commit")
   expect(await checkpoints.load("TestGroup", "0")).toBe(0n)
-  source.start("0", ctrl.signal)
+  const sourceP = source.start("0", ctrl.signal)
   await checkpointReached
   ctrl.abort()
   expect(await checkpoints.load("TestGroup", "0")).toBe(3n)
   expect(checkpoints.commit).toHaveBeenCalledTimes(1)
+  await expect(sourceP).rejects.toThrow("The operation was aborted")
 })

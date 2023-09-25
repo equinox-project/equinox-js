@@ -76,7 +76,7 @@ test("Correctly batches stream handling", async () => {
     { p: IndexStreamId.ofString("Cat-stream3"), i: 1, c: ["Something", "Something"] },
   ])
 
-  await src.start(ctrl.signal).catch(() => {})
+  await expect(src.start(ctrl.signal)).rejects.toThrow("The operation was aborted")
   expect(streams.size).toBe(3)
   expect(Array.from(streams.values()).flat()).toHaveLength(4)
 })
@@ -167,7 +167,7 @@ test("loading event bodies", async () => {
     checkpoints: new MemoryCheckpoints(),
     sink,
   })
-  void src.start(ctrl.signal).catch(() => {})
+  const sourceP = src.start(ctrl.signal)
   const epochWriter = AppendsEpoch.Config.createMem(1024 * 1024, 5000n, 100_000, store)
   for (const [sn, events] of expectedStreams) {
     store.sync(
@@ -199,6 +199,7 @@ test("loading event bodies", async () => {
   }
   await wait
   expect(received).toEqual(expectedStreams)
+  await expect(sourceP).rejects.toThrow("The operation was aborted")
 })
 
 test("starting from the tail of the store", async () => {
@@ -245,7 +246,7 @@ test("starting from the tail of the store", async () => {
 
   await wait
   ctrl.abort()
-  await p
+  await expect(p).rejects.toThrow("The operation was aborted")
   expect(received).toEqual([
     "Cat-stream3",
     [

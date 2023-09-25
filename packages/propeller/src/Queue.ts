@@ -88,7 +88,7 @@ export class AsyncQueue<T> {
     const value = this.queue.tryFind(predicate)
     if (value) return value
     return new Promise<T>((resolve, reject) => {
-      const abort = () => reject(new Error("Aborted"))
+      const abort = () => reject(new DOMException("The operation was aborted", "AbortError"))
       if (signal.aborted) return abort()
       signal.addEventListener("abort", abort)
       this.pendingGets.add({
