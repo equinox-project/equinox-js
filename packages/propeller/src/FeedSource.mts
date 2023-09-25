@@ -1,6 +1,7 @@
 import { Batch, Sink } from "./Types.js"
 import { ICheckpoints } from "./Checkpoints.js"
 import { sleep } from "./Sleep.js"
+import { Stats } from "./Stats.js"
 
 class CheckpointWriter {
   constructor(
@@ -33,6 +34,7 @@ class CheckpointWriter {
 }
 
 export type TailingFeedSourceOptions = {
+  statsIntervalMs?: number
   tailSleepIntervalMs: number
   checkpointIntervalMs: number
   groupName: string
@@ -45,6 +47,7 @@ export type TailingFeedSourceOptions = {
 export class TailingFeedSource {
   onError!: (err: any) => void
   constructor(private readonly options: TailingFeedSourceOptions) {}
+  stats = new Stats()
 
   private async *crawl(
     trancheId: string,
@@ -76,6 +79,7 @@ export class TailingFeedSource {
       for await (const _batch of this.crawl(trancheId, wasTail, pos, signal)) {
         // Weird TS bug thinks that batch is any
         const batch: Batch = _batch
+        this.stats.recordBatch(trancheId, batch)
         if (batch.items.length !== 0) {
           await sink.pump(
             {
@@ -94,6 +98,9 @@ export class TailingFeedSource {
   }
 
   start(trancheId: string, signal: AbortSignal) {
+    if (this.options.statsIntervalMs) {
+      this.stats.dumpOnInterval(this.options.statsIntervalMs, signal)
+    }
     return new Promise<void>((resolve, reject) => {
       this.onError = (err: any) => {
         if (err && err.message === "Aborted") return resolve()

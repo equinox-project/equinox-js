@@ -1,9 +1,12 @@
-import hc from "@honeycombio/opentelemetry-node"
+import Sdk from "@opentelemetry/sdk-node"
+// @ts-ignore
+import { PrettyConsoleProcessor } from "opentelemetry-exporter-console-pretty"
 import pg from "@opentelemetry/instrumentation-pg"
 import http from "@opentelemetry/instrumentation-http"
 import express from "@opentelemetry/instrumentation-express"
 
-const sdk = new hc.HoneycombSDK({
+const sdk = new Sdk.NodeSDK({
+  spanProcessor: new PrettyConsoleProcessor(),
   instrumentations: [
     new pg.PgInstrumentation({
       enhancedDatabaseReporting: true,

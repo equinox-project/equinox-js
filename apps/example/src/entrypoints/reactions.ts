@@ -47,7 +47,8 @@ async function createSource() {
         groupName: "InvoiceAutoEmailer",
         checkpoints,
         sink,
-        tailSleepIntervalMs: 100,
+        tailSleepIntervalMs: 1000,
+        statsIntervalMs: 10000,
       })
     }
     case Store.Dynamo: {
