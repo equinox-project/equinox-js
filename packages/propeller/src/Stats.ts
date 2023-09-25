@@ -51,7 +51,7 @@ export class Stats {
   dump() {
     for (const [trancheId, stat] of this.stats) {
       tracer
-        .startSpan("propeller.metric", {
+        .startSpan("propeller.metrics", {
           attributes: {
             "metrics.eqx.tranche_id": trancheId,
             "metrics.eqx.pages_read": stat.pagesRead,
