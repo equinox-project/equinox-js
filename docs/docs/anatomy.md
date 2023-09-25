@@ -12,7 +12,7 @@ An Equinox service is composed of a few modules (namespaces).
 - **Fold**: shows how the events are folded into state
 - **Decide**: shows which actions can be taken upon the state (resulting in
   new events being written)
-- **Queries**: shows how we map the state to answer questions.
+- **Query**: shows how we map the state to answer questions.
 - **Service**: the class that wraps the above into a cohesive domain service.
 - **Config**: shows how we've opted to to bind the Service to Streams in a Concrete Store (which Access Strategies to apply, if any)
   including important information like access strategies.
