@@ -19,7 +19,7 @@ An Equinox service is composed of a few modules (namespaces).
 :::tip
 
 Everything above `Service` is considered internal to the module. It is exported
-as a conveninence for testing, but other modules should not take a dependency on
+as a convenience for testing, but other modules should not take a dependency on
 anything other than the `Service`.
 
 :::
