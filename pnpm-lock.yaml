@@ -114,10 +114,104 @@ importers:
         version: 0.28.21
       tsup:
         specifier: ^7.2.0
-        version: 7.2.0(typescript@5.2.2)
+        version: 7.2.0(supports-color@9.4.0)(typescript@5.2.2)
       vitest:
         specifier: ^0.34.5
         version: 0.34.5(supports-color@9.4.0)
+
+  apps/example-rescript:
+    dependencies:
+      '@aws-sdk/client-dynamodb':
+        specifier: ^3.410.0
+        version: 3.410.0
+      '@equinox-js/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@equinox-js/dynamo-store':
+        specifier: workspace:*
+        version: link:../../packages/dynamo-store/dynamo-store
+      '@equinox-js/dynamo-store-source':
+        specifier: workspace:*
+        version: link:../../packages/dynamo-store/source
+      '@equinox-js/memory-store':
+        specifier: workspace:*
+        version: link:../../packages/memory-store
+      '@equinox-js/message-db':
+        specifier: workspace:*
+        version: link:../../packages/message-db/message-db
+      '@equinox-js/message-db-source':
+        specifier: workspace:*
+        version: link:../../packages/message-db/message-db-consumer
+      '@equinox-js/projection-pg':
+        specifier: workspace:*
+        version: link:../../packages/projection-pg
+      '@equinox-js/propeller':
+        specifier: workspace:*
+        version: link:../../packages/propeller
+      '@opentelemetry/api':
+        specifier: ^1.4.0
+        version: 1.4.1
+      '@opentelemetry/instrumentation-express':
+        specifier: ^0.33.0
+        version: 0.33.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/instrumentation-http':
+        specifier: ^0.41.0
+        version: 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/instrumentation-pg':
+        specifier: ^0.36.0
+        version: 0.36.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-node':
+        specifier: ^0.41.0
+        version: 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-base':
+        specifier: ^1.9.0
+        version: 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-node':
+        specifier: ^1.9.0
+        version: 1.15.0(@opentelemetry/api@1.4.1)
+      express:
+        specifier: ^4.18.2
+        version: 4.18.2
+      express-async-errors:
+        specifier: ^3.1.1
+        version: 3.1.1(express@4.18.2)
+      get-port:
+        specifier: ^7.0.0
+        version: 7.0.0
+      opentelemetry-exporter-console-pretty:
+        specifier: ^1.0.1
+        version: 1.0.1(@opentelemetry/api@1.4.1)
+      pg:
+        specifier: ^8.0.0
+        version: 8.8.0
+      ramda:
+        specifier: ^0.28.0
+        version: 0.28.0
+      zod:
+        specifier: ^3.20.2
+        version: 3.20.2
+    devDependencies:
+      '@types/express':
+        specifier: ^4.17.17
+        version: 4.17.17
+      '@types/node':
+        specifier: ^20.6.5
+        version: 20.6.5
+      '@types/pg':
+        specifier: ^8.0.0
+        version: 8.6.6
+      '@types/ramda':
+        specifier: ^0.28.21
+        version: 0.28.21
+      rescript:
+        specifier: ^10.1.4
+        version: 10.1.4
+      tsup:
+        specifier: ^7.2.0
+        version: 7.2.0
+      vitest:
+        specifier: ^0.34.5
+        version: 0.34.5
 
   docs:
     dependencies:
@@ -179,7 +273,7 @@ importers:
         version: 7.14.1
       tsup:
         specifier: ^7.2.0
-        version: 7.2.0(typescript@5.2.2)
+        version: 7.2.0(supports-color@9.4.0)(typescript@5.2.2)
       typescript:
         specifier: ^5.2.2
         version: 5.2.2
@@ -269,7 +363,7 @@ importers:
         version: 20.6.5
       tsup:
         specifier: ^7.2.0
-        version: 7.2.0(typescript@5.2.2)
+        version: 7.2.0(supports-color@9.4.0)(typescript@5.2.2)
       typescript:
         specifier: ^5.2.2
         version: 5.2.2
@@ -306,7 +400,7 @@ importers:
         version: 20.6.5
       tsup:
         specifier: ^7.2.0
-        version: 7.2.0(typescript@5.2.2)
+        version: 7.2.0(supports-color@9.4.0)(typescript@5.2.2)
       typescript:
         specifier: ^5.2.2
         version: 5.2.2
@@ -374,7 +468,7 @@ importers:
         version: 4.0.0
       tsup:
         specifier: ^7.2.0
-        version: 7.2.0(typescript@5.2.2)
+        version: 7.2.0(supports-color@9.4.0)(typescript@5.2.2)
       typescript:
         specifier: ^5.2.2
         version: 5.2.2
@@ -393,7 +487,7 @@ importers:
         version: 20.6.5
       tsup:
         specifier: ^7.2.0
-        version: 7.2.0(typescript@5.2.2)
+        version: 7.2.0(supports-color@9.4.0)(typescript@5.2.2)
       typescript:
         specifier: ^5.2.2
         version: 5.2.2
@@ -427,7 +521,7 @@ importers:
         version: 8.6.6
       tsup:
         specifier: ^7.2.0
-        version: 7.2.0(typescript@5.2.2)
+        version: 7.2.0(supports-color@9.4.0)(typescript@5.2.2)
       typescript:
         specifier: ^5.2.2
         version: 5.2.2
@@ -458,7 +552,7 @@ importers:
         version: 8.6.6
       tsup:
         specifier: ^7.2.0
-        version: 7.2.0(typescript@5.2.2)
+        version: 7.2.0(supports-color@9.4.0)(typescript@5.2.2)
       typescript:
         specifier: ^5.2.2
         version: 5.2.2
@@ -480,7 +574,7 @@ importers:
         version: 8.6.6
       tsup:
         specifier: ^7.2.0
-        version: 7.2.0(typescript@5.2.2)
+        version: 7.2.0(supports-color@9.4.0)(typescript@5.2.2)
       typescript:
         specifier: ^5.2.2
         version: 5.2.2
@@ -505,7 +599,7 @@ importers:
         version: 7.4.1
       tsup:
         specifier: ^7.2.0
-        version: 7.2.0(typescript@5.2.2)
+        version: 7.2.0(supports-color@9.4.0)(typescript@5.2.2)
       typescript:
         specifier: ^5.2.2
         version: 5.2.2
@@ -3281,9 +3375,9 @@ packages:
     resolution: {integrity: sha512-7mIhAROES6CY1GmCjR4CZkUfjTL6B3u6rKHK0ChQl2d1IevYXq/k/vFgvOrJfcKxiObpMnE9+X6R2Wt1KqxC6w==}
     engines: {node: '>=16.14'}
     dependencies:
-      cssnano-preset-advanced: 5.3.10(postcss@8.4.29)
-      postcss: 8.4.29
-      postcss-sort-media-queries: 4.3.0(postcss@8.4.29)
+      cssnano-preset-advanced: 5.3.10(postcss@8.4.30)
+      postcss: 8.4.30
+      postcss-sort-media-queries: 4.3.0(postcss@8.4.30)
       tslib: 2.6.2
     dev: false
 
@@ -3714,7 +3808,7 @@ packages:
       infima: 0.2.0-alpha.42
       lodash: 4.17.21
       nprogress: 0.2.0
-      postcss: 8.4.27
+      postcss: 8.4.30
       prism-react-renderer: 1.3.5(react@17.0.2)
       prismjs: 1.29.0
       react: 17.0.2
@@ -4169,7 +4263,7 @@ packages:
       '@jest/schemas': 29.6.3
       '@types/istanbul-lib-coverage': 2.0.4
       '@types/istanbul-reports': 3.0.1
-      '@types/node': 18.11.18
+      '@types/node': 20.6.5
       '@types/yargs': 17.0.22
       chalk: 4.1.2
     dev: false
@@ -4304,6 +4398,16 @@ packages:
       '@opentelemetry/api': 1.4.0
       tslib: 2.6.2
 
+  /@opentelemetry/context-async-hooks@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-sfxQOyAyV3WsKswGX0Yx3P+e7t3EtxpF/PC+6e4+rqs88oUfTaP3214iz4GQuuzV9yCG8DRWTZ96J6E/iD0qeA==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.0.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      tslib: 2.6.2
+    dev: false
+
   /@opentelemetry/context-async-hooks@1.9.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-Ur+TgRmJgAEvg6VQuhkqzsWsqoOtr+QSZ8r8Yf6WrvlZpAl/sdRU+yUXWjA7r8JFS9VbBq7IEp7oMStFuJT2ow==}
     engines: {node: '>=14'}
@@ -4321,6 +4425,17 @@ packages:
       '@opentelemetry/api': 1.4.0
       '@opentelemetry/semantic-conventions': 1.15.0
       tslib: 2.6.2
+
+  /@opentelemetry/core@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-GGTS6BytfaN8OgbCUOnxg/a9WVsVUj0484zXHZuBzvIXx7V4Tmkb0IHnnhS7Q0cBLNLgjNuvrCpQaP8fIvO4bg==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.0.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/semantic-conventions': 1.15.0
+      tslib: 2.6.2
+    dev: false
 
   /@opentelemetry/core@1.9.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-Koy1ApRUp5DB5KpOqhDk0JjO9x6QeEkmcePl8qQDsXZGF4MuHUBShXibd+J2tRNckTsvgEHi1uEuUckDgN+c/A==}
@@ -4345,6 +4460,20 @@ packages:
       tslib: 2.6.2
     dev: false
 
+  /@opentelemetry/exporter-jaeger@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-45TAQUqQiuGKkrm535qT0Vs4iJD8/irrHhsscUZPGogEHCu3GVhmc66vf1FleC+ASyv2ySUeXSmfIV3K3tqRHA==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.0.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/semantic-conventions': 1.15.0
+      jaeger-client: 3.19.0
+      tslib: 2.6.2
+    dev: false
+
   /@opentelemetry/exporter-trace-otlp-grpc@0.41.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-LYy4aP/vICUG9kyyEKu4HvG+FezINb9UNVK4XJhPXfp8dTyILA1dlNqgZlemZPMTgi3Vfz12VoESMQo8UYYyaA==}
     engines: {node: '>=14'}
@@ -4361,6 +4490,22 @@ packages:
       tslib: 2.6.2
     dev: false
 
+  /@opentelemetry/exporter-trace-otlp-grpc@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-LYy4aP/vICUG9kyyEKu4HvG+FezINb9UNVK4XJhPXfp8dTyILA1dlNqgZlemZPMTgi3Vfz12VoESMQo8UYYyaA==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.0.0
+    dependencies:
+      '@grpc/grpc-js': 1.8.18
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/otlp-grpc-exporter-base': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/otlp-transformer': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.1)
+      tslib: 2.6.2
+    dev: false
+
   /@opentelemetry/exporter-trace-otlp-http@0.41.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-xG/EJAphB8SFi635vUWJ7rNOwU2nTSIWz1zCu1G6tzQUcej5M1FYtTuUeoJ+HrjHUDOq0SgFbvzfFh6ReggWMQ==}
     engines: {node: '>=14'}
@@ -4373,6 +4518,21 @@ packages:
       '@opentelemetry/otlp-transformer': 0.41.0(@opentelemetry/api@1.4.0)
       '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.0)
       '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.0)
+      tslib: 2.6.2
+    dev: false
+
+  /@opentelemetry/exporter-trace-otlp-http@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-xG/EJAphB8SFi635vUWJ7rNOwU2nTSIWz1zCu1G6tzQUcej5M1FYtTuUeoJ+HrjHUDOq0SgFbvzfFh6ReggWMQ==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.0.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/otlp-exporter-base': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/otlp-transformer': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.1)
       tslib: 2.6.2
     dev: false
 
@@ -4392,6 +4552,22 @@ packages:
       tslib: 2.6.2
     dev: false
 
+  /@opentelemetry/exporter-trace-otlp-proto@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-rDx9uJGpBkvWwwmUk68F3ScowHoCrG5Q1IY0ED4Yx74nS9+KhgigN8IiSXlJyjzmw4IFxL1byNctbKlJ95090Q==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.0.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/otlp-exporter-base': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/otlp-proto-exporter-base': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/otlp-transformer': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.1)
+      tslib: 2.6.2
+    dev: false
+
   /@opentelemetry/exporter-zipkin@1.15.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-vBE8vingVgT9jD8M2WTzhsSnkN0XPR5zEZeoy0KZzt+0g2tRyvb7qWVGucadU+nIq4Z3vhUoN855ZuInE+YJgQ==}
     engines: {node: '>=14'}
@@ -4406,6 +4582,20 @@ packages:
       tslib: 2.6.2
     dev: false
 
+  /@opentelemetry/exporter-zipkin@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-vBE8vingVgT9jD8M2WTzhsSnkN0XPR5zEZeoy0KZzt+0g2tRyvb7qWVGucadU+nIq4Z3vhUoN855ZuInE+YJgQ==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.0.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/semantic-conventions': 1.15.0
+      tslib: 2.6.2
+    dev: false
+
   /@opentelemetry/instrumentation-express@0.33.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-Cem3AssubzUoBK5ab89rBt2kY90i/FFyQwMC9wPjBQldkOaT4cR+5ufvWritXRfoPltqEeX2imLavujNH6EzCw==}
     engines: {node: '>=14'}
@@ -4415,6 +4605,22 @@ packages:
       '@opentelemetry/api': 1.4.0
       '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.0)
       '@opentelemetry/instrumentation': 0.41.0(@opentelemetry/api@1.4.0)
+      '@opentelemetry/semantic-conventions': 1.15.0
+      '@types/express': 4.17.13
+      tslib: 2.4.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@opentelemetry/instrumentation-express@0.33.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-Cem3AssubzUoBK5ab89rBt2kY90i/FFyQwMC9wPjBQldkOaT4cR+5ufvWritXRfoPltqEeX2imLavujNH6EzCw==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.3.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/instrumentation': 0.41.0(@opentelemetry/api@1.4.1)
       '@opentelemetry/semantic-conventions': 1.15.0
       '@types/express': 4.17.13
       tslib: 2.4.1
@@ -4438,6 +4644,22 @@ packages:
       - supports-color
     dev: false
 
+  /@opentelemetry/instrumentation-http@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-O/YTVH4xE96rxRYoo14vayM9s0MUTtMASMAtYS3yvXMJETgc5aFnTrWezKQ6VJ2Lew5qfm1ZISzFURLSUM0qTw==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.3.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/instrumentation': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/semantic-conventions': 1.15.0
+      semver: 7.5.4
+      tslib: 2.6.2
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
   /@opentelemetry/instrumentation-pg@0.36.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-S9RmzTILWTl7AVfdp/e8lWQTlpwrpoPbpxAfEJ1ENzTlPMmdw0jWPAQTgrTLQa6cpzhiypDHts3g2b6hc1zFYQ==}
     engines: {node: '>=14'}
@@ -4452,6 +4674,24 @@ packages:
       '@types/pg': 8.6.1
       '@types/pg-pool': 2.0.3
       tslib: 2.4.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@opentelemetry/instrumentation-pg@0.36.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-S9RmzTILWTl7AVfdp/e8lWQTlpwrpoPbpxAfEJ1ENzTlPMmdw0jWPAQTgrTLQa6cpzhiypDHts3g2b6hc1zFYQ==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.3.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/instrumentation': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/semantic-conventions': 1.15.0
+      '@opentelemetry/sql-common': 0.40.0(@opentelemetry/api@1.4.1)
+      '@types/pg': 8.6.1
+      '@types/pg-pool': 2.0.3
+      tslib: 2.6.2
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -4473,6 +4713,23 @@ packages:
       - supports-color
     dev: false
 
+  /@opentelemetry/instrumentation@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-Ut9SnZfi7MexOk+GHCMjEtYHogIb6v1dfbnq+oTbQj0lOQUSNLtlO6bXwUdtmPhbvrx6bC0AGr1L6g3rNimv9w==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.3.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@types/shimmer': 1.0.2
+      import-in-the-middle: 1.4.1
+      require-in-the-middle: 7.2.0
+      semver: 7.5.4
+      shimmer: 1.2.1
+      tslib: 2.6.2
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
   /@opentelemetry/otlp-exporter-base@0.41.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-fSHtZznIU6kvCLFQC77nOhHj059G1sc/wNl96YiPdro4A8t8ue//ET0yAtpRCQ9lynn4RNrpsw5iEFJszEbmLg==}
     engines: {node: '>=14'}
@@ -4481,6 +4738,17 @@ packages:
     dependencies:
       '@opentelemetry/api': 1.4.0
       '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.0)
+      tslib: 2.6.2
+    dev: false
+
+  /@opentelemetry/otlp-exporter-base@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-fSHtZznIU6kvCLFQC77nOhHj059G1sc/wNl96YiPdro4A8t8ue//ET0yAtpRCQ9lynn4RNrpsw5iEFJszEbmLg==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.0.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
       tslib: 2.6.2
     dev: false
 
@@ -4498,6 +4766,20 @@ packages:
       tslib: 2.6.2
     dev: false
 
+  /@opentelemetry/otlp-grpc-exporter-base@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-TdbZ46i2kKeGKE9SCZFiSt1iTLHS+DniEaWbVsIhEPOLZXl8TGzzi1FjR/Q3gG/vlblYZ/MdgXHgRIGVG5qIDw==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.0.0
+    dependencies:
+      '@grpc/grpc-js': 1.8.18
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/otlp-exporter-base': 0.41.0(@opentelemetry/api@1.4.1)
+      protobufjs: 7.2.4
+      tslib: 2.6.2
+    dev: false
+
   /@opentelemetry/otlp-proto-exporter-base@0.41.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-VY/7y8ne72PIzPxFN3uzHfrmxo9rCDWP08/fY3iodjizCxmCCRFM4Sb7VX0ZSrjakL1mLXFd0FSwe71AsAtM9A==}
     engines: {node: '>=14'}
@@ -4507,6 +4789,19 @@ packages:
       '@opentelemetry/api': 1.4.0
       '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.0)
       '@opentelemetry/otlp-exporter-base': 0.41.0(@opentelemetry/api@1.4.0)
+      protobufjs: 7.2.4
+      tslib: 2.6.2
+    dev: false
+
+  /@opentelemetry/otlp-proto-exporter-base@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-VY/7y8ne72PIzPxFN3uzHfrmxo9rCDWP08/fY3iodjizCxmCCRFM4Sb7VX0ZSrjakL1mLXFd0FSwe71AsAtM9A==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.0.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/otlp-exporter-base': 0.41.0(@opentelemetry/api@1.4.1)
       protobufjs: 7.2.4
       tslib: 2.6.2
     dev: false
@@ -4527,6 +4822,22 @@ packages:
       tslib: 2.6.2
     dev: false
 
+  /@opentelemetry/otlp-transformer@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-a5GqVSdVIhAoYcQrdWQAeMbrkz0iDwKC6BUsuqPuykh+T4QZzrF6cwneOXKbQI5Dl7ms6ha9dYHf4Ka0kc66ZQ==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.3.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/api-logs': 0.41.0
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-logs': 0.41.0(@opentelemetry/api-logs@0.41.0)(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-metrics': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.1)
+      tslib: 2.6.2
+    dev: false
+
   /@opentelemetry/propagator-b3@1.15.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-YafSIITpCmo76VdlJ/GvS5x+uuRWCU5BqCOV9CITi11Tk4aqTxMR3pXlMoPYQWstUUgacQf4dGcdvdS+1rkDWQ==}
     engines: {node: '>=14'}
@@ -4536,6 +4847,17 @@ packages:
       '@opentelemetry/api': 1.4.0
       '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.0)
       tslib: 2.6.2
+
+  /@opentelemetry/propagator-b3@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-YafSIITpCmo76VdlJ/GvS5x+uuRWCU5BqCOV9CITi11Tk4aqTxMR3pXlMoPYQWstUUgacQf4dGcdvdS+1rkDWQ==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.0.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      tslib: 2.6.2
+    dev: false
 
   /@opentelemetry/propagator-b3@1.9.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-5M/NvJj7ZHZXEU8lkAFhrSrWaHmCCkFLstNbL8p16qpTn1AOZowuSjMOYRoJJBmL5PUobkZ3W8Gjov1UgldPBg==}
@@ -4556,6 +4878,17 @@ packages:
       '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.0)
       tslib: 2.6.2
 
+  /@opentelemetry/propagator-jaeger@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-OU6WNxuqjxNZoRcIBCsmvTBktAPuBUj1bh+DI+oYAvzwP2NXLavSDJWjVMGTJQDgZuR7lFijmx9EfwyAO9x37Q==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.0.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      tslib: 2.6.2
+    dev: false
+
   /@opentelemetry/propagator-jaeger@1.9.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-oo8RyuyzEbbXdIfeEG9iA5vmTH4Kld+dZMIZICd5G5SmeNcNes3sLrparpunIGms41wIP2mWiIlcOelDCmGceg==}
     engines: {node: '>=14'}
@@ -4575,6 +4908,18 @@ packages:
       '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.0)
       '@opentelemetry/semantic-conventions': 1.15.0
       tslib: 2.6.2
+
+  /@opentelemetry/resources@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-Sb8A6ZXHXDlgHv32UNRE3y8McWE3vkb5dsSttYArYa5ZpwjiF5ge0vnnKUUnG7bY0AgF9VBIOORZE8gsrnD2WA==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.0.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/semantic-conventions': 1.15.0
+      tslib: 2.6.2
+    dev: false
 
   /@opentelemetry/resources@1.9.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-zCyien0p3XWarU6zv72c/JZ6QlG5QW/hc61Nh5TSR1K9ndnljzAGrH55x4nfyQdubfoh9QxLNh9FXH0fWK6vcg==}
@@ -4600,6 +4945,20 @@ packages:
       tslib: 2.6.2
     dev: false
 
+  /@opentelemetry/sdk-logs@0.41.0(@opentelemetry/api-logs@0.41.0)(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-+Qs8uHcd/tYKS1n6lfSPiQXMOuyPN0c3xKeyWjD5mExRvmA1H6SIYfZmB6KeQNXWODK4z4JtWo5g5Efe0gJ1Vg==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.4.0 <1.5.0'
+      '@opentelemetry/api-logs': '>=0.39.1'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/api-logs': 0.41.0
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.1)
+      tslib: 2.6.2
+    dev: false
+
   /@opentelemetry/sdk-metrics@1.15.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-fFUnAcPvlXO39nlIduGuaeCuiZyFtSLCn9gW/0djFRO5DFst4m4gcT6+llXvNWuUvtGB49s56NP10B9IZRN0Rw==}
     engines: {node: '>=14'}
@@ -4609,6 +4968,19 @@ packages:
       '@opentelemetry/api': 1.4.0
       '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.0)
       '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.0)
+      lodash.merge: 4.6.2
+      tslib: 2.6.2
+    dev: false
+
+  /@opentelemetry/sdk-metrics@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-fFUnAcPvlXO39nlIduGuaeCuiZyFtSLCn9gW/0djFRO5DFst4m4gcT6+llXvNWuUvtGB49s56NP10B9IZRN0Rw==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.3.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.1)
       lodash.merge: 4.6.2
       tslib: 2.6.2
     dev: false
@@ -4637,6 +5009,30 @@ packages:
       - supports-color
     dev: false
 
+  /@opentelemetry/sdk-node@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-NJt14iU2kGZR8vO8xF5dEsj+57hocUgmvWDv5VccM67B8khH29ZebzrczvRyC2bDnxRdMdpvc4Nmck/UxLpJuQ==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.3.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/exporter-jaeger': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/exporter-trace-otlp-grpc': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/exporter-trace-otlp-http': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/exporter-trace-otlp-proto': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/exporter-zipkin': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/instrumentation': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-metrics': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-node': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/semantic-conventions': 1.15.0
+      tslib: 2.4.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
   /@opentelemetry/sdk-trace-base@1.15.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-udt1c9VHipbZwvCPIQR1VLg25Z4AMR/g0X8KmcInbFruGWQ/lptVPkz3yvWAsGSta5yHNQ3uoPwcyCygGnQ6Lg==}
     engines: {node: '>=14'}
@@ -4648,6 +5044,19 @@ packages:
       '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.0)
       '@opentelemetry/semantic-conventions': 1.15.0
       tslib: 2.6.2
+
+  /@opentelemetry/sdk-trace-base@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-udt1c9VHipbZwvCPIQR1VLg25Z4AMR/g0X8KmcInbFruGWQ/lptVPkz3yvWAsGSta5yHNQ3uoPwcyCygGnQ6Lg==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.0.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/semantic-conventions': 1.15.0
+      tslib: 2.6.2
+    dev: false
 
   /@opentelemetry/sdk-trace-base@1.9.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-glNgtJjxAIrDku8DG5Xu3nBK25rT+hkyg7yuXh8RUurp/4BcsXjMyVqpyJvb2kg+lxAX73VJBhncRKGHn9t8QQ==}
@@ -4674,6 +5083,22 @@ packages:
       '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.0)
       semver: 7.5.4
       tslib: 2.6.2
+
+  /@opentelemetry/sdk-trace-node@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-TKBx9oThZUVKkoGpXhFT/XUgpjq28TWwc6j3JlsL+cJX77DKBnVC+2H+kdVVJHRzyfqDx4LEJJVCwQO3K+cbXA==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.0.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/context-async-hooks': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/propagator-b3': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/propagator-jaeger': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.1)
+      semver: 7.5.4
+      tslib: 2.6.2
+    dev: false
 
   /@opentelemetry/sdk-trace-node@1.9.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-VTpjiqGQ4s8f0/szgZmVrtNSSmXFNoHwC4PNVwXyNeEqQcqyAygHvobpUG6m7qCiBFh6ZtrCuLdhhqWE04Objw==}
@@ -4707,6 +5132,16 @@ packages:
     dependencies:
       '@opentelemetry/api': 1.4.0
       '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.0)
+    dev: false
+
+  /@opentelemetry/sql-common@0.40.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-vSqRJYUPJVjMFQpYkQS3ruexCPSZJ8esne3LazLwtCPaPRvzZ7WG3tX44RouAn7w4wMp8orKguBqtt+ng2UTnw==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.1.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
     dev: false
 
   /@polka/url@1.0.0-next.21:
@@ -5308,7 +5743,7 @@ packages:
   /@types/bonjour@3.5.10:
     resolution: {integrity: sha512-p7ienRMiS41Nu2/igbJxxLDWrSZ0WxM8UQgCeO9KhoVF7cOVFkrKsiDr1EsJIla8vV3oEEjGcz11jc5yimhzZw==}
     dependencies:
-      '@types/node': 18.11.18
+      '@types/node': 20.6.5
     dev: false
 
   /@types/chai-subset@1.3.3:
@@ -5325,7 +5760,7 @@ packages:
     resolution: {integrity: sha512-h8QJa8xSb1WD4fpKBDcATDNGXghFj6/3GRWG6dhmRcu0RX1Ubasur2Uvx5aeEwlf0MwblEC2bMzzMQntxnw/Cw==}
     dependencies:
       '@types/express-serve-static-core': 4.17.33
-      '@types/node': 18.11.18
+      '@types/node': 20.6.5
     dev: false
 
   /@types/connect@3.4.35:
@@ -5388,7 +5823,7 @@ packages:
   /@types/http-proxy@1.17.10:
     resolution: {integrity: sha512-Qs5aULi+zV1bwKAg5z1PWnDXWmsn+LxIvUGv6E2+OOMYhclZMO+OXd9pYVf2gLykf2I7IV2u7oTHwChPNsvJ7g==}
     dependencies:
-      '@types/node': 18.11.18
+      '@types/node': 20.6.5
     dev: false
 
   /@types/istanbul-lib-coverage@2.0.4:
@@ -5412,7 +5847,7 @@ packages:
   /@types/keyv@3.1.4:
     resolution: {integrity: sha512-BQ5aZNSCpj7D6K2ksrRCTmKRLEpnPvWDiLPfoGyhZ++8YtiK9d/3DBKPJgry359X/P1PfruyYwvnvwFjuEiEIg==}
     dependencies:
-      '@types/node': 18.11.18
+      '@types/node': 20.6.5
     dev: false
 
   /@types/long@4.0.2:
@@ -5431,9 +5866,6 @@ packages:
   /@types/node@17.0.45:
     resolution: {integrity: sha512-w+tIMs3rq2afQdsPJlODhoUEKzFP1ayaoyl1CcnwtIlsVe7K7bA1NGm4s3PraqTLlXnbIN84zuBlxBWo1u9BLw==}
     dev: false
-
-  /@types/node@18.11.18:
-    resolution: {integrity: sha512-DHQpWGjyQKSHj3ebjFI/wRKcqQcdR+MoFBygntYOZytCqNfkd2ZC4ARDJ2DQqhjH5p85Nnd3jhUJIXrszFX/JA==}
 
   /@types/node@20.6.5:
     resolution: {integrity: sha512-2qGq5LAOTh9izcc0+F+dToFigBWiK1phKPt7rNhOqJSr35y8rlIBjDwGtFSgAI6MGIhjwOVNSQZVdJsZJ2uR1w==}
@@ -5519,7 +5951,7 @@ packages:
   /@types/responselike@1.0.0:
     resolution: {integrity: sha512-85Y2BjiufFzaMIlvJDvTTB8Fxl2xfLo4HgmHzVBz08w4wDePCTjYw66PdrolO0kzli3yam/YCgRufyo1DdQVTA==}
     dependencies:
-      '@types/node': 18.11.18
+      '@types/node': 20.6.5
     dev: false
 
   /@types/retry@0.12.0:
@@ -5529,7 +5961,7 @@ packages:
   /@types/sax@1.2.4:
     resolution: {integrity: sha512-pSAff4IAxJjfAXUG6tFkO7dsSbTmf8CtUpfhhZ5VhkRpC4628tJhh3+V6H1E+/Gs9piSzYKT5yzHO5M4GG9jkw==}
     dependencies:
-      '@types/node': 18.11.18
+      '@types/node': 20.6.5
     dev: false
 
   /@types/scheduler@0.16.2:
@@ -5554,7 +5986,7 @@ packages:
   /@types/sockjs@0.3.33:
     resolution: {integrity: sha512-f0KEEe05NvUnat+boPTZ0dgaLZ4SfSouXUgv5noUiefG2ajgKjmETo9ZJyuqsl7dfl2aHlLJUiki6B4ZYldiiw==}
     dependencies:
-      '@types/node': 18.11.18
+      '@types/node': 20.6.5
     dev: false
 
   /@types/unist@2.0.6:
@@ -5564,7 +5996,7 @@ packages:
   /@types/ws@8.5.4:
     resolution: {integrity: sha512-zdQDHKUgcX/zBc4GrwsE/7dVdAD8JR4EuiAXiiUhhfyIJXXb2+PrGshFyeXWQPMmmZ2XxgaqclgpIC7eTXc1mg==}
     dependencies:
-      '@types/node': 18.11.18
+      '@types/node': 20.6.5
     dev: false
 
   /@types/yargs-parser@21.0.0:
@@ -5960,7 +6392,7 @@ packages:
       postcss-value-parser: 4.2.0
     dev: false
 
-  /autoprefixer@10.4.14(postcss@8.4.29):
+  /autoprefixer@10.4.14(postcss@8.4.30):
     resolution: {integrity: sha512-FQzyfOsTlwVzjHxKEqRIAdJx9niO6VCBCoEwax/VLSoQF29ggECcPuBqUMZ+u8jCZOPSy8b8/8KnuFbp0SaFZQ==}
     engines: {node: ^10 || ^12 || >=14}
     hasBin: true
@@ -5972,7 +6404,7 @@ packages:
       fraction.js: 4.2.0
       normalize-range: 0.1.2
       picocolors: 1.0.0
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
     dev: false
 
@@ -6714,13 +7146,13 @@ packages:
       postcss: 8.4.21
     dev: false
 
-  /css-declaration-sorter@6.3.1(postcss@8.4.29):
+  /css-declaration-sorter@6.3.1(postcss@8.4.30):
     resolution: {integrity: sha512-fBffmak0bPAnyqc/HO8C3n2sHrp9wcqQz6ES9koRF2/mLOVAx9zIQ3Y7R29sYCteTPqMCwns4WYQoCX91Xl3+w==}
     engines: {node: ^10 || ^12 || >=14}
     peerDependencies:
       postcss: ^8.0.9
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
     dev: false
 
   /css-loader@6.7.3(webpack@5.76.1):
@@ -6729,12 +7161,12 @@ packages:
     peerDependencies:
       webpack: ^5.0.0
     dependencies:
-      icss-utils: 5.1.0(postcss@8.4.29)
-      postcss: 8.4.29
-      postcss-modules-extract-imports: 3.0.0(postcss@8.4.29)
-      postcss-modules-local-by-default: 4.0.0(postcss@8.4.29)
-      postcss-modules-scope: 3.0.0(postcss@8.4.29)
-      postcss-modules-values: 4.0.0(postcss@8.4.29)
+      icss-utils: 5.1.0(postcss@8.4.30)
+      postcss: 8.4.30
+      postcss-modules-extract-imports: 3.0.0(postcss@8.4.30)
+      postcss-modules-local-by-default: 4.0.0(postcss@8.4.30)
+      postcss-modules-scope: 3.0.0(postcss@8.4.30)
+      postcss-modules-values: 4.0.0(postcss@8.4.30)
       postcss-value-parser: 4.2.0
       semver: 7.5.4
       webpack: 5.76.1
@@ -6766,9 +7198,9 @@ packages:
         optional: true
     dependencies:
       clean-css: 5.3.2
-      cssnano: 5.1.15(postcss@8.4.29)
+      cssnano: 5.1.15(postcss@8.4.30)
       jest-worker: 29.5.0
-      postcss: 8.4.29
+      postcss: 8.4.30
       schema-utils: 4.0.0
       serialize-javascript: 6.0.1
       source-map: 0.6.1
@@ -6814,19 +7246,19 @@ packages:
     hasBin: true
     dev: false
 
-  /cssnano-preset-advanced@5.3.10(postcss@8.4.29):
+  /cssnano-preset-advanced@5.3.10(postcss@8.4.30):
     resolution: {integrity: sha512-fnYJyCS9jgMU+cmHO1rPSPf9axbQyD7iUhLO5Df6O4G+fKIOMps+ZbU0PdGFejFBBZ3Pftf18fn1eG7MAPUSWQ==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      autoprefixer: 10.4.14(postcss@8.4.29)
-      cssnano-preset-default: 5.2.14(postcss@8.4.29)
-      postcss: 8.4.29
-      postcss-discard-unused: 5.1.0(postcss@8.4.29)
-      postcss-merge-idents: 5.1.1(postcss@8.4.29)
-      postcss-reduce-idents: 5.2.0(postcss@8.4.29)
-      postcss-zindex: 5.1.0(postcss@8.4.29)
+      autoprefixer: 10.4.14(postcss@8.4.30)
+      cssnano-preset-default: 5.2.14(postcss@8.4.30)
+      postcss: 8.4.30
+      postcss-discard-unused: 5.1.0(postcss@8.4.30)
+      postcss-merge-idents: 5.1.1(postcss@8.4.30)
+      postcss-reduce-idents: 5.2.0(postcss@8.4.30)
+      postcss-zindex: 5.1.0(postcss@8.4.30)
     dev: false
 
   /cssnano-preset-default@5.2.14(postcss@8.4.21):
@@ -6867,42 +7299,42 @@ packages:
       postcss-unique-selectors: 5.1.1(postcss@8.4.21)
     dev: false
 
-  /cssnano-preset-default@5.2.14(postcss@8.4.29):
+  /cssnano-preset-default@5.2.14(postcss@8.4.30):
     resolution: {integrity: sha512-t0SFesj/ZV2OTylqQVOrFgEh5uanxbO6ZAdeCrNsUQ6fVuXwYTxJPNAGvGTxHbD68ldIJNec7PyYZDBrfDQ+6A==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      css-declaration-sorter: 6.3.1(postcss@8.4.29)
-      cssnano-utils: 3.1.0(postcss@8.4.29)
-      postcss: 8.4.29
-      postcss-calc: 8.2.4(postcss@8.4.29)
-      postcss-colormin: 5.3.1(postcss@8.4.29)
-      postcss-convert-values: 5.1.3(postcss@8.4.29)
-      postcss-discard-comments: 5.1.2(postcss@8.4.29)
-      postcss-discard-duplicates: 5.1.0(postcss@8.4.29)
-      postcss-discard-empty: 5.1.1(postcss@8.4.29)
-      postcss-discard-overridden: 5.1.0(postcss@8.4.29)
-      postcss-merge-longhand: 5.1.7(postcss@8.4.29)
-      postcss-merge-rules: 5.1.4(postcss@8.4.29)
-      postcss-minify-font-values: 5.1.0(postcss@8.4.29)
-      postcss-minify-gradients: 5.1.1(postcss@8.4.29)
-      postcss-minify-params: 5.1.4(postcss@8.4.29)
-      postcss-minify-selectors: 5.2.1(postcss@8.4.29)
-      postcss-normalize-charset: 5.1.0(postcss@8.4.29)
-      postcss-normalize-display-values: 5.1.0(postcss@8.4.29)
-      postcss-normalize-positions: 5.1.1(postcss@8.4.29)
-      postcss-normalize-repeat-style: 5.1.1(postcss@8.4.29)
-      postcss-normalize-string: 5.1.0(postcss@8.4.29)
-      postcss-normalize-timing-functions: 5.1.0(postcss@8.4.29)
-      postcss-normalize-unicode: 5.1.1(postcss@8.4.29)
-      postcss-normalize-url: 5.1.0(postcss@8.4.29)
-      postcss-normalize-whitespace: 5.1.1(postcss@8.4.29)
-      postcss-ordered-values: 5.1.3(postcss@8.4.29)
-      postcss-reduce-initial: 5.1.2(postcss@8.4.29)
-      postcss-reduce-transforms: 5.1.0(postcss@8.4.29)
-      postcss-svgo: 5.1.0(postcss@8.4.29)
-      postcss-unique-selectors: 5.1.1(postcss@8.4.29)
+      css-declaration-sorter: 6.3.1(postcss@8.4.30)
+      cssnano-utils: 3.1.0(postcss@8.4.30)
+      postcss: 8.4.30
+      postcss-calc: 8.2.4(postcss@8.4.30)
+      postcss-colormin: 5.3.1(postcss@8.4.30)
+      postcss-convert-values: 5.1.3(postcss@8.4.30)
+      postcss-discard-comments: 5.1.2(postcss@8.4.30)
+      postcss-discard-duplicates: 5.1.0(postcss@8.4.30)
+      postcss-discard-empty: 5.1.1(postcss@8.4.30)
+      postcss-discard-overridden: 5.1.0(postcss@8.4.30)
+      postcss-merge-longhand: 5.1.7(postcss@8.4.30)
+      postcss-merge-rules: 5.1.4(postcss@8.4.30)
+      postcss-minify-font-values: 5.1.0(postcss@8.4.30)
+      postcss-minify-gradients: 5.1.1(postcss@8.4.30)
+      postcss-minify-params: 5.1.4(postcss@8.4.30)
+      postcss-minify-selectors: 5.2.1(postcss@8.4.30)
+      postcss-normalize-charset: 5.1.0(postcss@8.4.30)
+      postcss-normalize-display-values: 5.1.0(postcss@8.4.30)
+      postcss-normalize-positions: 5.1.1(postcss@8.4.30)
+      postcss-normalize-repeat-style: 5.1.1(postcss@8.4.30)
+      postcss-normalize-string: 5.1.0(postcss@8.4.30)
+      postcss-normalize-timing-functions: 5.1.0(postcss@8.4.30)
+      postcss-normalize-unicode: 5.1.1(postcss@8.4.30)
+      postcss-normalize-url: 5.1.0(postcss@8.4.30)
+      postcss-normalize-whitespace: 5.1.1(postcss@8.4.30)
+      postcss-ordered-values: 5.1.3(postcss@8.4.30)
+      postcss-reduce-initial: 5.1.2(postcss@8.4.30)
+      postcss-reduce-transforms: 5.1.0(postcss@8.4.30)
+      postcss-svgo: 5.1.0(postcss@8.4.30)
+      postcss-unique-selectors: 5.1.1(postcss@8.4.30)
     dev: false
 
   /cssnano-utils@3.1.0(postcss@8.4.21):
@@ -6914,13 +7346,13 @@ packages:
       postcss: 8.4.21
     dev: false
 
-  /cssnano-utils@3.1.0(postcss@8.4.29):
+  /cssnano-utils@3.1.0(postcss@8.4.30):
     resolution: {integrity: sha512-JQNR19/YZhz4psLX/rQ9M83e3z2Wf/HdJbryzte4a3NSuafyp9w/I4U+hx5C2S9g41qlstH7DEWnZaaj83OuEA==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
     dev: false
 
   /cssnano@5.1.15(postcss@8.4.21):
@@ -6935,15 +7367,15 @@ packages:
       yaml: 1.10.2
     dev: false
 
-  /cssnano@5.1.15(postcss@8.4.29):
+  /cssnano@5.1.15(postcss@8.4.30):
     resolution: {integrity: sha512-j+BKgDcLDQA+eDifLx0EO4XSA56b7uut3BQFH+wbSaSTuGLuiyTa/wbRYthUXX8LC9mLg+WWKe8h+qJuwTAbHw==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      cssnano-preset-default: 5.2.14(postcss@8.4.29)
+      cssnano-preset-default: 5.2.14(postcss@8.4.30)
       lilconfig: 2.1.0
-      postcss: 8.4.29
+      postcss: 8.4.30
       yaml: 1.10.2
     dev: false
 
@@ -6967,6 +7399,17 @@ packages:
     dependencies:
       ms: 2.0.0
     dev: false
+
+  /debug@4.3.4:
+    resolution: {integrity: sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ==}
+    engines: {node: '>=6.0'}
+    peerDependencies:
+      supports-color: '*'
+    peerDependenciesMeta:
+      supports-color:
+        optional: true
+    dependencies:
+      ms: 2.1.2
 
   /debug@4.3.4(supports-color@9.4.0):
     resolution: {integrity: sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ==}
@@ -7357,7 +7800,7 @@ packages:
     resolution: {integrity: sha512-EzV94NYKoO09GLXGjXj9JIlXijVck4ONSr5wiCWDvhsvj5jxSrzTmRU/9C1DyB6uToszLs8aifA6NQ7lEQdvFw==}
     engines: {node: '>= 0.8'}
     dependencies:
-      '@types/node': 18.11.18
+      '@types/node': 20.6.5
       require-like: 0.1.2
     dev: false
 
@@ -8170,13 +8613,13 @@ packages:
       safer-buffer: 2.1.2
     dev: false
 
-  /icss-utils@5.1.0(postcss@8.4.29):
+  /icss-utils@5.1.0(postcss@8.4.30):
     resolution: {integrity: sha512-soFhflCVWLfRNOPU3iv5Z9VUdT44xFRbzjLsEzSr5AQmgqPMTHdU3PMT1Cf1ssx8fLNJDA1juftYl+PUcv3MqA==}
     engines: {node: ^10 || ^12 || >= 14}
     peerDependencies:
       postcss: ^8.1.0
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
     dev: false
 
   /ignore@5.2.4:
@@ -8508,7 +8951,7 @@ packages:
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     dependencies:
       '@jest/types': 29.5.0
-      '@types/node': 18.11.18
+      '@types/node': 20.6.5
       chalk: 4.1.2
       ci-info: 3.8.0
       graceful-fs: 4.2.10
@@ -8519,7 +8962,7 @@ packages:
     resolution: {integrity: sha512-7vuh85V5cdDofPyxn58nrPjBktZo0u9x1g8WtjQol+jZDaE+fhN+cIvTj11GndBnMnyfrUOG1sZQxCdjKh+DKg==}
     engines: {node: '>= 10.13.0'}
     dependencies:
-      '@types/node': 18.11.18
+      '@types/node': 20.6.5
       merge-stream: 2.0.0
       supports-color: 8.1.1
 
@@ -8527,7 +8970,7 @@ packages:
     resolution: {integrity: sha512-NcrQnevGoSp4b5kg+akIpthoAFHxPBcb5P6mYPY0fUNT+sSvmtu6jlkEle3anczUKIKEbMxFimk9oTP/tpIPgA==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     dependencies:
-      '@types/node': 18.11.18
+      '@types/node': 20.6.5
       jest-util: 29.5.0
       merge-stream: 2.0.0
       supports-color: 8.1.1
@@ -9174,6 +9617,15 @@ packages:
       chalk: 5.3.0
     dev: false
 
+  /opentelemetry-exporter-console-pretty@1.0.1(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-OgoDeZ1al0/w8srWHn3+nvfVN2FqPmIEAi1rFq6eWPbOS6Nv2/ReCyx390xygY50ET5m80lvuzVU9uWNgjNtRQ==}
+    peerDependencies:
+      '@opentelemetry/api': 1.x.x
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      chalk: 5.3.0
+    dev: false
+
   /opentracing@0.14.7:
     resolution: {integrity: sha512-vz9iS7MJ5+Bp1URw8Khvdyw1H/hGvzHWlKQ7eRrQojSCDL1/SrWfrY9QebLw97n2deyRtzHRC3MkQfVNUCo91Q==}
     engines: {node: '>=0.10'}
@@ -9490,12 +9942,12 @@ packages:
       postcss-value-parser: 4.2.0
     dev: false
 
-  /postcss-calc@8.2.4(postcss@8.4.29):
+  /postcss-calc@8.2.4(postcss@8.4.30):
     resolution: {integrity: sha512-SmWMSJmB8MRnnULldx0lQIyhSNvuDl9HfrZkaqqE/WHAhToYsAvDq+yAsA/kIyINDszOp3Rh0GFoNuH5Ypsm3Q==}
     peerDependencies:
       postcss: ^8.2.2
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-selector-parser: 6.0.11
       postcss-value-parser: 4.2.0
     dev: false
@@ -9513,7 +9965,7 @@ packages:
       postcss-value-parser: 4.2.0
     dev: false
 
-  /postcss-colormin@5.3.1(postcss@8.4.29):
+  /postcss-colormin@5.3.1(postcss@8.4.30):
     resolution: {integrity: sha512-UsWQG0AqTFQmpBegeLLc1+c3jIqBNB0zlDGRWR+dQ3pRKJL1oeMzyqmH3o2PIfn9MBdNrVPWhDbT769LxCTLJQ==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
@@ -9522,7 +9974,7 @@ packages:
       browserslist: 4.21.5
       caniuse-api: 3.0.0
       colord: 2.9.3
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
     dev: false
 
@@ -9537,14 +9989,14 @@ packages:
       postcss-value-parser: 4.2.0
     dev: false
 
-  /postcss-convert-values@5.1.3(postcss@8.4.29):
+  /postcss-convert-values@5.1.3(postcss@8.4.30):
     resolution: {integrity: sha512-82pC1xkJZtcJEfiLw6UXnXVXScgtBrjlO5CBmuDQc+dlb88ZYheFsjTn40+zBVi3DkfF7iezO0nJUPLcJK3pvA==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
       browserslist: 4.21.5
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
     dev: false
 
@@ -9557,13 +10009,13 @@ packages:
       postcss: 8.4.21
     dev: false
 
-  /postcss-discard-comments@5.1.2(postcss@8.4.29):
+  /postcss-discard-comments@5.1.2(postcss@8.4.30):
     resolution: {integrity: sha512-+L8208OVbHVF2UQf1iDmRcbdjJkuBF6IS29yBDSiWUIzpYaAhtNl6JYnYm12FnkeCwQqF5LeklOu6rAqgfBZqQ==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
     dev: false
 
   /postcss-discard-duplicates@5.1.0(postcss@8.4.21):
@@ -9575,13 +10027,13 @@ packages:
       postcss: 8.4.21
     dev: false
 
-  /postcss-discard-duplicates@5.1.0(postcss@8.4.29):
+  /postcss-discard-duplicates@5.1.0(postcss@8.4.30):
     resolution: {integrity: sha512-zmX3IoSI2aoenxHV6C7plngHWWhUOV3sP1T8y2ifzxzbtnuhk1EdPwm0S1bIUNaJ2eNbWeGLEwzw8huPD67aQw==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
     dev: false
 
   /postcss-discard-empty@5.1.1(postcss@8.4.21):
@@ -9593,13 +10045,13 @@ packages:
       postcss: 8.4.21
     dev: false
 
-  /postcss-discard-empty@5.1.1(postcss@8.4.29):
+  /postcss-discard-empty@5.1.1(postcss@8.4.30):
     resolution: {integrity: sha512-zPz4WljiSuLWsI0ir4Mcnr4qQQ5e1Ukc3i7UfE2XcrwKK2LIPIqE5jxMRxO6GbI3cv//ztXDsXwEWT3BHOGh3A==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
     dev: false
 
   /postcss-discard-overridden@5.1.0(postcss@8.4.21):
@@ -9611,22 +10063,22 @@ packages:
       postcss: 8.4.21
     dev: false
 
-  /postcss-discard-overridden@5.1.0(postcss@8.4.29):
+  /postcss-discard-overridden@5.1.0(postcss@8.4.30):
     resolution: {integrity: sha512-21nOL7RqWR1kasIVdKs8HNqQJhFxLsyRfAnUDm4Fe4t4mCWL9OJiHvlHPjcd8zc5Myu89b/7wZDnOSjFgeWRtw==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
     dev: false
 
-  /postcss-discard-unused@5.1.0(postcss@8.4.29):
+  /postcss-discard-unused@5.1.0(postcss@8.4.30):
     resolution: {integrity: sha512-KwLWymI9hbwXmJa0dkrzpRbSJEh0vVUd7r8t0yOGPcfKzyJJxFM8kLyC5Ev9avji6nY95pOp1W6HqIrfT+0VGw==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-selector-parser: 6.0.11
     dev: false
 
@@ -9660,14 +10112,14 @@ packages:
       webpack: 5.76.1
     dev: false
 
-  /postcss-merge-idents@5.1.1(postcss@8.4.29):
+  /postcss-merge-idents@5.1.1(postcss@8.4.30):
     resolution: {integrity: sha512-pCijL1TREiCoog5nQp7wUe+TUonA2tC2sQ54UGeMmryK3UFGIYKqDyjnqd6RcuI4znFn9hWSLNN8xKE/vWcUQw==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      cssnano-utils: 3.1.0(postcss@8.4.29)
-      postcss: 8.4.29
+      cssnano-utils: 3.1.0(postcss@8.4.30)
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
     dev: false
 
@@ -9682,15 +10134,15 @@ packages:
       stylehacks: 5.1.1(postcss@8.4.21)
     dev: false
 
-  /postcss-merge-longhand@5.1.7(postcss@8.4.29):
+  /postcss-merge-longhand@5.1.7(postcss@8.4.30):
     resolution: {integrity: sha512-YCI9gZB+PLNskrK0BB3/2OzPnGhPkBEwmwhfYk1ilBHYVAZB7/tkTHFBAnCrvBBOmeYyMYw3DMjT55SyxMBzjQ==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
-      stylehacks: 5.1.1(postcss@8.4.29)
+      stylehacks: 5.1.1(postcss@8.4.30)
     dev: false
 
   /postcss-merge-rules@5.1.4(postcss@8.4.21):
@@ -9706,7 +10158,7 @@ packages:
       postcss-selector-parser: 6.0.11
     dev: false
 
-  /postcss-merge-rules@5.1.4(postcss@8.4.29):
+  /postcss-merge-rules@5.1.4(postcss@8.4.30):
     resolution: {integrity: sha512-0R2IuYpgU93y9lhVbO/OylTtKMVcHb67zjWIfCiKR9rWL3GUk1677LAqD/BcHizukdZEjT8Ru3oHRoAYoJy44g==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
@@ -9714,8 +10166,8 @@ packages:
     dependencies:
       browserslist: 4.21.5
       caniuse-api: 3.0.0
-      cssnano-utils: 3.1.0(postcss@8.4.29)
-      postcss: 8.4.29
+      cssnano-utils: 3.1.0(postcss@8.4.30)
+      postcss: 8.4.30
       postcss-selector-parser: 6.0.11
     dev: false
 
@@ -9729,13 +10181,13 @@ packages:
       postcss-value-parser: 4.2.0
     dev: false
 
-  /postcss-minify-font-values@5.1.0(postcss@8.4.29):
+  /postcss-minify-font-values@5.1.0(postcss@8.4.30):
     resolution: {integrity: sha512-el3mYTgx13ZAPPirSVsHqFzl+BBBDrXvbySvPGFnQcTI4iNslrPaFq4muTkLZmKlGk4gyFAYUBMH30+HurREyA==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
     dev: false
 
@@ -9751,15 +10203,15 @@ packages:
       postcss-value-parser: 4.2.0
     dev: false
 
-  /postcss-minify-gradients@5.1.1(postcss@8.4.29):
+  /postcss-minify-gradients@5.1.1(postcss@8.4.30):
     resolution: {integrity: sha512-VGvXMTpCEo4qHTNSa9A0a3D+dxGFZCYwR6Jokk+/3oB6flu2/PnPXAh2x7x52EkY5xlIHLm+Le8tJxe/7TNhzw==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
       colord: 2.9.3
-      cssnano-utils: 3.1.0(postcss@8.4.29)
-      postcss: 8.4.29
+      cssnano-utils: 3.1.0(postcss@8.4.30)
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
     dev: false
 
@@ -9775,15 +10227,15 @@ packages:
       postcss-value-parser: 4.2.0
     dev: false
 
-  /postcss-minify-params@5.1.4(postcss@8.4.29):
+  /postcss-minify-params@5.1.4(postcss@8.4.30):
     resolution: {integrity: sha512-+mePA3MgdmVmv6g+30rn57USjOGSAyuxUmkfiWpzalZ8aiBkdPYjXWtHuwJGm1v5Ojy0Z0LaSYhHaLJQB0P8Jw==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
       browserslist: 4.21.5
-      cssnano-utils: 3.1.0(postcss@8.4.29)
-      postcss: 8.4.29
+      cssnano-utils: 3.1.0(postcss@8.4.30)
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
     dev: false
 
@@ -9797,55 +10249,55 @@ packages:
       postcss-selector-parser: 6.0.11
     dev: false
 
-  /postcss-minify-selectors@5.2.1(postcss@8.4.29):
+  /postcss-minify-selectors@5.2.1(postcss@8.4.30):
     resolution: {integrity: sha512-nPJu7OjZJTsVUmPdm2TcaiohIwxP+v8ha9NehQ2ye9szv4orirRU3SDdtUmKH+10nzn0bAyOXZ0UEr7OpvLehg==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-selector-parser: 6.0.11
     dev: false
 
-  /postcss-modules-extract-imports@3.0.0(postcss@8.4.29):
+  /postcss-modules-extract-imports@3.0.0(postcss@8.4.30):
     resolution: {integrity: sha512-bdHleFnP3kZ4NYDhuGlVK+CMrQ/pqUm8bx/oGL93K6gVwiclvX5x0n76fYMKuIGKzlABOy13zsvqjb0f92TEXw==}
     engines: {node: ^10 || ^12 || >= 14}
     peerDependencies:
       postcss: ^8.1.0
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
     dev: false
 
-  /postcss-modules-local-by-default@4.0.0(postcss@8.4.29):
+  /postcss-modules-local-by-default@4.0.0(postcss@8.4.30):
     resolution: {integrity: sha512-sT7ihtmGSF9yhm6ggikHdV0hlziDTX7oFoXtuVWeDd3hHObNkcHRo9V3yg7vCAY7cONyxJC/XXCmmiHHcvX7bQ==}
     engines: {node: ^10 || ^12 || >= 14}
     peerDependencies:
       postcss: ^8.1.0
     dependencies:
-      icss-utils: 5.1.0(postcss@8.4.29)
-      postcss: 8.4.29
+      icss-utils: 5.1.0(postcss@8.4.30)
+      postcss: 8.4.30
       postcss-selector-parser: 6.0.11
       postcss-value-parser: 4.2.0
     dev: false
 
-  /postcss-modules-scope@3.0.0(postcss@8.4.29):
+  /postcss-modules-scope@3.0.0(postcss@8.4.30):
     resolution: {integrity: sha512-hncihwFA2yPath8oZ15PZqvWGkWf+XUfQgUGamS4LqoP1anQLOsOJw0vr7J7IwLpoY9fatA2qiGUGmuZL0Iqlg==}
     engines: {node: ^10 || ^12 || >= 14}
     peerDependencies:
       postcss: ^8.1.0
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-selector-parser: 6.0.11
     dev: false
 
-  /postcss-modules-values@4.0.0(postcss@8.4.29):
+  /postcss-modules-values@4.0.0(postcss@8.4.30):
     resolution: {integrity: sha512-RDxHkAiEGI78gS2ofyvCsu7iycRv7oqw5xMWn9iMoR0N/7mf9D50ecQqUo5BZ9Zh2vH4bCUR/ktCqbB9m8vJjQ==}
     engines: {node: ^10 || ^12 || >= 14}
     peerDependencies:
       postcss: ^8.1.0
     dependencies:
-      icss-utils: 5.1.0(postcss@8.4.29)
-      postcss: 8.4.29
+      icss-utils: 5.1.0(postcss@8.4.30)
+      postcss: 8.4.30
     dev: false
 
   /postcss-normalize-charset@5.1.0(postcss@8.4.21):
@@ -9857,13 +10309,13 @@ packages:
       postcss: 8.4.21
     dev: false
 
-  /postcss-normalize-charset@5.1.0(postcss@8.4.29):
+  /postcss-normalize-charset@5.1.0(postcss@8.4.30):
     resolution: {integrity: sha512-mSgUJ+pd/ldRGVx26p2wz9dNZ7ji6Pn8VWBajMXFf8jk7vUoSrZ2lt/wZR7DtlZYKesmZI680qjr2CeFF2fbUg==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
     dev: false
 
   /postcss-normalize-display-values@5.1.0(postcss@8.4.21):
@@ -9876,13 +10328,13 @@ packages:
       postcss-value-parser: 4.2.0
     dev: false
 
-  /postcss-normalize-display-values@5.1.0(postcss@8.4.29):
+  /postcss-normalize-display-values@5.1.0(postcss@8.4.30):
     resolution: {integrity: sha512-WP4KIM4o2dazQXWmFaqMmcvsKmhdINFblgSeRgn8BJ6vxaMyaJkwAzpPpuvSIoG/rmX3M+IrRZEz2H0glrQNEA==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
     dev: false
 
@@ -9896,13 +10348,13 @@ packages:
       postcss-value-parser: 4.2.0
     dev: false
 
-  /postcss-normalize-positions@5.1.1(postcss@8.4.29):
+  /postcss-normalize-positions@5.1.1(postcss@8.4.30):
     resolution: {integrity: sha512-6UpCb0G4eofTCQLFVuI3EVNZzBNPiIKcA1AKVka+31fTVySphr3VUgAIULBhxZkKgwLImhzMR2Bw1ORK+37INg==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
     dev: false
 
@@ -9916,13 +10368,13 @@ packages:
       postcss-value-parser: 4.2.0
     dev: false
 
-  /postcss-normalize-repeat-style@5.1.1(postcss@8.4.29):
+  /postcss-normalize-repeat-style@5.1.1(postcss@8.4.30):
     resolution: {integrity: sha512-mFpLspGWkQtBcWIRFLmewo8aC3ImN2i/J3v8YCFUwDnPu3Xz4rLohDO26lGjwNsQxB3YF0KKRwspGzE2JEuS0g==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
     dev: false
 
@@ -9936,13 +10388,13 @@ packages:
       postcss-value-parser: 4.2.0
     dev: false
 
-  /postcss-normalize-string@5.1.0(postcss@8.4.29):
+  /postcss-normalize-string@5.1.0(postcss@8.4.30):
     resolution: {integrity: sha512-oYiIJOf4T9T1N4i+abeIc7Vgm/xPCGih4bZz5Nm0/ARVJ7K6xrDlLwvwqOydvyL3RHNf8qZk6vo3aatiw/go3w==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
     dev: false
 
@@ -9956,13 +10408,13 @@ packages:
       postcss-value-parser: 4.2.0
     dev: false
 
-  /postcss-normalize-timing-functions@5.1.0(postcss@8.4.29):
+  /postcss-normalize-timing-functions@5.1.0(postcss@8.4.30):
     resolution: {integrity: sha512-DOEkzJ4SAXv5xkHl0Wa9cZLF3WCBhF3o1SKVxKQAa+0pYKlueTpCgvkFAHfk+Y64ezX9+nITGrDZeVGgITJXjg==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
     dev: false
 
@@ -9977,14 +10429,14 @@ packages:
       postcss-value-parser: 4.2.0
     dev: false
 
-  /postcss-normalize-unicode@5.1.1(postcss@8.4.29):
+  /postcss-normalize-unicode@5.1.1(postcss@8.4.30):
     resolution: {integrity: sha512-qnCL5jzkNUmKVhZoENp1mJiGNPcsJCs1aaRmURmeJGES23Z/ajaln+EPTD+rBeNkSryI+2WTdW+lwcVdOikrpA==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
       browserslist: 4.21.5
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
     dev: false
 
@@ -9999,14 +10451,14 @@ packages:
       postcss-value-parser: 4.2.0
     dev: false
 
-  /postcss-normalize-url@5.1.0(postcss@8.4.29):
+  /postcss-normalize-url@5.1.0(postcss@8.4.30):
     resolution: {integrity: sha512-5upGeDO+PVthOxSmds43ZeMeZfKH+/DKgGRD7TElkkyS46JXAUhMzIKiCa7BabPeIy3AQcTkXwVVN7DbqsiCew==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
       normalize-url: 6.1.0
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
     dev: false
 
@@ -10020,13 +10472,13 @@ packages:
       postcss-value-parser: 4.2.0
     dev: false
 
-  /postcss-normalize-whitespace@5.1.1(postcss@8.4.29):
+  /postcss-normalize-whitespace@5.1.1(postcss@8.4.30):
     resolution: {integrity: sha512-83ZJ4t3NUDETIHTa3uEg6asWjSBYL5EdkVB0sDncx9ERzOKBVJIUeDO9RyA9Zwtig8El1d79HBp0JEi8wvGQnA==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
     dev: false
 
@@ -10041,24 +10493,24 @@ packages:
       postcss-value-parser: 4.2.0
     dev: false
 
-  /postcss-ordered-values@5.1.3(postcss@8.4.29):
+  /postcss-ordered-values@5.1.3(postcss@8.4.30):
     resolution: {integrity: sha512-9UO79VUhPwEkzbb3RNpqqghc6lcYej1aveQteWY+4POIwlqkYE21HKWaLDF6lWNuqCobEAyTovVhtI32Rbv2RQ==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      cssnano-utils: 3.1.0(postcss@8.4.29)
-      postcss: 8.4.29
+      cssnano-utils: 3.1.0(postcss@8.4.30)
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
     dev: false
 
-  /postcss-reduce-idents@5.2.0(postcss@8.4.29):
+  /postcss-reduce-idents@5.2.0(postcss@8.4.30):
     resolution: {integrity: sha512-BTrLjICoSB6gxbc58D5mdBK8OhXRDqud/zodYfdSi52qvDHdMwk+9kB9xsM8yJThH/sZU5A6QVSmMmaN001gIg==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
     dev: false
 
@@ -10073,7 +10525,7 @@ packages:
       postcss: 8.4.21
     dev: false
 
-  /postcss-reduce-initial@5.1.2(postcss@8.4.29):
+  /postcss-reduce-initial@5.1.2(postcss@8.4.30):
     resolution: {integrity: sha512-dE/y2XRaqAi6OvjzD22pjTUQ8eOfc6m/natGHgKFBK9DxFmIm69YmaRVQrGgFlEfc1HePIurY0TmDeROK05rIg==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
@@ -10081,7 +10533,7 @@ packages:
     dependencies:
       browserslist: 4.21.5
       caniuse-api: 3.0.0
-      postcss: 8.4.29
+      postcss: 8.4.30
     dev: false
 
   /postcss-reduce-transforms@5.1.0(postcss@8.4.21):
@@ -10094,13 +10546,13 @@ packages:
       postcss-value-parser: 4.2.0
     dev: false
 
-  /postcss-reduce-transforms@5.1.0(postcss@8.4.29):
+  /postcss-reduce-transforms@5.1.0(postcss@8.4.30):
     resolution: {integrity: sha512-2fbdbmgir5AvpW9RLtdONx1QoYG2/EtqpNQbFASDlixBbAYuTcJ0dECwlqNqH7VbaUnEnh8SrxOe2sRIn24XyQ==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
     dev: false
 
@@ -10112,13 +10564,13 @@ packages:
       util-deprecate: 1.0.2
     dev: false
 
-  /postcss-sort-media-queries@4.3.0(postcss@8.4.29):
+  /postcss-sort-media-queries@4.3.0(postcss@8.4.30):
     resolution: {integrity: sha512-jAl8gJM2DvuIJiI9sL1CuiHtKM4s5aEIomkU8G3LFvbP+p8i7Sz8VV63uieTgoewGqKbi+hxBTiOKJlB35upCg==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       postcss: ^8.4.16
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
       sort-css-media-queries: 2.1.0
     dev: false
 
@@ -10133,13 +10585,13 @@ packages:
       svgo: 2.8.0
     dev: false
 
-  /postcss-svgo@5.1.0(postcss@8.4.29):
+  /postcss-svgo@5.1.0(postcss@8.4.30):
     resolution: {integrity: sha512-D75KsH1zm5ZrHyxPakAxJWtkyXew5qwS70v56exwvw542d9CRtTo78K0WeFxZB4G7JXKKMbEZtZayTGdIky/eA==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-value-parser: 4.2.0
       svgo: 2.8.0
     dev: false
@@ -10154,13 +10606,13 @@ packages:
       postcss-selector-parser: 6.0.11
     dev: false
 
-  /postcss-unique-selectors@5.1.1(postcss@8.4.29):
+  /postcss-unique-selectors@5.1.1(postcss@8.4.30):
     resolution: {integrity: sha512-5JiODlELrz8L2HwxfPnhOWZYWDxVHWL83ufOv84NrcgipI7TaeRsatAhK4Tr2/ZiYldpK/wBvw5BD3qfaK96GA==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-selector-parser: 6.0.11
     dev: false
 
@@ -10168,35 +10620,17 @@ packages:
     resolution: {integrity: sha512-1NNCs6uurfkVbeXG4S8JFT9t19m45ICnif8zWLd5oPSZ50QnwMfK+H3jv408d4jw/7Bttv5axS5IiHoLaVNHeQ==}
     dev: false
 
-  /postcss-zindex@5.1.0(postcss@8.4.29):
+  /postcss-zindex@5.1.0(postcss@8.4.30):
     resolution: {integrity: sha512-fgFMf0OtVSBR1va1JNHYgMxYk73yhn/qb4uQDq1DLGYolz8gHCyr/sesEuGUaYs58E3ZJRcpoGuPVoB7Meiq9A==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
-      postcss: 8.4.29
+      postcss: 8.4.30
     dev: false
 
   /postcss@8.4.21:
     resolution: {integrity: sha512-tP7u/Sn/dVxK2NnruI4H9BG+x+Wxz6oeZ1cJ8P6G/PZY0IKk4k/63TDsQf2kQq3+qoJeLm2kIBUNlZe3zgb4Zg==}
-    engines: {node: ^10 || ^12 || >=14}
-    dependencies:
-      nanoid: 3.3.6
-      picocolors: 1.0.0
-      source-map-js: 1.0.2
-    dev: false
-
-  /postcss@8.4.27:
-    resolution: {integrity: sha512-gY/ACJtJPSmUFPDCHtX78+01fHa64FaU4zaaWfuh1MhGJISufJAH4cun6k/8fwsHYeK4UQmENQK+tRLCFJE8JQ==}
-    engines: {node: ^10 || ^12 || >=14}
-    dependencies:
-      nanoid: 3.3.6
-      picocolors: 1.0.0
-      source-map-js: 1.0.2
-    dev: false
-
-  /postcss@8.4.29:
-    resolution: {integrity: sha512-cbI+jaqIeu/VGqXEarWkRCCffhjgXc0qjBtXpqJhTBohMUjUQnbBr0xqX3vEKudc4iviTewcJo5ajcec5+wdJw==}
     engines: {node: ^10 || ^12 || >=14}
     dependencies:
       nanoid: 3.3.6
@@ -10211,7 +10645,6 @@ packages:
       nanoid: 3.3.6
       picocolors: 1.0.0
       source-map-js: 1.0.2
-    dev: true
 
   /postgres-array@2.0.0:
     resolution: {integrity: sha512-VpZrUqU5A69eQyW2c5CA1jtLecCsN2U/bD6VilrFDWq5+5UIEVO7nazS3TEcHf1zuPYO/sqGvUvW62g86RXZuA==}
@@ -10791,7 +11224,7 @@ packages:
     resolution: {integrity: sha512-3TLx5TGyAY6AOqLBoXmHkNql0HIf2RGbuMgCDT2WO/uGVAPJs6h7Kl+bN6TIZGd9bWhWPwnDnTHGtW8Iu77sdw==}
     engines: {node: '>=8.6.0'}
     dependencies:
-      debug: 4.3.4(supports-color@9.4.0)
+      debug: 4.3.4
       module-details-from-path: 1.0.3
       resolve: 1.22.1
     transitivePeerDependencies:
@@ -10805,6 +11238,12 @@ packages:
   /requires-port@1.0.0:
     resolution: {integrity: sha512-KigOCHcocU3XODJxsu8i/j8T9tzT4adHiecwORRQ0ZZFcp7ahwXuRU1m+yuO90C5ZUyGeGfocHDI14M3L3yDAQ==}
     dev: false
+
+  /rescript@10.1.4:
+    resolution: {integrity: sha512-FFKlS9AG/XrLepWsyw7B+A9DtQBPWEPDPDKghV831Y2KGbie+eeFBOS0xtRHp0xbt7S0N2Dm6hhX+kTZQ/3Ybg==}
+    hasBin: true
+    requiresBuild: true
+    dev: true
 
   /resolve-from@4.0.0:
     resolution: {integrity: sha512-pb/MYmXstAkysRFx8piNI1tGFNQIFA3vkE3Gq4EuA1dF6gHp/+vgZqsCGJapvy8N3Q+4o7FwvquPJcnZ7RYy4g==}
@@ -10877,7 +11316,7 @@ packages:
     dependencies:
       find-up: 5.0.0
       picocolors: 1.0.0
-      postcss: 8.4.29
+      postcss: 8.4.30
       strip-json-comments: 3.1.1
     dev: false
 
@@ -11373,14 +11812,14 @@ packages:
       postcss-selector-parser: 6.0.11
     dev: false
 
-  /stylehacks@5.1.1(postcss@8.4.29):
+  /stylehacks@5.1.1(postcss@8.4.30):
     resolution: {integrity: sha512-sBpcd5Hx7G6seo7b1LkpttvTz7ikD0LlH5RmdcBNb6fFR0Fl7LQwHDFr300q4cwUqi+IYrFGmsIHieMBfnN/Bw==}
     engines: {node: ^10 || ^12 || >=14.0}
     peerDependencies:
       postcss: ^8.2.15
     dependencies:
       browserslist: 4.21.5
-      postcss: 8.4.29
+      postcss: 8.4.30
       postcss-selector-parser: 6.0.11
     dev: false
 
@@ -11632,7 +12071,7 @@ packages:
   /tslib@2.6.2:
     resolution: {integrity: sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==}
 
-  /tsup@7.2.0(supports-color@9.4.0)(typescript@5.2.2):
+  /tsup@7.2.0:
     resolution: {integrity: sha512-vDHlczXbgUvY3rWvqFEbSqmC1L7woozbzngMqTtL2PGBODTtWlRwGDDawhvWzr5c1QjKe4OAKqJGfE1xeXUvtQ==}
     engines: {node: '>=16.14'}
     hasBin: true
@@ -11651,7 +12090,7 @@ packages:
       bundle-require: 4.0.1(esbuild@0.18.20)
       cac: 6.7.14
       chokidar: 3.5.3
-      debug: 4.3.4(supports-color@9.4.0)
+      debug: 4.3.4
       esbuild: 0.18.20
       execa: 5.1.1
       globby: 11.1.0
@@ -11662,13 +12101,12 @@ packages:
       source-map: 0.8.0-beta.0
       sucrase: 3.34.0
       tree-kill: 1.2.2
-      typescript: 5.2.2
     transitivePeerDependencies:
       - supports-color
       - ts-node
     dev: true
 
-  /tsup@7.2.0(typescript@5.2.2):
+  /tsup@7.2.0(supports-color@9.4.0)(typescript@5.2.2):
     resolution: {integrity: sha512-vDHlczXbgUvY3rWvqFEbSqmC1L7woozbzngMqTtL2PGBODTtWlRwGDDawhvWzr5c1QjKe4OAKqJGfE1xeXUvtQ==}
     engines: {node: '>=16.14'}
     hasBin: true
@@ -12085,6 +12523,28 @@ packages:
       vfile-message: 2.0.4
     dev: false
 
+  /vite-node@0.34.5(@types/node@20.6.5):
+    resolution: {integrity: sha512-RNZ+DwbCvDoI5CbCSQSyRyzDTfFvFauvMs6Yq4ObJROKlIKuat1KgSX/Ako5rlDMfVCyMcpMRMTkJBxd6z8YRA==}
+    engines: {node: '>=v14.18.0'}
+    hasBin: true
+    dependencies:
+      cac: 6.7.14
+      debug: 4.3.4
+      mlly: 1.4.2
+      pathe: 1.1.1
+      picocolors: 1.0.0
+      vite: 4.4.9(@types/node@20.6.5)
+    transitivePeerDependencies:
+      - '@types/node'
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+    dev: true
+
   /vite-node@0.34.5(@types/node@20.6.5)(supports-color@9.4.0):
     resolution: {integrity: sha512-RNZ+DwbCvDoI5CbCSQSyRyzDTfFvFauvMs6Yq4ObJROKlIKuat1KgSX/Ako5rlDMfVCyMcpMRMTkJBxd6z8YRA==}
     engines: {node: '>=v14.18.0'}
@@ -12141,6 +12601,71 @@ packages:
       rollup: 3.29.2
     optionalDependencies:
       fsevents: 2.3.3
+    dev: true
+
+  /vitest@0.34.5:
+    resolution: {integrity: sha512-CPI68mmnr2DThSB3frSuE5RLm9wo5wU4fbDrDwWQQB1CWgq9jQVoQwnQSzYAjdoBOPoH2UtXpOgHVge/uScfZg==}
+    engines: {node: '>=v14.18.0'}
+    hasBin: true
+    peerDependencies:
+      '@edge-runtime/vm': '*'
+      '@vitest/browser': '*'
+      '@vitest/ui': '*'
+      happy-dom: '*'
+      jsdom: '*'
+      playwright: '*'
+      safaridriver: '*'
+      webdriverio: '*'
+    peerDependenciesMeta:
+      '@edge-runtime/vm':
+        optional: true
+      '@vitest/browser':
+        optional: true
+      '@vitest/ui':
+        optional: true
+      happy-dom:
+        optional: true
+      jsdom:
+        optional: true
+      playwright:
+        optional: true
+      safaridriver:
+        optional: true
+      webdriverio:
+        optional: true
+    dependencies:
+      '@types/chai': 4.3.6
+      '@types/chai-subset': 1.3.3
+      '@types/node': 20.6.5
+      '@vitest/expect': 0.34.5
+      '@vitest/runner': 0.34.5
+      '@vitest/snapshot': 0.34.5
+      '@vitest/spy': 0.34.5
+      '@vitest/utils': 0.34.5
+      acorn: 8.10.0
+      acorn-walk: 8.2.0
+      cac: 6.7.14
+      chai: 4.3.8
+      debug: 4.3.4
+      local-pkg: 0.4.3
+      magic-string: 0.30.3
+      pathe: 1.1.1
+      picocolors: 1.0.0
+      std-env: 3.4.3
+      strip-literal: 1.3.0
+      tinybench: 2.5.1
+      tinypool: 0.7.0
+      vite: 4.4.9(@types/node@20.6.5)
+      vite-node: 0.34.5(@types/node@20.6.5)
+      why-is-node-running: 2.2.2
+    transitivePeerDependencies:
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
     dev: true
 
   /vitest@0.34.5(supports-color@9.4.0):

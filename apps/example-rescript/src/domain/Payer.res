@@ -1,0 +1,101 @@
+open Equinox
+open Identifiers
+
+module Stream = {
+  let category = "Payer"
+  let streamId = StreamId.gen(PayerId.toString)
+  let decodeId = StreamId.dec(PayerId.parse)
+  let tryMatch = StreamName.tryMatch(category, decodeId)
+}
+
+module Event = {
+  type payer_profile = {
+    name: string,
+    email: string,
+  }
+  type t = PayerProfileUpdated(payer_profile) | PayerDeleted
+
+  let encode = (x, ()) =>
+    switch x {
+    | PayerProfileUpdated(data) => ("PayerProfileUpdated", Js.Json.stringifyAny(data))
+    | PayerDeleted => ("PayerDeleted", None)
+    }
+
+  let tryDecode = x =>
+    switch x {
+    | ("PayerProfileUpdated", Some(data)) =>
+      PayerProfileUpdated(Js.Json.parseExn(data)->Obj.magic)->Some
+    | ("PayerDeleted", _) => Some(PayerDeleted)
+    | _ => None
+    }
+
+  let codec = Codec.json(encode, tryDecode)
+}
+
+module Fold = {
+  type state = option<Event.payer_profile>
+  let initial = None
+  let evolve = (_state, event) =>
+    switch event {
+    | Event.PayerProfileUpdated(data) => Some(data)
+    | Event.PayerDeleted => None
+    }
+  let fold = Js.Array.reduce(evolve)
+}
+
+module Decide = {
+  let updateProfile = (data, state) => {
+    if state == Some(data) {
+      []
+    } else {
+      [Event.PayerProfileUpdated(data)]
+    }
+  }
+
+  let deletePayer = state => {
+    if state == None {
+      []
+    } else {
+      [Event.PayerDeleted]
+    }
+  }
+}
+
+module Service = {
+  type t = {resolve: PayerId.t => Decider.t<Event.t, Fold.state>}
+
+  let updateProfile = (service, id, profile) => {
+    let decider = service.resolve(id)
+    decider->Decider.transactWith(Decide.updateProfile(profile), LoadOption.AnyCachedValue)
+  }
+
+  let deletePayer = (service, id) => {
+    let decider = service.resolve(id)
+    decider->Decider.transact(Decide.deletePayer)
+  }
+
+  let readProfile = (service, id) => {
+    let decider = service.resolve(id)
+    decider->Decider.query(state => state)
+  }
+}
+
+@warning("-44")
+module Config = {
+  open EquinoxConfig
+  let resolveCategory = config =>
+    switch config {
+    | MemoryStore(store) =>
+      MemoryStore.create(Stream.category, Event.codec, Fold.fold, Fold.initial, store)
+    | MessageDb(store, cache) =>
+      let create = MessageDb.createLatestKnown
+      create(Stream.category, Event.codec, Fold.fold, Fold.initial, (store, cache))
+    }
+
+  let create = config => {
+    let category = resolveCategory(config)
+    let resolve = id => Decider.forStream(category, Stream.streamId(id))
+    {Service.resolve: resolve}
+  }
+}
+
