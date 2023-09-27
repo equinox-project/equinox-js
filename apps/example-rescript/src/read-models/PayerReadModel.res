@@ -29,31 +29,34 @@ let changes = (streamName, events) =>
   | None => []
   }
 
+@scope("Object") @val
+external assign: ('a, 'b) => 'c = "assign"
 
+let toEqx = x =>
+  switch x {
+  | Upsert({id, fields}) => {"type": 3, "data": assign(id, fields)}
+  | Delete(id) => {"type": 2, "data": id}
+  }
 
-// function changes(stream: StreamName, events: ITimelineEvent[]): Change[] {
-//   const id = Payer.Stream.tryMatch(stream)
-//   if (!id) return []
-//   const event = Payer.Events.codec.tryDecode(events[events.length - 1])
-//   if (!event) return []
-//   const version = events[events.length - 1]!.index
-//   switch (event.type) {
-//     case "PayerProfileUpdated":
-//       const data = event.data
-//       return [Upsert({ id: id, version, name: data.name, email: data.email })]
-//     case "PayerDeleted":
-//       return [Delete({ id: id, version })]
-//   }
-// }
-//
-// export const ensureTable = (pool: Pool) =>
-//   pool.query(
-//     `create table if not exists payer (
-//       id uuid not null primary key,
-//       version bigint not null,
-//       name text not null,
-//       email text not null
-//     )`,
-//   )
-//
-// export const createHandler = (pool: Pool) => createProjection(projection, pool, changes)
+type handler = (Equinox.StreamName.t, array<Equinox.timeline_event<string>>) => promise<unit>
+@module("@equinox-js/projection-pg")
+external createPgProjection: (
+  . projection,
+  Postgres.Pool.t,
+  (Equinox.StreamName.t, array<Equinox.timeline_event<string>>) => array<'a>,
+) => handler = "createProjection"
+
+let eqxHandler = (stream, events) => changes(stream, events)->Belt.Array.map(toEqx)
+
+let createHandler = pool => createPgProjection(. projection, pool, eqxHandler)
+
+let ensureTable = pool =>
+  pool->Postgres.Pool.query(
+    `create table if not exists payer (
+       id uuid not null primary key,
+       version bigint not null,
+       name text not null,
+       email text not null
+     )`,
+    [],
+  )

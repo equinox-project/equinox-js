@@ -66,7 +66,7 @@ module Service = {
 
   let updateProfile = (service, id, profile) => {
     let decider = service.resolve(id)
-    decider->Decider.transactWith(Decide.updateProfile(profile), LoadOption.AnyCachedValue)
+    decider->Decider.transact(Decide.updateProfile(profile))
   }
 
   let deletePayer = (service, id) => {

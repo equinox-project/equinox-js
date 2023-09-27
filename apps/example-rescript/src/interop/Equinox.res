@@ -128,17 +128,13 @@ module Decider = {
 
   @send
   external transact: (t<'e, 's>, 's => array<'e>) => Js.Promise.t<unit> = "transact"
-  @send
-  external transactLoadOpt: (t<'e, 's>, 's => array<'e>, LoadOption.t') => Js.Promise.t<unit> =
-    "transact"
-  let transactWith = (decider, fn, loadOption) =>
-    transactLoadOpt(decider, fn, LoadOption.to_eqx(loadOption))
 
   @send
   external query: (t<'e, 's>, 's => 'q) => Js.Promise.t<'q> = "query"
 
   @send
-  external transactAsync: (t<'e, 's>, 's => promise<array<'e>>) => Js.Promise.t<unit> = "transactAsync"
+  external transactAsync: (t<'e, 's>, 's => promise<array<'e>>) => Js.Promise.t<unit> =
+    "transactAsync"
 }
 
 module CachingStrategy = {
@@ -210,4 +206,72 @@ module MemoryStoreCategory = {
     ('s, array<'e>) => 's,
     's,
   ) => Category.t<'e, 's, 'c> = "create"
+}
+
+module Checkpoints = {
+  type t
+
+  @module("@equinox-js/message-db-source") @new
+  external createPg: Postgres.Pool.t => t = "PgCheckpoints"
+
+  @send
+  external ensureTable: t => Js.Promise.t<unit> = "ensureTable"
+}
+
+module Sink = {
+  type t
+}
+
+module StreamsSink = {
+  type options = {
+    /** The handler to call for each batch of stream messages */
+    handler: (StreamName.t, array<timeline_event<string>>) => promise<unit>,
+    /** The maximum number of streams that can be processing concurrently
+     * Note: each stream can have at most 1 handler active */
+    maxConcurrentStreams: int,
+    /** The number of batches the source can read ahead the currently processing batch */
+    maxReadAhead: int,
+  }
+
+  @module("@equinox-js/propeller") @scope("StreamsSink")
+  external create: options => Sink.t = "create"
+}
+
+module MessageDbSource = {
+  type options = {
+    /** The database pool to use to read messages from the category */
+    pool: Postgres.Pool.t,
+    /** The categories to read from */
+    categories: array<string>,
+    /**
+     * The maximum number of messages to read from the category at a time
+     * @default 500
+     */
+    batchSize?: int,
+    /** The name of the consumer group to use for checkpointing */
+    groupName: string,
+    /** The checkpointer to use for checkpointing */
+    checkpoints: Checkpoints.t,
+    /** The sink to pump messages into */
+    sink: Sink.t,
+    /** emit a metric span every statsIntervalMs */
+    statsIntervalMs?: int,
+    /** sleep time in ms between reads when at the end of the category */
+    tailSleepIntervalMs: int,
+    /** sleep time in ms between checkpoint commits */
+    checkpointIntervalMs?: int,
+    /** When using consumer groups: the index of the consumer. 0 <= i <= consumerGroupSize
+     * each consumer in the group maintains their own checkpoint */
+    consumerGroupMember?: int,
+    /** The number of group consumers you have deployed */
+    consumerGroupSize?: int,
+  }
+
+  type t
+
+  @send
+  external start: (t, AbortSignal.t) => Js.Promise.t<unit> = "start"
+
+  @module("@equinox-js/message-db-source") @scope("MessageDbSource")
+  external create: options => t = "create"
 }

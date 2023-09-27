@@ -38,7 +38,7 @@
     "@types/node": "^20.6.5",
     "@types/pg": "^8.0.0",
     "@types/ramda": "^0.28.21",
-    "rescript": "^10.1.4",
+    "rescript": "10.1.4",
     "tsup": "^7.2.0",
     "vitest": "^0.34.5"
   }
