@@ -1,7 +1,6 @@
 type express
 
-@module external expressCjs: unit => express = "express"
-@module external express: unit => express = "express"
+@module("express") external express: unit => express = "default"
 
 type req
 type res

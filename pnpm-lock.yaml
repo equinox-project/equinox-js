@@ -121,18 +121,9 @@ importers:
 
   apps/example-rescript:
     dependencies:
-      '@aws-sdk/client-dynamodb':
-        specifier: ^3.410.0
-        version: 3.410.0
       '@equinox-js/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@equinox-js/dynamo-store':
-        specifier: workspace:*
-        version: link:../../packages/dynamo-store/dynamo-store
-      '@equinox-js/dynamo-store-source':
-        specifier: workspace:*
-        version: link:../../packages/dynamo-store/source
       '@equinox-js/memory-store':
         specifier: workspace:*
         version: link:../../packages/memory-store
@@ -172,12 +163,6 @@ importers:
       express:
         specifier: ^4.18.2
         version: 4.18.2
-      express-async-errors:
-        specifier: ^3.1.1
-        version: 3.1.1(express@4.18.2)
-      get-port:
-        specifier: ^7.0.0
-        version: 7.0.0
       opentelemetry-exporter-console-pretty:
         specifier: ^1.0.1
         version: 1.0.1(@opentelemetry/api@1.4.1)
@@ -187,22 +172,7 @@ importers:
       ramda:
         specifier: ^0.28.0
         version: 0.28.0
-      zod:
-        specifier: ^3.20.2
-        version: 3.20.2
     devDependencies:
-      '@types/express':
-        specifier: ^4.17.17
-        version: 4.17.17
-      '@types/node':
-        specifier: ^20.6.5
-        version: 20.6.5
-      '@types/pg':
-        specifier: ^8.0.0
-        version: 8.6.6
-      '@types/ramda':
-        specifier: ^0.28.21
-        version: 0.28.21
       rescript:
         specifier: 10.1.4
         version: 10.1.4

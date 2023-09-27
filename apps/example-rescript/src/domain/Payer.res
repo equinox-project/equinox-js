@@ -6,6 +6,7 @@ module Stream = {
   let streamId = StreamId.gen(PayerId.toString)
   let decodeId = StreamId.dec(PayerId.parse)
   let tryMatch = StreamName.tryMatch(category, decodeId)
+  let name = id => StreamName.create(category, streamId(id))
 }
 
 module Event = {

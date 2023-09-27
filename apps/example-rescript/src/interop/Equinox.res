@@ -20,6 +20,19 @@ type timeline_event<'format> = {
 @module("crypto") @val
 external randomUUID: unit => string = "randomUUID"
 
+module EventData = {
+  let toTimelineEvent = (ev: event_data<'f>, index): timeline_event<'f> => {
+    let id = switch ev.id {
+    | None => randomUUID()
+    | Some(x) => x
+    }
+    let time = Js.Date.make()
+    let isUnfold = false
+    let size = 0
+    {id, time, type_: ev.type_, data: ?ev.data, meta: ?ev.meta, index, isUnfold, size}
+  }
+}
+
 module Codec = {
   type t<'e, 'f, 'c> = {
     tryDecode: timeline_event<'f> => option<'e>,
@@ -195,10 +208,17 @@ module MemoryStore = {
   type volatile_store
   @module("@equinox-js/memory-store") @new
   external create: unit => volatile_store = "VolatileStore"
+
+  @send
+  external handleFrom: (
+    volatile_store,
+    Js.Bigint.t,
+    (StreamName.t, array<timeline_event<string>>) => promise<unit>,
+  ) => promise<unit> = "handleFrom"
 }
 
 module MemoryStoreCategory = {
-  @module("@equinox-js/message-db") @scope("MessageDbCategory") @val
+  @module("@equinox-js/memory-store") @scope("MemoryStoreCategory") @val
   external create: (
     MemoryStore.volatile_store,
     string,

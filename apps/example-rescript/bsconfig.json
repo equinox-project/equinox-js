@@ -1,13 +1,20 @@
 {
   "name": "example-rescript",
   "version": "0.1.0",
-  "sources": {
-    "dir": "src",
-    "subdirs": true
-  },
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    },
+    {
+      "dir": "test",
+      "subdirs": true,
+      "type": "dev"
+    }
+  ],
   "package-specs": {
-    "module": "commonjs",
-    "in-source": false 
+    "module": "es6",
+    "in-source": false
   },
-  "suffix": ".cjs"
+  "suffix": ".js"
 }

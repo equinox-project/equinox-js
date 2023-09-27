@@ -74,7 +74,7 @@ module Service = {
     })
   }
 
-  let inspectState = (invoiceId: InvoiceId.t, service: t) => {
+  let inspectState = (service, invoiceId) => {
     let decider = service.resolve(invoiceId)
     decider->Decider.query(s => s)
   }
