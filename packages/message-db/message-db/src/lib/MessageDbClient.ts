@@ -28,6 +28,7 @@ export class MessageDbWriter {
       const position = BigInt(results.rows[0].write_message)
       return { type: "Written", position }
     } catch (err: any) {
+      // TODO: bubble the error up: it might not just be a conflict
       return { type: "ConflictUnknown" }
     }
   }
@@ -64,6 +65,7 @@ export class MessageDbWriter {
 
       await client.query("COMMIT")
     } catch (err: any) {
+      // TODO: bubble the error up: it might not just be a conflict
       await client.query("ROLLBACK")
       return { type: "ConflictUnknown" }
     } finally {
