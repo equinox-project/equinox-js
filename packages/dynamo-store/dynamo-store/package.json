@@ -27,5 +27,5 @@
     "@equinox-js/core": "workspace:*",
     "@opentelemetry/api": "^1.4.0"
   },
-  "version": "1.0.0-rc.5"
+  "version": "1.0.0-rc.6"
 }
