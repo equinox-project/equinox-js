@@ -28,7 +28,10 @@ export class MessageDbWriter {
       const position = BigInt(results.rows[0].write_message)
       return { type: "Written", position }
     } catch (err: any) {
-      return { type: "ConflictUnknown" }
+      if (err?.message?.startsWith("Wrong expected version: ")) {
+        return { type: "ConflictUnknown" }
+      }
+      throw err
     }
   }
 
@@ -65,7 +68,10 @@ export class MessageDbWriter {
       await client.query("COMMIT")
     } catch (err: any) {
       await client.query("ROLLBACK")
-      return { type: "ConflictUnknown" }
+      if (err?.message?.startsWith("Wrong expected version: ")) {
+        return { type: "ConflictUnknown" }
+      }
+      throw err
     } finally {
       client.release()
     }
