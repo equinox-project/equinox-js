@@ -11,7 +11,8 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean --sourcemap"
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --sourcemap",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@opentelemetry/sdk-trace-base": "^1.9.0",
