@@ -14,7 +14,7 @@ export class MessageDbWriter {
   ): Promise<MdbWriteResult> {
     try {
       const results = await this.pool.query({
-        text: `select message_store.write_message($1, $2, $3, $4, $5, $6)`,
+        text: `select write_message($1, $2, $3, $4, $5, $6)`,
         name: "write_message",
         values: [
           message.id || randomUUID(),
@@ -47,7 +47,7 @@ export class MessageDbWriter {
       for (let i = 0; i < messages.length; ++i) {
         const message = messages[i]
         const results = await client.query({
-          text: `select message_store.write_message($1, $2, $3, $4, $5, $6)`,
+          text: `select write_message($1, $2, $3, $4, $5, $6)`,
           name: "write_message",
           values: [
             message.id || randomUUID(),
@@ -86,7 +86,7 @@ export class MessageDbReader {
 
   async readLastEvent(streamName: string, requiresLeader: boolean, eventType?: string) {
     const result = await this.getPool(requiresLeader).query({
-      text: "select * from message_store.get_last_stream_message($1, $2)",
+      text: "select * from get_last_stream_message($1, $2)",
       name: "get_last_stream_message",
       values: [streamName, eventType ?? null],
     })
