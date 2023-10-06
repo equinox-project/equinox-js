@@ -1,6 +1,6 @@
 import { Cart, ContactPreferences } from "../../../test-domain/src/index.js"
 import { Decider, MemoryCache, Codec, CachingStrategy, Tags, StreamId } from "@equinox-js/core"
-import { describe, test, expect, afterEach, afterAll } from "vitest"
+import { describe, test, expect, afterEach, afterAll, vi } from "vitest"
 import { Pool } from "pg"
 import { randomUUID } from "crypto"
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
@@ -65,6 +65,7 @@ namespace CartService {
 }
 
 const client = MessageDbConnection.create(
+  new Pool({ connectionString: "postgres://message_store:@127.0.0.1:5432/message_store" }),
   new Pool({ connectionString: "postgres://message_store:@127.0.0.1:5432/message_store" }),
 )
 
@@ -300,6 +301,19 @@ describe("Round-trips against the store", () => {
     const conflicts = syncs.filter((x) => x.events.find((x) => x.name == "Conflict"))
     expect(syncs).toHaveLength(4)
     expect(conflicts).toHaveLength(2)
+  })
+})
+
+describe("Error handling", () => {
+  test("bubbles up DB errors", async () => {
+    const batchSize = 10
+    const context = createContext(client, batchSize)
+    vi.spyOn(client.write["pool"], "query").mockRejectedValueOnce(new Error("Test DB Error"))
+    let id = StreamId.create(randomUUID())
+    const decider = SimplestThing.resolve(context, SimplestThing.categoryName, id)
+    await expect(decider.transact(() => [{ type: "StuffHappened" }])).rejects.toThrow(
+      "Test DB Error",
+    )
   })
 })
 
