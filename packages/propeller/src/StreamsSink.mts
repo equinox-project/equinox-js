@@ -12,12 +12,8 @@ class Stream {
 
   merge(event: ITimelineEvent): void {
     const last = this.events[this.events.length - 1]
-    if (!last || last.index === event.index - 1n) {
-      this.events.push(event)
-      return
-    }
-    if (last.index > event.index) return
-    if (event.index > last.index) throw new Error("Unexpected gap")
+    if (last && last.index >= event.index) return
+    this.events.push(event)
   }
 }
 
