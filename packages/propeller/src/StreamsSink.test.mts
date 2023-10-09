@@ -1,7 +1,6 @@
 import { describe, test, expect, vi } from "vitest"
 import { BatchLimiter, StreamsSink } from "./StreamsSink.mjs"
 import { ITimelineEvent, StreamId, StreamName } from "@equinox-js/core"
-import { sleep } from "./Sleep.js"
 import { IngesterBatch } from "./Types.js"
 
 const mkEvent = (type: string, index: bigint): ITimelineEvent => ({
@@ -22,6 +21,14 @@ const mkBatch = (onComplete: () => void, index?: bigint): IngesterBatch => ({
   checkpoint: 5n,
   onComplete,
 })
+
+const abortsOrResolves = async (p: Promise<void>) => {
+  const result = await p.then(
+    () => "resolved",
+    (err) => (err.name === "AbortError" ? "aborted" : "rejected"),
+  )
+  expect(result).toEqual(expect.stringMatching(/aborted|resolved/))
+}
 
 describe("Concurrency", () => {
   test.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])(
@@ -50,7 +57,7 @@ describe("Concurrency", () => {
       ctrl.abort()
 
       expect(maxActive).toBe(concurrency)
-      await expect(sinkP).rejects.toThrow("The operation was aborted")
+      await abortsOrResolves(sinkP)
     },
   )
 })
@@ -78,14 +85,14 @@ test("Correctly merges batches", async () => {
 
   expect(invocations).toBe(10)
   expect(checkpoint).toHaveBeenCalledTimes(2)
-  await expect(sinkP).rejects.toThrow("The operation was aborted")
+  await abortsOrResolves(sinkP)
 })
 
 const mkSingleBatch = (
   onComplete: (n: bigint) => () => Promise<void>,
   checkpoint: bigint,
 ): IngesterBatch => ({
-  items: [[StreamName.create("Cat", StreamId.create("stream1")), mkEvent("Something", 0n)]],
+  items: [[StreamName.create("Cat", StreamId.create("stream1")), mkEvent("Something", checkpoint)]],
   isTail: false,
   checkpoint: checkpoint,
   onComplete: onComplete(checkpoint),
@@ -105,26 +112,25 @@ test("Correctly limits in-flight batches", async () => {
   const completed = vi.fn().mockResolvedValue(undefined)
   const complete = (n: bigint) => () => completed(n)
 
-  // First batch will be immediately picked up
+  // First two batches are picked up together
   await sink.pump(mkSingleBatch(complete, 0n), ctrl.signal)
-  // meanwhile we merge two batches together
   await sink.pump(mkSingleBatch(complete, 1n), ctrl.signal)
+  // This batch will be picked up after the first two complete
   await sink.pump(mkSingleBatch(complete, 2n), ctrl.signal)
 
-  // This batch will be immediately picked up
+  // after which we load up the next three and handle them together
   await sink.pump(mkSingleBatch(complete, 3n), ctrl.signal)
-  // meanwhile we merge two batches together
   await sink.pump(mkSingleBatch(complete, 4n), ctrl.signal)
   await sink.pump(mkSingleBatch(complete, 5n), ctrl.signal)
 
   await limiter.waitForEmpty()
   ctrl.abort()
 
-  expect(invocations).toBe(4)
+  expect(invocations).toBe(3)
 
   // onComplete is called in order and for every batch
   expect(completed.mock.calls).toEqual([[0n], [1n], [2n], [3n], [4n], [5n]])
-  await expect(sinkP).rejects.toThrow("The operation was aborted")
+  await abortsOrResolves(sinkP)
 })
 
 test("Ensures at-most one handler is per stream", async () => {
@@ -139,7 +145,7 @@ test("Ensures at-most one handler is per stream", async () => {
     await new Promise((res) => setTimeout(res, 10))
     active--
   }
-  const limiter = new BatchLimiter(10)
+  const limiter = new BatchLimiter(6)
   const sink = new StreamsSink(handler, 100, limiter)
 
   const sinkP = sink.start(ctrl.signal)
@@ -147,12 +153,9 @@ test("Ensures at-most one handler is per stream", async () => {
   const completed = vi.fn().mockResolvedValue(undefined)
   const complete = (n: bigint) => () => completed(n)
 
-  await sink.pump(mkSingleBatch(complete, 0n), ctrl.signal)
-  await sink.pump(mkSingleBatch(complete, 1n), ctrl.signal)
-  await sink.pump(mkSingleBatch(complete, 2n), ctrl.signal)
-  await sink.pump(mkSingleBatch(complete, 3n), ctrl.signal)
-  await sink.pump(mkSingleBatch(complete, 4n), ctrl.signal)
-  await sink.pump(mkSingleBatch(complete, 5n), ctrl.signal)
+  for (let i = 0; i < 10; ++i) {
+    await sink.pump(mkSingleBatch(complete, BigInt(i)), ctrl.signal)
+  }
 
   await limiter.waitForEmpty()
   ctrl.abort()
@@ -162,6 +165,6 @@ test("Ensures at-most one handler is per stream", async () => {
   expect(maxActive).toBe(1)
 
   // onComplete is called in order and for every batch
-  expect(completed.mock.calls).toEqual([[0n], [1n], [2n], [3n], [4n], [5n]])
-  await expect(sinkP).rejects.toThrow("The operation was aborted")
+  expect(completed.mock.calls).toEqual(Array.from({ length: 10 }).map((_, i) => [BigInt(i)]))
+  await abortsOrResolves(sinkP)
 })

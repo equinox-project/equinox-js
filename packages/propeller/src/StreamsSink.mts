@@ -1,19 +1,44 @@
 import { ITimelineEvent, StreamName } from "@equinox-js/core"
-import { traceHandler, EventHandler } from "./Tracing.js"
+import { traceHandler } from "./Tracing.js"
 import { Attributes, trace } from "@opentelemetry/api"
-import { IngesterBatch, Sink } from "./Types.js"
+import { IngesterBatch, Sink, EventHandler } from "./Types.js"
 import { AsyncQueue } from "./Queue.js"
 
 const tracer = trace.getTracer("@equinox-js/propeller")
 
-class Stream {
-  events: ITimelineEvent[] = []
-  constructor(public name: StreamName) {}
+type StreamBatch = { checkpoint: bigint; events: ITimelineEvent[] }
 
-  merge(event: ITimelineEvent): void {
-    const last = this.events[this.events.length - 1]
-    if (last && last.index >= event.index) return
-    this.events.push(event)
+class Stream {
+  batches: StreamBatch[] = []
+  handledIndex = -1n
+  checkpoint = -1n
+  isHandling = false
+  constructor(
+    public name: StreamName,
+    public handle: EventHandler<string>,
+    public tracingAttrs: Attributes,
+  ) {}
+
+  mergeBatch(checkpoint: bigint, events: ITimelineEvent[]): void {
+    if (checkpoint <= this.checkpoint) return
+    this.batches.push({ checkpoint, events })
+  }
+
+  async run() {
+    if (this.batches.length === 0) return
+    const events = this.batches.flatMap((b) => b.events).filter((x) => x.index > this.handledIndex)
+    if (events.length === 0) return
+    try {
+      this.isHandling = true
+      const checkpoint = this.batches[this.batches.length - 1].checkpoint
+
+      await traceHandler(tracer, this.tracingAttrs, this.name, events, this.handle)
+      this.batches = this.batches.filter((b) => b.checkpoint > checkpoint)
+      this.checkpoint = checkpoint
+      this.handledIndex = events[events.length - 1].index
+    } finally {
+      this.isHandling = false
+    }
   }
 }
 
@@ -21,8 +46,6 @@ class QueueWorker {
   private stopped = true
   constructor(
     private readonly tryGetNext: (signal: AbortSignal) => Promise<Stream>,
-    private readonly handle: EventHandler<string>,
-    private readonly tracingAttrs: Attributes,
     private readonly onHandled: (stream: Stream) => void,
   ) {}
 
@@ -34,7 +57,7 @@ class QueueWorker {
     this.stopped = false
     while (!signal.aborted && !this.stopped) {
       const stream = await this.tryGetNext(signal)
-      await traceHandler(tracer, this.tracingAttrs, stream.name, stream.events, this.handle)
+      await stream.run()
       this.onHandled(stream)
     }
   }
@@ -51,7 +74,7 @@ export class BatchLimiter {
     return new Promise<void>((resolve, reject) => {
       const abort = () => {
         signal.removeEventListener("abort", abort)
-        reject(new Error("Aborted"))
+        reject(signal.reason)
       }
       signal.addEventListener("abort", abort)
       this.onReady = () => {
@@ -100,7 +123,6 @@ type CreateOptions = {
 export class StreamsSink implements Sink {
   private queue = new AsyncQueue<Stream>()
   private streams = new Map<StreamName, Stream>()
-  private activeStreams = new Set<StreamName>()
   private batchStreams = new Map<IngesterBatch, Set<Stream>>()
   private readonly tracingAttrs: Attributes = {}
   constructor(
@@ -116,7 +138,6 @@ export class StreamsSink implements Sink {
   }
 
   private handleStreamCompletion(stream: Stream) {
-    this.activeStreams.delete(stream.name)
     const batches = Array.from(this.batchStreams)
     for (const [batch, streams] of this.batchStreams) {
       streams.delete(stream)
@@ -127,38 +148,24 @@ export class StreamsSink implements Sink {
         this.batchLimiter.endBatch()
       }
     }
+    if (stream.batches.length) {
+      this.queue.add(stream)
+    }
   }
 
   async start(signal: AbortSignal) {
-    // set up a linked abort controller to avoid attaching too many event listeners to the provided signal
-    // node has a default limit of 11 before it emits a warning to the console. We have entirely legitimate reasons
-    // for attaching more than 11 listeners
-    const ctrl = new AbortController()
-    signal.addEventListener("abort", () => ctrl.abort())
-    const _signal = ctrl.signal
     // Starts N workers that will process streams in parallel
-
     const workers = new Array<QueueWorker>(this.maxConcurrentStreams)
 
     for (let i = 0; i < this.maxConcurrentStreams; ++i) {
       workers[i] = new QueueWorker(
-        async (signal) => {
-          const stream = await this.queue.tryFindAsync(
-            (stream) => !this.activeStreams.has(stream.name),
-            signal,
-          )
-          this.activeStreams.add(stream.name)
-          this.streams.delete(stream.name)
-          return stream
-        },
-        this.handle,
-        this.tracingAttrs,
+        async (signal) => this.queue.tryFindAsync((stream) => !stream.isHandling, signal),
         (stream) => this.handleStreamCompletion(stream),
       )
     }
 
     try {
-      await Promise.all(workers.map((w) => w.run(_signal)))
+      await Promise.all(workers.map((w) => w.run(signal)))
     } catch (err) {
       workers.forEach((w) => w.stop())
       throw err
@@ -169,10 +176,19 @@ export class StreamsSink implements Sink {
     this.batchLimiter.startBatch()
     const streamsInBatch = new Set<Stream>()
     this.batchStreams.set(batch, streamsInBatch)
+    const grouped = new Map<StreamName, ITimelineEvent[]>()
     for (const [sn, event] of batch.items) {
+      const current = grouped.get(sn)
+      if (current) {
+        current.push(event)
+      } else {
+        grouped.set(sn, [event])
+      }
+    }
+    for (const [sn, events] of grouped) {
       const current = this.streams.get(sn)
-      const stream = current ?? new Stream(sn)
-      stream.merge(event)
+      const stream = current ?? new Stream(sn, this.handle, this.tracingAttrs)
+      stream.mergeBatch(batch.checkpoint, events)
       streamsInBatch.add(stream)
       if (!current) {
         this.streams.set(sn, stream)

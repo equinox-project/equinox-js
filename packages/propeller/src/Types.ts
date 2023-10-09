@@ -1,6 +1,11 @@
 import { ITimelineEvent, StreamName } from "@equinox-js/core"
 import { Attributes } from "@opentelemetry/api"
 
+export type EventHandler<Format> = (
+  sn: StreamName,
+  events: ITimelineEvent<Format>[],
+) => Promise<void>
+
 export type Batch = {
   items: [StreamName, ITimelineEvent][]
   checkpoint: bigint
