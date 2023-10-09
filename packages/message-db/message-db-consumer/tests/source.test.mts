@@ -70,7 +70,7 @@ test("Ships batches to the sink", async () => {
   ctrl.abort()
   expect(streams.size).toBe(3)
   expect(Array.from(streams.values()).flat()).toHaveLength(4)
-  await expect(sourceP).rejects.toThrow("The operation was aborted")
+  await expect(sourceP).rejects.toThrow("This operation was aborted")
 })
 test("it fails fast", async () => {
   const category = randomUUID().replace(/-/g, "")
