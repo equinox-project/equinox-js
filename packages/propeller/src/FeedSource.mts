@@ -87,11 +87,6 @@ export class TailingFeedSource extends EventEmitter {
         const batch: Batch = _batch
         this.stats.recordBatch(trancheId, batch)
         if (batch.items.length !== 0) {
-          this.emit("batch", {
-            trancheId,
-            position: batch.checkpoint,
-            items_count: batch.items.length,
-          })
           await sink.pump(
             {
               items: batch.items,
@@ -101,8 +96,6 @@ export class TailingFeedSource extends EventEmitter {
             },
             signal,
           )
-        } else {
-          this.emit("empty", { trancheId, position: batch.checkpoint })
         }
         pos = batch.checkpoint
         wasTail = batch.isTail
