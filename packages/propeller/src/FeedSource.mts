@@ -2,6 +2,7 @@ import { Batch, Sink } from "./Types.js"
 import { ICheckpoints } from "./Checkpoints.js"
 import { sleep } from "./Sleep.js"
 import { Stats } from "./Stats.js"
+import EventEmitter from "events"
 
 class CheckpointWriter {
   constructor(
@@ -44,9 +45,11 @@ export type TailingFeedSourceOptions = {
   establishOrigin?: (tranche: string) => Promise<bigint>
 }
 
-export class TailingFeedSource {
+export class TailingFeedSource extends EventEmitter {
   onError!: (err: any) => void
-  constructor(private readonly options: TailingFeedSourceOptions) {}
+  constructor(private readonly options: TailingFeedSourceOptions) {
+    super()
+  }
   stats = new Stats()
 
   private async *crawl(
@@ -55,7 +58,10 @@ export class TailingFeedSource {
     position: bigint,
     signal: AbortSignal,
   ): AsyncIterable<Batch> {
-    if (wasTail) await sleep(this.options.tailSleepIntervalMs, signal)
+    if (wasTail) {
+      this.emit("tail", { trancheId, position })
+      await sleep(this.options.tailSleepIntervalMs, signal)
+    }
     yield* this.options.crawl(trancheId, position, signal)
   }
 
