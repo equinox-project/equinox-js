@@ -13,7 +13,7 @@
   "scripts": {
     "build": "tsup src/index.mts --format esm,cjs --dts --clean"
   },
-  "version": "1.0.0-rc.6.2",
+  "version": "1.0.0-rc.6.3",
   "files": [
     "./dist"
   ],
