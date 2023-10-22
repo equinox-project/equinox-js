@@ -11,7 +11,7 @@ the central domain abstraction.
 # Quick example
 
 ```ts
-import { Decider, StreamId, StreamName, Uuid } from "@equinox-js/core"
+import { Decider, StreamId, StreamName, Uuid, Codec } from "@equinox-js/core"
 
 export type AccountId = Uuid.Uuid<"AccountId">
 export const AccountId = Uuid.create<"AccountId">()
