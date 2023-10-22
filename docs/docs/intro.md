@@ -11,7 +11,7 @@ the central domain abstraction.
 # Quick example
 
 ```ts
-import { Decider, StreamId, StreamName, Uuid } from "@equinox-js/core"
+import { Decider, StreamId, StreamName, Uuid, Codec } from "@equinox-js/core"
 
 export type AccountId = Uuid.Uuid<"AccountId">
 export const AccountId = Uuid.create<"AccountId">()
@@ -19,7 +19,7 @@ export const AccountId = Uuid.create<"AccountId">()
 export namespace Stream {
   export const Category = "Account"
   export const id = StreamId.gen(AccountId.toString)
-  export const decodeId = StreamName.dec(AccountId.parse)
+  export const decodeId = StreamId.dec(AccountId.parse)
   export const match = StreamName.tryMatch(Category, decodeId)
 }
 
@@ -32,6 +32,8 @@ export namespace Events {
 }
 
 export namespace Fold {
+  import Event = Events.Event
+
   export type State = number
   export const initial: State = 0
 
@@ -47,6 +49,9 @@ export namespace Fold {
 }
 
 export namespace Decide {
+  import Event = Events.Event
+  import State = Fold.State
+
   export const deposit =
     (amount: number) =>
     (state: State): Event[] => {
