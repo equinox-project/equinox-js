@@ -32,6 +32,8 @@ export namespace Events {
 }
 
 export namespace Fold {
+  import Event = Events.Event
+
   export type State = number
   export const initial: State = 0
 
@@ -47,6 +49,9 @@ export namespace Fold {
 }
 
 export namespace Decide {
+  import Event = Events.Event
+  import State = Fold.State
+
   export const deposit =
     (amount: number) =>
     (state: State): Event[] => {
