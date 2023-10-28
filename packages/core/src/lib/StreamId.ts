@@ -6,8 +6,9 @@ export namespace StreamId {
   namespace Element {
     export const separator = "_"
     export function validate(raw: string) {
-      if (raw === "") throw new Error("Element must not be empty")
-      if (raw.includes(separator)) throw new Error("Element may not contain embedded '_' symbols")
+      if (raw === "") throw new Error("StreamId: Element must not be empty")
+      if (raw.includes(separator))
+        throw new Error(`StreamId: Element "${raw}" may not contain embedded '_' symbols`)
     }
   }
 
@@ -33,7 +34,7 @@ export namespace StreamId {
   export function parse(count: number, x: StreamId) {
     const elements = Elements.split(x)
     if (elements.length !== count)
-      throw new Error(`Expected ${count} elements, but got ${elements.length}`)
+      throw new Error(`StreamId: Expected ${count} elements, but got ${elements.length} in "${x}"`)
     return elements
   }
 
@@ -87,7 +88,7 @@ export namespace StreamId {
     return (id: StreamId) => {
       const elements = Elements.split(id)
       if (elements.length !== fns.length)
-        throw new Error(`Expected ${fns.length} elements, but got ${elements.length}`)
+        throw new Error(`StreamId: Expected ${fns.length} elements, but got ${elements.length} in "${id}"`)
       const values = new Array(fns.length)
       for (let i = 0; i < fns.length; i++) values[i] = fns[i](elements[i])
       return values
