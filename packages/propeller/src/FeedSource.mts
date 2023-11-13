@@ -4,7 +4,7 @@ import { sleep } from "./Sleep.js"
 import { Stats } from "./Stats.js"
 import EventEmitter from "events"
 
-class CheckpointWriter {
+export class CheckpointWriter {
   constructor(
     private readonly groupName: string,
     private readonly trancheId: string,
@@ -76,30 +76,31 @@ export class TailingFeedSource extends EventEmitter {
       pos,
     )
     checkpointWriter.start(signal).catch(this.onError)
-    // flush the checkpoint on abort
-    signal.addEventListener("abort", () => {
-      checkpointWriter.flush()
-    })
-    let wasTail = false
-    while (!signal.aborted) {
-      for await (const _batch of this.crawl(trancheId, wasTail, pos, signal)) {
-        // Weird TS bug thinks that batch is any
-        const batch: Batch = _batch
-        this.stats.recordBatch(trancheId, batch)
-        if (batch.items.length !== 0) {
-          await sink.pump(
-            {
-              items: batch.items,
-              checkpoint: batch.checkpoint,
-              isTail: batch.isTail,
-              onComplete: () => checkpointWriter.commit(batch.checkpoint),
-            },
-            signal,
-          )
+    try {
+      let wasTail = false
+      while (!signal.aborted) {
+        for await (const _batch of this.crawl(trancheId, wasTail, pos, signal)) {
+          // Weird TS bug thinks that batch is any
+          const batch: Batch = _batch
+          this.stats.recordBatch(trancheId, batch)
+          if (batch.items.length !== 0) {
+            await sink.pump(
+              {
+                items: batch.items,
+                checkpoint: batch.checkpoint,
+                isTail: batch.isTail,
+                onComplete: () => checkpointWriter.commit(batch.checkpoint),
+              },
+              signal,
+            )
+          }
+          pos = batch.checkpoint
+          wasTail = batch.isTail
         }
-        pos = batch.checkpoint
-        wasTail = batch.isTail
       }
+    } finally {
+      // ensure we flush the checkpoint
+      await checkpointWriter.flush()
     }
   }
 
@@ -118,3 +119,4 @@ export class TailingFeedSource extends EventEmitter {
     })
   }
 }
+

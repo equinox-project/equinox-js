@@ -1,5 +1,5 @@
 import { MemoryCheckpoints } from "./Checkpoints.js"
-import { TailingFeedSource } from "./FeedSource.mjs"
+import { CheckpointWriter, TailingFeedSource } from "./FeedSource.mjs"
 import { test, expect, vi } from "vitest"
 import { Batch, IngesterBatch, Sink } from "./Types.js"
 import { StreamName, StreamId } from "@equinox-js/core"
@@ -23,10 +23,8 @@ function createCrawl(batches: Batch[]) {
 
 const streamName = (id: string) => StreamName.create("Cat", StreamId.create(id))
 
-test("Checkpointing happens asynchronously", async () => {
-  const checkpoints = new MemoryCheckpoints()
-  const sink = new MemorySink()
-  const crawl = createCrawl([
+const checkpointCrawl = () =>
+  createCrawl([
     {
       items: [
         [streamName("1"), {} as any],
@@ -60,6 +58,12 @@ test("Checkpointing happens asynchronously", async () => {
       isTail: true,
     },
   ])
+
+test("Checkpointing happens asynchronously", async () => {
+  const checkpoints = new MemoryCheckpoints()
+  const sink = new MemorySink()
+  const crawl = checkpointCrawl()
+
   const ctrl = new AbortController()
   const checkpointReached = checkpoints.waitForCheckpoint("TestGroup", "0", 3n)
   const source = new TailingFeedSource({
@@ -71,11 +75,14 @@ test("Checkpointing happens asynchronously", async () => {
     crawl,
   })
   vi.spyOn(checkpoints, "commit")
+  vi.spyOn(CheckpointWriter.prototype, "flush")
   expect(await checkpoints.load("TestGroup", "0")).toBe(0n)
   const sourceP = source.start("0", ctrl.signal)
   await checkpointReached
   ctrl.abort()
   expect(await checkpoints.load("TestGroup", "0")).toBe(3n)
   expect(checkpoints.commit).toHaveBeenCalledTimes(1)
+  expect(CheckpointWriter.prototype.flush).toHaveBeenCalledTimes(1)
   await expect(sourceP).rejects.toThrow("The operation was aborted")
 })
+
