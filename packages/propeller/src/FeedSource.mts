@@ -111,17 +111,18 @@ export class TailingFeedSource extends EventEmitter {
     }
   }
 
-  async start(trancheId: string, signal: AbortSignal) {
+  start(trancheId: string, signal: AbortSignal) {
     if (this.options.statsIntervalMs) {
       this.stats.dumpOnInterval(this.options.statsIntervalMs, signal)
     }
-    const sinkPromise = this.options.sink.start?.(signal)
-    const sourcePromise = this._start(trancheId, signal)
-    const results = await Promise.allSettled([sinkPromise, sourcePromise])
-    const errors = results
-      .filter((r): r is PromiseRejectedResult => r.status === "rejected")
-      .map((r) => r.reason)
-    if (errors.length === 1) throw errors[0]
-    if (errors.length > 1) throw new AggregateError(errors)
+    return new Promise<void>((resolve, reject) => {
+      const onError = (err: Error) => {
+        if (!signal.aborted) reject(err)
+      }
+      Promise.allSettled([
+        this.options.sink.start?.(signal).catch(onError),
+        this._start(trancheId, signal).catch(onError),
+      ]).then(() => resolve())
+    })
   }
 }
