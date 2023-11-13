@@ -96,7 +96,11 @@ export class TailingFeedSource extends EventEmitter {
     }
   }
 
-  async start(trancheId: string, signal: AbortSignal) {
+  async start(trancheId: string, rootSignal: AbortSignal) {
+    const ctrl = new AbortController()
+    rootSignal.addEventListener("abort", () => ctrl.abort())
+    const signal = ctrl.signal
+
     if (this.options.statsIntervalMs) {
       this.stats.dumpOnInterval(this.options.statsIntervalMs, signal)
     }
@@ -111,9 +115,16 @@ export class TailingFeedSource extends EventEmitter {
       pos,
     )
 
-    const checkpointsP = checkpointWriter.start(signal)
-    const sinkP = this.options.sink.start?.(signal)
-    const sourceP = this._start(trancheId, pos, (cp) => checkpointWriter.commit(cp), signal)
+    const cancelAndThrow = (e: unknown) => {
+      if (!signal.aborted) ctrl.abort()
+      throw e
+    }
+
+    const checkpointsP = checkpointWriter.start(signal).catch(cancelAndThrow)
+    const sinkP = this.options.sink.start?.(signal).catch(cancelAndThrow)
+    const sourceP = this._start(trancheId, pos, (cp) => checkpointWriter.commit(cp), signal).catch(
+      cancelAndThrow,
+    )
 
     await Promise.all([checkpointsP, sinkP, sourceP]).finally(() => checkpointWriter.flush())
   }
