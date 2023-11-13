@@ -98,7 +98,7 @@ export class TailingFeedSource extends EventEmitter {
 
   async start(trancheId: string, rootSignal: AbortSignal) {
     const ctrl = new AbortController()
-    rootSignal.addEventListener("abort", () => ctrl.abort())
+    rootSignal.addEventListener("abort", () => !ctrl.signal.aborted && ctrl.abort())
     const signal = ctrl.signal
 
     if (this.options.statsIntervalMs) {
@@ -116,7 +116,8 @@ export class TailingFeedSource extends EventEmitter {
     )
 
     const cancelAndThrow = (e: unknown) => {
-      if (!signal.aborted) ctrl.abort()
+      if (signal.aborted) return
+      ctrl.abort()
       throw e
     }
 
@@ -126,6 +127,15 @@ export class TailingFeedSource extends EventEmitter {
       cancelAndThrow,
     )
 
-    await Promise.all([checkpointsP, sinkP, sourceP]).finally(() => checkpointWriter.flush())
+    const results = await Promise.allSettled([checkpointsP, sinkP, sourceP])
+    await checkpointWriter.flush().catch(() => {})
+
+    const errors = []
+    for (const result of results) {
+      if (result.status === "rejected") errors.push(result.reason)
+    }
+
+    if (errors.length === 1) throw errors[0]
+    if (errors.length > 1) throw new AggregateError(errors)
   }
 }
