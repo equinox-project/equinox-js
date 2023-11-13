@@ -64,9 +64,45 @@ export class TailingFeedSource extends EventEmitter {
     yield* this.options.crawl(trancheId, position, signal)
   }
 
-  private async _start(trancheId: string, signal: AbortSignal) {
-    const { checkpoints, checkpointIntervalMs, groupName, establishOrigin, sink } = this.options
-    let pos = await checkpoints.load(groupName, trancheId, establishOrigin)
+  private async _start(
+    trancheId: string,
+    pos: bigint,
+    onBatchComplete: (cp: bigint) => void,
+    signal: AbortSignal,
+  ) {
+    const { sink } = this.options
+
+    // we swallow aborts checkpoint errors
+    let wasTail = false
+    while (!signal.aborted) {
+      for await (const _batch of this.crawl(trancheId, wasTail, pos, signal)) {
+        // Weird TS bug thinks that batch is any
+        const batch: Batch = _batch
+        this.stats.recordBatch(trancheId, batch)
+        if (batch.items.length !== 0) {
+          await sink.pump(
+            {
+              items: batch.items,
+              checkpoint: batch.checkpoint,
+              isTail: batch.isTail,
+              onComplete: () => onBatchComplete(batch.checkpoint),
+            },
+            signal,
+          )
+        }
+        pos = batch.checkpoint
+        wasTail = batch.isTail
+      }
+    }
+  }
+
+  async start(trancheId: string, signal: AbortSignal) {
+    if (this.options.statsIntervalMs) {
+      this.stats.dumpOnInterval(this.options.statsIntervalMs, signal)
+    }
+
+    const { checkpoints, checkpointIntervalMs, groupName, establishOrigin } = this.options
+    const pos = await checkpoints.load(groupName, trancheId, establishOrigin)
     const checkpointWriter = new CheckpointWriter(
       groupName,
       trancheId,
@@ -74,55 +110,11 @@ export class TailingFeedSource extends EventEmitter {
       checkpoints,
       pos,
     )
-    let checkpointError: Error | undefined = undefined
-    // we swallow aborts checkpoint errors
-    checkpointWriter.start(signal).catch((err) => {
-      checkpointError = err
-    })
-    try {
-      let wasTail = false
-      while (!signal.aborted && !checkpointError) {
-        for await (const _batch of this.crawl(trancheId, wasTail, pos, signal)) {
-          // Weird TS bug thinks that batch is any
-          const batch: Batch = _batch
-          this.stats.recordBatch(trancheId, batch)
-          if (batch.items.length !== 0) {
-            await sink.pump(
-              {
-                items: batch.items,
-                checkpoint: batch.checkpoint,
-                isTail: batch.isTail,
-                onComplete: () => checkpointWriter.commit(batch.checkpoint),
-              },
-              signal,
-            )
-          }
-          pos = batch.checkpoint
-          wasTail = batch.isTail
-        }
-      }
 
-      if (!signal.aborted && checkpointError) {
-        throw checkpointError
-      }
-    } finally {
-      // ensure we flush the checkpoint
-      await checkpointWriter.flush()
-    }
-  }
+    const checkpointsP = checkpointWriter.start(signal)
+    const sinkP = this.options.sink.start?.(signal)
+    const sourceP = this._start(trancheId, pos, (cp) => checkpointWriter.commit(cp), signal)
 
-  start(trancheId: string, signal: AbortSignal) {
-    if (this.options.statsIntervalMs) {
-      this.stats.dumpOnInterval(this.options.statsIntervalMs, signal)
-    }
-    return new Promise<void>((resolve, reject) => {
-      const onError = (err: Error) => {
-        if (!signal.aborted) reject(err)
-      }
-      Promise.allSettled([
-        this.options.sink.start?.(signal).catch(onError),
-        this._start(trancheId, signal).catch(onError),
-      ]).then(() => resolve())
-    })
+    await Promise.all([checkpointsP, sinkP, sourceP]).finally(() => checkpointWriter.flush())
   }
 }

@@ -93,6 +93,10 @@ test("Checkpointing happens asynchronously", async () => {
   expect(checkpoints.commit).toHaveBeenCalledTimes(1)
   ctrl.abort()
   expect(await checkpoints.load("TestGroup", "0")).toBe(3n)
+  expect(CheckpointWriter.prototype.flush).toHaveBeenCalledTimes(1)
   await sourceP
   expect(CheckpointWriter.prototype.flush).toHaveBeenCalledTimes(2)
+})
+
+test("Checkpoint is flushed on abort or source error", async () => {
 })
