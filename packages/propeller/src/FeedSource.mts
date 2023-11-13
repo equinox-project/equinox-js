@@ -46,7 +46,6 @@ export type TailingFeedSourceOptions = {
 }
 
 export class TailingFeedSource extends EventEmitter {
-  onError!: (err: any) => void
   constructor(private readonly options: TailingFeedSourceOptions) {
     super()
   }
@@ -75,13 +74,14 @@ export class TailingFeedSource extends EventEmitter {
       checkpoints,
       pos,
     )
+    let checkpointError: Error | undefined = undefined
     // we swallow aborts checkpoint errors
     checkpointWriter.start(signal).catch((err) => {
-      if (!signal.aborted) throw err
+      checkpointError = err
     })
     try {
       let wasTail = false
-      while (!signal.aborted) {
+      while (!signal.aborted && !checkpointError) {
         for await (const _batch of this.crawl(trancheId, wasTail, pos, signal)) {
           // Weird TS bug thinks that batch is any
           const batch: Batch = _batch
@@ -101,6 +101,10 @@ export class TailingFeedSource extends EventEmitter {
           wasTail = batch.isTail
         }
       }
+
+      if (!signal.aborted && checkpointError) {
+        throw checkpointError
+      }
     } finally {
       // ensure we flush the checkpoint
       await checkpointWriter.flush()
@@ -113,6 +117,11 @@ export class TailingFeedSource extends EventEmitter {
     }
     const sinkPromise = this.options.sink.start?.(signal)
     const sourcePromise = this._start(trancheId, signal)
-    await Promise.all([sinkPromise, sourcePromise])
+    const results = await Promise.allSettled([sinkPromise, sourcePromise])
+    const errors = results
+      .filter((r): r is PromiseRejectedResult => r.status === "rejected")
+      .map((r) => r.reason)
+    if (errors.length === 1) throw errors[0]
+    if (errors.length > 1) throw new AggregateError(errors)
   }
 }

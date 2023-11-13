@@ -41,6 +41,10 @@ const waiter = () => {
   ] as const
 }
 
+const throwIfActive = (signal: AbortSignal) => (e: any) => {
+  if (!signal.aborted) throw e
+}
+
 test("Correctly batches stream handling", async () => {
   const store = new VolatileStore()
   const index = AppendsIndex.Reader.createMem(store)
@@ -76,7 +80,7 @@ test("Correctly batches stream handling", async () => {
     { p: IndexStreamId.ofString("Cat-stream3"), i: 1, c: ["Something", "Something"] },
   ])
 
-  await expect(src.start(ctrl.signal)).rejects.toThrow("operation was aborted")
+  await src.start(ctrl.signal).catch(throwIfActive(ctrl.signal))
   expect(streams.size).toBe(3)
   expect(Array.from(streams.values()).flat()).toHaveLength(4)
 })
@@ -114,7 +118,9 @@ test("it fails fast", async () => {
     })),
   )
 
-  await expect(src.start(ctrl.signal)).rejects.toThrow("failed")
+  const sourceP = src.start(ctrl.signal).catch(throwIfActive(ctrl.signal))
+
+  await expect(sourceP).rejects.toThrow("failed")
 })
 
 const createTimelineEvent = (i: number, type: string, body: any): ITimelineEvent => ({
@@ -167,7 +173,7 @@ test("loading event bodies", async () => {
     checkpoints: new MemoryCheckpoints(),
     sink,
   })
-  const sourceP = src.start(ctrl.signal)
+  const sourceP = src.start(ctrl.signal).catch(throwIfActive(ctrl.signal))
   const epochWriter = AppendsEpoch.Config.createMem(1024 * 1024, 5000n, 100_000, store)
   for (const [sn, events] of expectedStreams) {
     store.sync(
@@ -199,7 +205,7 @@ test("loading event bodies", async () => {
   }
   await wait
   expect(received).toEqual(expectedStreams)
-  await expect(sourceP).rejects.toThrow("operation was aborted")
+  await sourceP
 })
 
 test("starting from the tail of the store", async () => {
@@ -238,7 +244,7 @@ test("starting from the tail of the store", async () => {
     { p: IndexStreamId.ofString("Cat-stream3"), i: 0, c: ["Something", "Something"] },
   ])
 
-  const p = src.start(ctrl.signal)
+  const p = src.start(ctrl.signal).catch(throwIfActive(ctrl.signal))
   await checkpoints.loaded[0] // give it a chance to load the checkpoint
   await epochWriter.ingest(AppendsPartitionId.wellKnownId, AppendsEpochId.initial, [
     { p: IndexStreamId.ofString("Cat-stream3"), i: 2, c: ["Something", "Something"] },
@@ -246,7 +252,7 @@ test("starting from the tail of the store", async () => {
 
   await wait
   ctrl.abort()
-  await expect(p).rejects.toThrow("The operation was aborted")
+  await p
   expect(received).toEqual([
     "Cat-stream3",
     [

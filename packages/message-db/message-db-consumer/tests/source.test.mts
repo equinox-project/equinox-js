@@ -3,7 +3,7 @@ import { MessageDbSource } from "../src/index.mjs"
 import { ICheckpoints, StreamsSink } from "@equinox-js/propeller"
 import { randomUUID } from "crypto"
 import { Pool } from "pg"
-import { MessageDbConnection} from "@equinox-js/message-db"
+import { MessageDbConnection } from "@equinox-js/message-db"
 import { ITimelineEvent, StreamName } from "@equinox-js/core"
 
 class MemoryCheckpoints implements ICheckpoints {
@@ -32,6 +32,10 @@ const pool = new Pool({ connectionString })
 const conn = MessageDbConnection.create(pool)
 const writer = conn.write
 afterAll(() => pool.end())
+
+const throwIfActive = (signal: AbortSignal) => (e: any) => {
+  if (!signal.aborted) throw e
+}
 
 test("Ships batches to the sink", async () => {
   const category = randomUUID().replace(/-/g, "")
@@ -64,13 +68,13 @@ test("Ships batches to the sink", async () => {
   })
 
   const ctrl = new AbortController()
-  const sourceP = src.start(ctrl.signal)
+  const sourceP = src.start(ctrl.signal).catch(throwIfActive(ctrl.signal))
 
   await wait
   ctrl.abort()
   expect(streams.size).toBe(3)
   expect(Array.from(streams.values()).flat()).toHaveLength(4)
-  await expect(sourceP).rejects.toThrow("This operation was aborted")
+  await sourceP
 })
 test("it fails fast", async () => {
   const category = randomUUID().replace(/-/g, "")
