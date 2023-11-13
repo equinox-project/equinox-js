@@ -127,15 +127,6 @@ export class TailingFeedSource extends EventEmitter {
       cancelAndThrow,
     )
 
-    const results = await Promise.allSettled([checkpointsP, sinkP, sourceP])
-    await checkpointWriter.flush().catch(() => {})
-
-    const errors = []
-    for (const result of results) {
-      if (result.status === "rejected") errors.push(result.reason)
-    }
-
-    if (errors.length === 1) throw errors[0]
-    if (errors.length > 1) throw new AggregateError(errors)
+    await Promise.all([checkpointsP, sinkP, sourceP]).finally(() => checkpointWriter.flush())
   }
 }
