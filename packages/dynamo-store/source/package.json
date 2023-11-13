@@ -11,7 +11,8 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.mts --sourcemap --format esm,cjs --dts --clean"
+    "build": "tsup src/index.mts --sourcemap --format esm,cjs --dts --clean",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@equinox-js/memory-store": "workspace:*",

@@ -14,6 +14,10 @@ class MemorySink implements Sink {
   addTracingAttrs = vi.fn()
 }
 
+const throwIfActive = (signal: AbortSignal) => (e: unknown) => {
+  if (!signal.aborted) throw e
+}
+
 function createCrawl(batches: Batch[]) {
   return async function* crawl(): AsyncIterable<Batch> {
     while (batches.length) {
@@ -83,12 +87,16 @@ test("Checkpointing happens asynchronously", async () => {
   }
   vi.spyOn(CheckpointWriter.prototype, "flush")
   expect(await checkpoints.load("TestGroup", "0")).toBe(0n)
-  const sourceP = source.start("0", ctrl.signal)
+  const sourceP = source.start("0", ctrl.signal).catch(throwIfActive(ctrl.signal))
   await checkpointReached
   expect(CheckpointWriter.prototype.flush).toHaveBeenCalledTimes(1)
   expect(checkpoints.commit).toHaveBeenCalledTimes(1)
   ctrl.abort()
   expect(await checkpoints.load("TestGroup", "0")).toBe(3n)
-  await expect(sourceP).rejects.toThrow("operation was aborted")
+  expect(CheckpointWriter.prototype.flush).toHaveBeenCalledTimes(1)
+  await sourceP
   expect(CheckpointWriter.prototype.flush).toHaveBeenCalledTimes(2)
+})
+
+test("Checkpoint is flushed on abort or source error", async () => {
 })
