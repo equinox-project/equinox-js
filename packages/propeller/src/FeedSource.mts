@@ -75,7 +75,10 @@ export class TailingFeedSource extends EventEmitter {
       checkpoints,
       pos,
     )
-    checkpointWriter.start(signal).catch(this.onError)
+    // we swallow aborts checkpoint errors
+    checkpointWriter.start(signal).catch((err) => {
+      if (!signal.aborted) throw err
+    })
     try {
       let wasTail = false
       while (!signal.aborted) {
@@ -104,19 +107,12 @@ export class TailingFeedSource extends EventEmitter {
     }
   }
 
-  start(trancheId: string, signal: AbortSignal) {
+  async start(trancheId: string, signal: AbortSignal) {
     if (this.options.statsIntervalMs) {
       this.stats.dumpOnInterval(this.options.statsIntervalMs, signal)
     }
-    return new Promise<void>((resolve, reject) => {
-      this.onError = (err: any) => {
-        if (err && err.message === "Aborted") return resolve()
-        reject(err)
-      }
-      const sinkPromise = this.options.sink.start?.(signal)
-      const sourcePromise = this._start(trancheId, signal)
-      Promise.all([sinkPromise, sourcePromise]).then(() => resolve(), this.onError)
-    })
+    const sinkPromise = this.options.sink.start?.(signal)
+    const sourcePromise = this._start(trancheId, signal)
+    await Promise.all([sinkPromise, sourcePromise])
   }
 }
-

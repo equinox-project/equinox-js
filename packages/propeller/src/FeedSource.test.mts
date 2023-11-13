@@ -3,6 +3,7 @@ import { CheckpointWriter, TailingFeedSource } from "./FeedSource.mjs"
 import { test, expect, vi } from "vitest"
 import { Batch, IngesterBatch, Sink } from "./Types.js"
 import { StreamName, StreamId } from "@equinox-js/core"
+import { sleep } from "./Sleep.js"
 
 class MemorySink implements Sink {
   async start() {}
@@ -75,14 +76,19 @@ test("Checkpointing happens asynchronously", async () => {
     crawl,
   })
   vi.spyOn(checkpoints, "commit")
+  const oldFlush = CheckpointWriter.prototype.flush
+  CheckpointWriter.prototype.flush = async function () {
+    await sleep(10, ctrl.signal)
+    await oldFlush.call(this)
+  }
   vi.spyOn(CheckpointWriter.prototype, "flush")
   expect(await checkpoints.load("TestGroup", "0")).toBe(0n)
   const sourceP = source.start("0", ctrl.signal)
   await checkpointReached
+  expect(CheckpointWriter.prototype.flush).toHaveBeenCalledTimes(1)
+  expect(checkpoints.commit).toHaveBeenCalledTimes(1)
   ctrl.abort()
   expect(await checkpoints.load("TestGroup", "0")).toBe(3n)
-  expect(checkpoints.commit).toHaveBeenCalledTimes(1)
-  expect(CheckpointWriter.prototype.flush).toHaveBeenCalledTimes(1)
-  await expect(sourceP).rejects.toThrow("The operation was aborted")
+  await expect(sourceP).rejects.toThrow("operation was aborted")
+  expect(CheckpointWriter.prototype.flush).toHaveBeenCalledTimes(2)
 })
-
