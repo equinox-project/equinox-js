@@ -14,7 +14,7 @@ class MemorySink implements Sink {
   addTracingAttrs = vi.fn()
 }
 
-const throwIfActive = (signal: AbortSignal) => (e: any) => {
+const throwIfActive = (signal: AbortSignal) => (e: unknown) => {
   if (!signal.aborted) throw e
 }
 

@@ -33,7 +33,7 @@ const conn = MessageDbConnection.create(pool)
 const writer = conn.write
 afterAll(() => pool.end())
 
-const throwIfActive = (signal: AbortSignal) => (e: any) => {
+const throwIfActive = (signal: AbortSignal) => (e: unknown) => {
   if (!signal.aborted) throw e
 }
 
