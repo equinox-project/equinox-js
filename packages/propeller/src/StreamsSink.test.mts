@@ -49,7 +49,7 @@ describe("Concurrency", () => {
       ctrl.abort()
 
       expect(maxActive).toBe(concurrency)
-      await expect(sinkP).rejects.toThrow("This operation was aborted")
+      await expect(sinkP).rejects.toThrow("operation was aborted")
     },
   )
 })
@@ -77,7 +77,7 @@ test("Correctly merges batches", async () => {
 
   expect(invocations).toBe(10)
   expect(checkpoint).toHaveBeenCalledTimes(2)
-  await expect(sinkP).rejects.toThrow("This operation was aborted")
+  await expect(sinkP).rejects.toThrow("operation was aborted")
 })
 
 const mkSingleBatch = (
@@ -123,7 +123,7 @@ test("Correctly limits in-flight batches", async () => {
 
   // onComplete is called in order and for every batch
   expect(completed.mock.calls).toEqual([[0n], [1n], [2n], [3n], [4n], [5n]])
-  await expect(sinkP).rejects.toThrow("This operation was aborted")
+  await expect(sinkP).rejects.toThrow("operation was aborted")
 })
 
 test("Ensures at-most one handler is per stream", async () => {
@@ -162,5 +162,5 @@ test("Ensures at-most one handler is per stream", async () => {
 
   // onComplete is called in order and for every batch
   expect(completed.mock.calls).toEqual([[0n], [1n], [2n], [3n], [4n], [5n]])
-  await expect(sinkP).rejects.toThrow("This operation was aborted")
+  await expect(sinkP).rejects.toThrow("operation was aborted")
 })

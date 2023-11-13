@@ -76,7 +76,7 @@ test("Correctly batches stream handling", async () => {
     { p: IndexStreamId.ofString("Cat-stream3"), i: 1, c: ["Something", "Something"] },
   ])
 
-  await expect(src.start(ctrl.signal)).rejects.toThrow("The operation was aborted")
+  await expect(src.start(ctrl.signal)).rejects.toThrow("operation was aborted")
   expect(streams.size).toBe(3)
   expect(Array.from(streams.values()).flat()).toHaveLength(4)
 })
@@ -199,7 +199,7 @@ test("loading event bodies", async () => {
   }
   await wait
   expect(received).toEqual(expectedStreams)
-  await expect(sourceP).rejects.toThrow("The operation was aborted")
+  await expect(sourceP).rejects.toThrow("operation was aborted")
 })
 
 test("starting from the tail of the store", async () => {
