@@ -1,6 +1,6 @@
 {
   "name": "@equinox-js/dynamo-store-indexer-lambda",
-  "version": "1.0.0-rc.6.4",
+  "version": "1.0.0-rc.6.5",
   "main": "src/index.ts",
   "scripts": {
     "lint": "tsc -p . --noEmit"
