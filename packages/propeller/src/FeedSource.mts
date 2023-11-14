@@ -116,7 +116,7 @@ export class TailingFeedSource extends EventEmitter {
     )
 
     const cancelAndThrow = (e: unknown) => {
-      if (signal.aborted) return
+      if (signal.aborted) throw e
       ctrl.abort()
       throw e
     }
