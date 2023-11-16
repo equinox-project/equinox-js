@@ -59,6 +59,11 @@ describe("Codec", () => {
         expect(() => codec.tryDecode(encoded as any)).toThrow()
       })
 
+      test("ignores unconfigured event types", () => {
+        const event = { type: "OldHello", data: JSON.stringify({ hallo: "hallo" }) }
+        expect(codec.tryDecode(event as any)).toEqual(undefined)
+      })
+
       test("does not roundtrip complex types", () => {
         const HelloSchema = z.object({ hello: z.date() })
         const codec = Codec.upcast(Codec.json(), Codec.Upcast.body({ Hello: HelloSchema.parse }))
