@@ -245,7 +245,7 @@ export namespace Reader {
     encode() {
       throw new Error("This is a read only codec")
     },
-    tryDecode(event: ITimelineEvent<string>): Event | undefined {
+    decode(event: ITimelineEvent<string>): Event | undefined {
       const data = JSON.parse(event.data ?? "null")
       return [event.index, { type: event.type, data: data } as Events.Event]
     },

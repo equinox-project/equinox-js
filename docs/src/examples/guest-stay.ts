@@ -18,7 +18,7 @@ type Event =
   | { type: "CheckedOut"; data: { at: Date } }
 
 const codec: ICodec<Event, string> = {
-  tryDecode(ev): Event | undefined {
+  decode(ev): Event | undefined {
     const data = JSON.parse(ev.data || "{}")
     switch (ev.type) {
       case "CheckedIn":

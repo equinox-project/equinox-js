@@ -39,10 +39,10 @@ function change(payerId: PayerId, event: Payer.Event): Sql {
 
 function changes(streamName: string, events: ITimelineEvent[]): Sql[] {
   const payerId = PayerId.parse(StreamName.parseId(streamName))
-  const decodedEvents = keepMap(events, Payer.codec.tryDecode)
+  const decodedEvents = keepMap(events, Payer.codec.decode)
   const changes: Sql[] = []
   for (const event of events) {
-    const ev = Payer.codec.tryDecode(event)
+    const ev = Payer.codec.decode(event)
     if (!ev) continue
     changes.push(change(payerId, ev))
   }

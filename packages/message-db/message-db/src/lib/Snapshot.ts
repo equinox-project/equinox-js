@@ -16,11 +16,11 @@ export const meta = (token: StreamToken): Meta => ({
   streamVersion: String(Token.streamVersion(token)),
 })
 export async function decode<V>(
-  tryDecode: (ev: ITimelineEvent<Format>) => Promise<V | null | undefined> | V | null | undefined,
+  decode: (ev: ITimelineEvent<Format>) => Promise<V | null | undefined> | V | null | undefined,
   events: ITimelineEvent<Format>[],
 ): Promise<[StreamToken, V] | null> {
   if (events.length > 0) {
-    const decoded = await tryDecode(events[0])
+    const decoded = await decode(events[0])
     if (decoded != null) return [Token.create(streamVersion(events[0])), decoded]
   }
   return null

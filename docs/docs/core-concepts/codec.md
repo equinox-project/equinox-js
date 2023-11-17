@@ -17,7 +17,7 @@ like this:
 
 ```ts
 const codec: Codec<Event, string> = {
-  tryDecode(ev): Event | undefined {
+  decode(ev): Event | undefined {
     const data = JSON.parse(ev.data || "{}")
     switch (ev.type) {
       case "CheckedIn":
@@ -78,6 +78,13 @@ const codec = Codec.map(
   }),
 )
 ```
+
+When upcasting is used the `decode` method of the resulting codec will drop
+events whose types are not included in the mapping. This is because it's a 
+common evolution in event sourced systems for events to become dead weight, or
+unnecessary. By providing an upcast mapping you've essentially defined exactly
+the events you care about and the codec will respect that by returning `undefined`
+for events outside the mapping, and throwing when your upcast fails.
 
 :::caution
 

@@ -31,7 +31,7 @@ function keepMap<T, V>(arr: T[], fn: (v: T) => V | undefined): V[] {
 
 type GatewaySyncResult = { type: "Written"; token: StreamToken } | { type: "ConflictUnknown" }
 
-type TryDecode<E> = (v: ITimelineEvent<Format>) => E | undefined
+type Decode<E> = (v: ITimelineEvent<Format>) => E | undefined
 
 export class MessageDbConnection {
   constructor(
@@ -66,7 +66,7 @@ export class MessageDbContext {
   async loadBatched<Event, State>(
     streamName: string,
     requireLeader: boolean,
-    tryDecode: TryDecode<Event>,
+    decode: Decode<Event>,
     fold: (state: State, events: Event[]) => State,
     initial: State,
   ): Promise<[StreamToken, State]> {
@@ -84,7 +84,7 @@ export class MessageDbContext {
     )) {
       batches++
       eventCount += events.length
-      state = fold(state, keepMap(events, tryDecode))
+      state = fold(state, keepMap(events, decode))
       version = lastVersion
     }
     trace.getActiveSpan()?.setAttributes({
@@ -98,7 +98,7 @@ export class MessageDbContext {
   async loadLast<Event, State>(
     streamName: string,
     requireLeader: boolean,
-    tryDecode: TryDecode<Event>,
+    decode: Decode<Event>,
     fold: (state: State, events: Event[]) => State,
     initial: State,
   ): Promise<[StreamToken, State]> {
@@ -107,14 +107,14 @@ export class MessageDbContext {
       [Tags.loaded_count]: 1,
       [Tags.read_version]: Number(version),
     })
-    return [Token.create(version), fold(initial, keepMap(events, tryDecode))]
+    return [Token.create(version), fold(initial, keepMap(events, decode))]
   }
 
   async loadSnapshot<Event>(
     category: string,
     streamId: string,
     requireLeader: boolean,
-    tryDecode: TryDecode<Event>,
+    decode: Decode<Event>,
     eventType: string,
   ) {
     const snapshotStream = Snapshot.streamName(category, streamId)
@@ -124,7 +124,7 @@ export class MessageDbContext {
       snapshotStream,
       eventType,
     )
-    const decoded = await Snapshot.decode(tryDecode, events)
+    const decoded = await Snapshot.decode(decode, events)
     trace.getActiveSpan()?.setAttributes({
       [Tags.snapshot_version]: decoded ? Number(decoded?.[0].version) : -1,
     })
@@ -135,7 +135,7 @@ export class MessageDbContext {
     streamName: Equinox.StreamName,
     requireLeader: boolean,
     token: StreamToken,
-    tryDecode: TryDecode<Event>,
+    decode: Decode<Event>,
     fold: (state: State, events: Event[]) => State,
     state: State,
   ): Promise<[StreamToken, State]> {
@@ -151,7 +151,7 @@ export class MessageDbContext {
       startPos,
       requireLeader,
     )) {
-      state = fold(state, keepMap(events, tryDecode))
+      state = fold(state, keepMap(events, decode))
       streamVersion = streamVersion > version ? streamVersion : version
       batches++
       eventCount += events.length
@@ -252,7 +252,7 @@ class InternalCategory<Event, State, Context>
         return this.context.loadBatched(
           streamName,
           requireLeader,
-          this.codec.tryDecode,
+          this.codec.decode,
           this.fold,
           this.initial,
         )
@@ -260,7 +260,7 @@ class InternalCategory<Event, State, Context>
         return this.context.loadLast(
           streamName,
           requireLeader,
-          this.codec.tryDecode,
+          this.codec.decode,
           this.fold,
           this.initial,
         )
@@ -269,14 +269,14 @@ class InternalCategory<Event, State, Context>
           this.categoryName,
           streamId,
           requireLeader,
-          this.codec.tryDecode,
+          this.codec.decode,
           this.access.eventName,
         )
         if (!result)
           return this.context.loadBatched(
             streamName,
             requireLeader,
-            this.codec.tryDecode,
+            this.codec.decode,
             this.fold,
             this.initial,
           )
@@ -286,7 +286,7 @@ class InternalCategory<Event, State, Context>
           streamName,
           requireLeader,
           pos,
-          this.codec.tryDecode,
+          this.codec.decode,
           this.fold,
           initial,
         )
@@ -308,7 +308,7 @@ class InternalCategory<Event, State, Context>
       streamName,
       requireLeader,
       t.token,
-      this.codec.tryDecode,
+      this.codec.decode,
       this.fold,
       t.state,
     )

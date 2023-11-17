@@ -30,7 +30,7 @@ export const projection = { table: "payer", id: ["id"] }
 
 function changes(stream: string, events: ITimelineEvent[]): Change[] {
   const id = PayerId.parse(StreamName.parseId(stream))
-  const event = Payer.codec.tryDecode(events[events.length - 1])
+  const event = Payer.codec.decode(events[events.length - 1])
   if (!event) return []
   switch (event.type) {
     case "PayerProfileUpdated":
@@ -133,7 +133,7 @@ function change(id: AppointmentId, version: bigint, event: Appointment.Event) {
 function changes(streamName: string, events: ITimelineEvent[]): Change[] {
   const id = AppointmentId.parse(StreamName.parseId(streamName))
   const version = events[events.length - 1].index
-  return keepMap(events, Appointment.codec.tryDecode).map((ev) => change(id, version, ev))
+  return keepMap(events, Appointment.codec.decode).map((ev) => change(id, version, ev))
 }
 
 export const createHandler = (pool: Pool) => createProjection(projection, pool, changes)

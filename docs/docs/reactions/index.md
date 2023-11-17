@@ -66,7 +66,7 @@ async function handler(stream: string, events: ITimelineEvent[]) {
   const messageId = MessageId.parse(streamId)
   // We know that the MessageSent event is always the first event in the stream
   // and as such we do not need to check any other event
-  const ev = Message.codec.tryDecode(events[0])
+  const ev = Message.codec.decode(events[0])
   if (ev.type !== "MessageSent") return
   await notifier.sendNotifications(messageId, ev.data)
 }
