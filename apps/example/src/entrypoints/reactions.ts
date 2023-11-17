@@ -20,7 +20,7 @@ const invoiceEmailer = InvoiceAutoEmailer.Service.create(config)
 function impliesInvoiceEmailRequired(streamName: StreamName, events: ITimelineEvent[]) {
   const id = Invoice.Stream.tryMatch(streamName)
   if (!id) return
-  const ev = Invoice.Events.codec.tryDecode(events[0])
+  const ev = Invoice.Events.codec.decode(events[0])
   if (ev?.type !== "InvoiceRaised") return
   return { id, payer_id: ev.data.payer_id, amount: ev.data.amount }
 }

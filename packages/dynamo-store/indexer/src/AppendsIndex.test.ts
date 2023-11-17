@@ -20,7 +20,7 @@ test("Deserialises with upconversion", () => {
     encoding: 1,
     body: zlib.deflateRawSync(Buffer.from(JSON.stringify({ tranche: 3, epoch: 2 }))),
   }
-  const dec = AppendsIndex.Events.codec.tryDecode({ type: "Started", data } as any)
+  const dec = AppendsIndex.Events.codec.decode({ type: "Started", data } as any)
   expect(dec).toEqual({ type: "Started", data: { partition: 3, epoch: 2 } })
 })
 
@@ -30,7 +30,7 @@ test("Roundtrips Started cleanly", () => {
     data: { partition: AppendsPartitionId.wellKnownId, epoch: AppendsEpochId.parse("3") },
   }
   const enc = AppendsIndex.Events.codec.encode(event, null)
-  const dec = AppendsIndex.Events.codec.tryDecode(enc as any)
+  const dec = AppendsIndex.Events.codec.decode(enc as any)
   expect(dec).toEqual(event)
 })
 test("Roundtrips Snapshotted cleanly", () => {
@@ -39,6 +39,6 @@ test("Roundtrips Snapshotted cleanly", () => {
     data: { active: { [AppendsPartitionId.parse("0")]: AppendsEpochId.parse("2") } },
   }
   const enc = AppendsIndex.Events.codec.encode(event, null)
-  const dec = AppendsIndex.Events.codec.tryDecode(enc as any)
+  const dec = AppendsIndex.Events.codec.decode(enc as any)
   expect(dec).toEqual(event)
 })

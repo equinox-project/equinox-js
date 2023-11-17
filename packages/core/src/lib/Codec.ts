@@ -2,7 +2,7 @@ import { IEventData, ITimelineEvent } from "./Types.js"
 import zlib from "zlib"
 
 export interface ICodec<E, F, C = undefined> {
-  tryDecode(event: ITimelineEvent<F>): E | undefined
+  decode(event: ITimelineEvent<F>): E | undefined
   encode(event: E, ctx: C): IEventData<F>
 }
 
@@ -14,7 +14,7 @@ export function json<E extends DomainEvent>(): ICodec<E, string, null>
 export function json<E extends DomainEvent, C>(mapMeta: MapMeta<E, C>): ICodec<E, string, C>
 export function json(mapMeta?: MapMeta<any, any>): ICodec<any, string, any> {
   return {
-    tryDecode: (e) => ({ type: e.type, data: e.data ? JSON.parse(e.data) : undefined }),
+    decode: (e) => ({ type: e.type, data: e.data ? JSON.parse(e.data) : undefined }),
     encode(e, _ctx) {
       const meta = JSON.stringify(mapMeta ? mapMeta(e, _ctx) : e.meta)
       return {
@@ -49,8 +49,8 @@ export const upcast = <E extends DomainEvent, Ctx = null>(
   upcast: (e: DomainEvent) => E | undefined,
 ): ICodec<E, string, Ctx> => {
   return {
-    tryDecode: (e: ITimelineEvent<string>) => {
-      const decoded = codec.tryDecode(e)
+    decode: (e: ITimelineEvent<string>) => {
+      const decoded = codec.decode(e)
       if (!decoded) return
       return upcast(decoded)
     },
@@ -98,10 +98,10 @@ export function smartCompress(buf: Buffer | string): EncodedBody {
 
 export function compress<E, C>(codec: ICodec<E, string, C>): ICodec<E, EncodedBody, C> {
   return {
-    tryDecode(e) {
+    decode(e) {
       const data = e.data ? smartDecompress(e.data)?.toString() : undefined
       const meta = e.meta ? smartDecompress(e.meta)?.toString() : undefined
-      return codec.tryDecode({ ...e, data, meta })
+      return codec.decode({ ...e, data, meta })
     },
     encode(e, ctx) {
       const inner = codec.encode(e, ctx)

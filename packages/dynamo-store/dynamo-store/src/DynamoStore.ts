@@ -836,7 +836,7 @@ namespace Tip {
   }
 }
 
-type TryDecode<E> = (e: ITimelineEvent<EncodedBody>) => E | undefined
+type Decode<E> = (e: ITimelineEvent<EncodedBody>) => E | undefined
 namespace Query {
   // prettier-ignore
   const mkQuery = (table: StoreTable, stream: string, consistentRead: boolean, maxItems: number, direction: Direction, minIndex?: number, maxIndex?: number) =>
@@ -880,13 +880,13 @@ namespace Query {
   }
 
   export function scanTip<E>(
-    tryDecode: TryDecode<E>,
+    decode: Decode<E>,
     isOrigin: (ev: E) => boolean,
     tip: Tip.LoadedTip,
   ): ScanResult<E> {
     const items: E[] = []
     const isOrigin_ = (ev: ITimelineEvent<EncodedBody>) => {
-      const x = tryDecode(ev)
+      const x = decode(ev)
       if (x == undefined) return false
       items.unshift(x)
       return isOrigin(x)
@@ -916,7 +916,7 @@ namespace Query {
     maxItems: number,
     maxRequests: number | undefined,
     direction: Direction,
-    tryDecode: TryDecode<E>,
+    decode: Decode<E>,
     isOrigin: (ev: E) => boolean,
     minIndex: number | undefined,
     maxIndex: number | undefined,
@@ -948,7 +948,7 @@ namespace Query {
       pagesCount++
       batchCount += batches.length
       for (const x of batchEvents) {
-        const decoded = tryDecode(Event.toTimelineEvent(x))
+        const decoded = decode(Event.toTimelineEvent(x))
         events.push([x, decoded])
         if (decoded && isOrigin(decoded)) {
           found = true
@@ -992,7 +992,7 @@ namespace Query {
     table: StoreTable,
     stream: string,
     opts: QueryOptions,
-    tryDecode: TryDecode<E>,
+    decode: Decode<E>,
     isOrigin: (v: E) => boolean,
     direction: Direction,
     minIndex?: number,
@@ -1008,7 +1008,7 @@ namespace Query {
       const acc: E[] = []
       let found = false
       for (const x of events) {
-        const decoded = tryDecode(Event.toTimelineEvent(x))
+        const decoded = decode(Event.toTimelineEvent(x))
         if (!decoded) continue
         acc.push(decoded)
         if (isOrigin(decoded)) {
@@ -1131,13 +1131,13 @@ class StoreClient {
     stream: string,
     consistentRead: boolean,
     direction: Direction,
-    tryDecode: TryDecode<E>,
+    decode: Decode<E>,
     isOrigin: (e: E) => boolean,
     minIndex?: number,
     maxIndex?: number,
     tipRet?: Tip.LoadedTip,
   ): Promise<[StreamToken, E[]]> {
-    const tip = tipRet && Query.scanTip(tryDecode, isOrigin, tipRet)
+    const tip = tipRet && Query.scanTip(decode, isOrigin, tipRet)
     maxIndex = maxIndex ?? (tip ? Batch.tipMagicI : undefined)
     const walk =
       (table: StoreTable) => (minIndex: number | undefined, maxIndex: number | undefined) =>
@@ -1148,7 +1148,7 @@ class StoreClient {
           this.queryOptions.maxItems,
           this.queryOptions.maxRequests,
           direction,
-          tryDecode,
+          decode,
           isOrigin,
           minIndex,
           maxIndex,
@@ -1164,14 +1164,14 @@ class StoreClient {
     stream: string,
     maybePos: Position | undefined,
     consistentRead: boolean,
-    tryDecode: TryDecode<E>,
+    decode: Decode<E>,
     isOrigin: (e: E) => boolean,
     checkUnfolds: boolean,
   ): Promise<[StreamToken, E[]]> {
     const span = trace.getActiveSpan()
     span?.setAttribute(Tags.load_method, "BatchBackward")
     if (!checkUnfolds)
-      return this.read(stream, consistentRead, Direction.Backward, tryDecode, isOrigin)
+      return this.read(stream, consistentRead, Direction.Backward, decode, isOrigin)
     const res = await this.loadTip(stream, consistentRead, maybePos)
     switch (res.type) {
       case "NotFound":
@@ -1183,7 +1183,7 @@ class StoreClient {
           stream,
           consistentRead,
           Direction.Backward,
-          tryDecode,
+          decode,
           isOrigin,
           undefined,
           undefined,
@@ -1207,7 +1207,7 @@ class StoreClient {
     stream: string,
     maybePos: Position | undefined,
     consistentRead: boolean,
-    tryDecode: TryDecode<E>,
+    decode: Decode<E>,
     isOrigin: (e: E) => boolean,
     preview?: Tip.LoadedTip,
   ): Promise<LoadFromTokenResult<E>> {
@@ -1216,7 +1216,7 @@ class StoreClient {
         stream,
         consistentRead,
         Direction.Backward,
-        tryDecode,
+        decode,
         isOrigin,
         Position.toIndex(maybePos),
         undefined,
@@ -1281,7 +1281,7 @@ class StoreClient {
     query: QueryOptions,
     stream: StreamName,
     direction: Direction,
-    tryDecode: TryDecode<E>,
+    decode: Decode<E>,
     isOrigin: (e: E) => boolean,
     minIndex?: number,
     maxIndex?: number,
@@ -1290,7 +1290,7 @@ class StoreClient {
       this.table,
       stream,
       query,
-      tryDecode,
+      decode,
       isOrigin,
       direction,
       minIndex,
@@ -1329,7 +1329,7 @@ class StoreCategory<E, S, C> implements IReloadableCategory<E, S, C> {
       streamName,
       undefined,
       requireLeader,
-      this.codec.tryDecode,
+      this.codec.decode,
       this.isOrigin,
       this.checkUnfolds,
     )
@@ -1393,7 +1393,7 @@ class StoreCategory<E, S, C> implements IReloadableCategory<E, S, C> {
       streamName,
       Token.unpack(t.token),
       requireLeader,
-      this.codec.tryDecode,
+      this.codec.decode,
       this.isOrigin,
     )
 
@@ -1568,8 +1568,8 @@ export class EventsContext {
       ? QueryOptions.create({ maxItems: queryMaxItems })
       : store.queryOptions
       const isOrigin = () => false
-      const tryDecode = <T>(e: T) => e
-    return store.readLazy(batching, streamName, direction, tryDecode, isOrigin, minIndex, maxIndex)
+      const decode = <T>(e: T) => e
+    return store.readLazy(batching, streamName, direction, decode, isOrigin, minIndex, maxIndex)
   }
 
   private async getInternal(streamName: StreamName, minIndex?: number, maxIndex?: number, maxCount?: number, direction = Direction.Forward): Promise<[StreamToken, ITimelineEvent<EncodedBody>[]]> {
@@ -1580,9 +1580,9 @@ export class EventsContext {
     }
     const store = this.context.storeClient
     const isOrigin = maxCount == null ? () => false : maxCountPredicate(maxCount)
-    const tryDecode = <T>(e: T) => e
+    const decode = <T>(e: T) => e
     const consistentRead = false
-    const [token, events] = await store.read(streamName, consistentRead, direction, tryDecode, isOrigin, minIndex, maxIndex)
+    const [token, events] = await store.read(streamName, consistentRead, direction, decode, isOrigin, minIndex, maxIndex)
     if (direction === Direction.Backward) events.reverse()
     return [token, events]
   }

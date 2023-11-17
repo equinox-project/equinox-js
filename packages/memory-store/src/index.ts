@@ -84,7 +84,7 @@ class Category<Event, State, Context, Format>
   private decodeEvents(encoded: ITimelineEvent<Format>[]) {
     const events: Event[] = []
     for (const ev of encoded) {
-      const decoded = this.codec.tryDecode(ev)
+      const decoded = this.codec.decode(ev)
       if (decoded != null) events.push(decoded)
     }
     return events

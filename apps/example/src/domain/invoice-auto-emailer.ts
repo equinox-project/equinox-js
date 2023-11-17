@@ -103,7 +103,7 @@ export const createHandler = (config: Config.Config, emailSender?: ISendEmails) 
   return async (stream: StreamName, events: ITimelineEvent[]) => {
     const id = Invoice.Stream.tryMatch(stream)
     if (!id) return
-    const ev = Invoice.Events.codec.tryDecode(events[0])
+    const ev = Invoice.Events.codec.decode(events[0])
     if (ev?.type !== "InvoiceRaised") return
     await service.sendEmail(id, ev.data.payer_id, ev.data.amount)
   }

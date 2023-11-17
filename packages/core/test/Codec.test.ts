@@ -1,7 +1,6 @@
 import { describe, test, expect } from "vitest"
 import { Codec } from "../src"
 import { z } from "zod"
-import { randomUUID } from "crypto"
 
 describe("Codec", () => {
   describe("json", () => {
@@ -15,7 +14,7 @@ describe("Codec", () => {
         id: undefined,
       })
       expect(
-        codec.tryDecode({
+        codec.decode({
           type: "Hello",
           data: '{"world":"hello"}',
           meta: undefined,
@@ -49,19 +48,19 @@ describe("Codec", () => {
       test("roundtrips", () => {
         const event = { type: "Hello", data: { hello: new Date() } }
         const encoded = codec.encode(event, undefined)
-        const decoded = codec.tryDecode(encoded as any)
+        const decoded = codec.decode(encoded as any)
         expect(decoded).toEqual(event)
       })
 
       test("fails if upcast fails", () => {
         const event = { type: "Hello", data: { hello: "hello" } }
         const encoded = codec.encode(event, undefined)
-        expect(() => codec.tryDecode(encoded as any)).toThrow()
+        expect(() => codec.decode(encoded as any)).toThrow()
       })
 
       test("ignores unconfigured event types", () => {
         const event = { type: "OldHello", data: JSON.stringify({ hallo: "hallo" }) }
-        expect(codec.tryDecode(event as any)).toEqual(undefined)
+        expect(codec.decode(event as any)).toEqual(undefined)
       })
 
       test("does not roundtrip complex types", () => {
@@ -70,7 +69,7 @@ describe("Codec", () => {
         const event = { type: "Hello", data: { hello: new Date() } }
         const encoded = codec.encode(event, undefined)
         // string is not a date
-        expect(() => codec.tryDecode(encoded as any)).toThrow()
+        expect(() => codec.decode(encoded as any)).toThrow()
       })
     })
 
@@ -101,14 +100,14 @@ describe("Codec", () => {
       test("roundtrips", () => {
         const event = { type: "Hello", data: { at: new Date() } }
         const encoded = codec.encode(event, undefined)
-        const decoded = codec.tryDecode(encoded as any)
+        const decoded = codec.decode(encoded as any)
         expect(decoded).toEqual(event)
       })
 
-      test('fails if upcast fails', () => {
+      test("fails if upcast fails", () => {
         const event = { type: "Hello", data: { at: "hello" } }
         const encoded = codec.encode(event, undefined)
-        expect(() => codec.tryDecode(encoded as any)).toThrow()
+        expect(() => codec.decode(encoded as any)).toThrow()
       })
     })
   })

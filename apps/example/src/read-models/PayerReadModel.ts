@@ -13,7 +13,7 @@ export const projection = { table: "payer", id: ["id"], version: "version"}
 function changes(stream: StreamName, events: ITimelineEvent[]): Change[] {
   const id = Payer.Stream.tryMatch(stream) 
   if (!id) return []
-  const event = Payer.Events.codec.tryDecode(events[events.length - 1])
+  const event = Payer.Events.codec.decode(events[events.length - 1])
   if (!event) return []
   const version = events[events.length - 1]!.index
   switch (event.type) {
