@@ -3,6 +3,7 @@ import { PayerId } from "./identifiers.js"
 import z from "zod"
 import { equals } from "ramda"
 import * as Config from "../config/equinox.js"
+import { Context } from "../context/context.js"
 
 export namespace Stream {
   export const category = "Payer"
@@ -22,7 +23,7 @@ export namespace Events {
   export type Event = { type: "PayerProfileUpdated"; data: PayerProfile } | { type: "PayerDeleted" }
 
   export const codec = Codec.upcast<Event>(
-    Codec.json(),
+    Codec.json(Context.create),
     Codec.Upcast.body({
       PayerProfileUpdated: PayerProfile.parse,
       PayerDeleted: () => undefined,

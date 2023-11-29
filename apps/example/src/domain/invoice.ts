@@ -3,6 +3,7 @@ import z from "zod"
 import { Codec, Decider, LoadOption, StreamId, StreamName } from "@equinox-js/core"
 import { reduce } from "ramda"
 import * as Config from "../config/equinox.js"
+import { Context } from "../context/context.js"
 
 export namespace Stream {
   export const CATEGORY = "Invoice"
@@ -31,7 +32,7 @@ export namespace Events {
     | { type: "InvoiceFinalized" }
 
   export const codec = Codec.upcast<Event>(
-    Codec.json(),
+    Codec.json(Context.create),
     Codec.Upcast.body({
       InvoiceRaised: InvoiceRaised.parse,
       PaymentReceived: Payment.parse,

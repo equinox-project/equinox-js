@@ -14,7 +14,7 @@ describe("Invoice auto emailer", () => {
     const invoiceId = InvoiceId.create()
     const payerId = PayerId.create()
     const emailer = InvoiceAutoEmailer.Service.create(config)
-    await emailer.sendEmail(invoiceId, payerId, 100)
+    await emailer.sendEmail({}, invoiceId, payerId, 100)
     expect(await emailer.inspectState(invoiceId)).toEqual({
       type: "EmailSendingFailed",
       data: { payer_id: payerId, reason: "Payer not found" },
@@ -27,7 +27,7 @@ describe("Invoice auto emailer", () => {
     const payers = Payer.Service.create(config)
     const emailer = InvoiceAutoEmailer.Service.create(config)
     await payers.updateProfile(payerId, profile)
-    await emailer.sendEmail(invoiceId, payerId, 100)
+    await emailer.sendEmail({}, invoiceId, payerId, 100)
     expect(await emailer.inspectState(invoiceId)).toEqual({
       type: "EmailSent",
       data: { email: profile.email, payer_id: payerId },
@@ -42,7 +42,7 @@ describe("Invoice auto emailer", () => {
       sendEmail: () => Promise.reject(new Error("Test failure")),
     })
     await payers.updateProfile(payerId, profile)
-    await emailer.sendEmail(invoiceId, payerId, 100)
+    await emailer.sendEmail({}, invoiceId, payerId, 100)
     expect(await emailer.inspectState(invoiceId)).toEqual({
       type: "EmailSendingFailed",
       data: { payer_id: payerId, reason: "Test failure" },

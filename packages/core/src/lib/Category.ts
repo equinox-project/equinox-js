@@ -4,7 +4,7 @@ import * as Tags from './Tags.js'
 import { StreamId } from "./StreamId.js"
 
 /** Store-agnostic interface representing interactions an Application can have with a set of streams with a given pair of Event and State types */
-export interface ICategory<Event, State, Context = null> {
+export interface ICategory<Event, State, Context = void> {
   /** Obtain the state from the target stream */
   load(streamId: StreamId, maxStaleMs: number, requireLeader: boolean): Promise<TokenAndState<State>>
 
@@ -22,7 +22,7 @@ export interface ICategory<Event, State, Context = null> {
   ): Promise<SyncResult<State>>
 }
 
-export class Category<Event, State, Context = null> {
+export class Category<Event, State, Context = void> {
   constructor(
     private readonly inner: ICategory<Event, State, Context>,
     private readonly empty: TokenAndState<State>,
