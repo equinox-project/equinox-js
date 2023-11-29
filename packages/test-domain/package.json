@@ -1,6 +1,6 @@
 {
   "name": "@equinox-js/test-domain",
-  "version": "1.0.0-rc.7",
+  "version": "1.0.0-rc.8",
   "private": true,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
