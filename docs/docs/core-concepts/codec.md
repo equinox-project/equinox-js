@@ -80,7 +80,7 @@ const codec = Codec.map(
 ```
 
 When upcasting is used, the `decode` method of the resulting codec will drop
-events whose types are not included in the mapping. This is because it's a 
+events whose types are not included in the mapping. This is because it's a
 common evolution in event sourced systems for events to become dead weight, or
 unnecessary. By providing an upcast mapping you've essentially defined exactly
 the events you care about and the codec will respect that by returning `undefined`
@@ -103,24 +103,23 @@ record this information on our domain event type.
 
 ```ts
 type Meta = { userId: string }
-type Event =
-  | {type: 'SomethingHappened', data: { what: string }, meta: Meta }
+type Event = { type: "SomethingHappened"; data: { what: string }; meta: Meta }
 ```
 
 The second and preferred option is to use the `Context` variable. You can
 map the event and context to a metadata type.
 
 ```ts
-type Context = { tenantId: string, correlationId: string; causationId: string; userId: string }
-type Event =
-  | {type: 'SomethingHappened', data: { what: string } }
+type Context = { tenantId: string; correlationId: string; causationId: string; userId: string }
+type Event = { type: "SomethingHappened"; data: { what: string } }
 
-const mapMeta = (ev: Event, ctx: Context) => ({ 
-  // matches ESDB conventions
-  $correlationId: ctx.correlationId,
-  $causationId: ctx.causationId,
-  userId: ctx.userId,
-  // ignore tenant as that's going to be on the stream id
+const mapMeta = (ev: Event, ctx: Context) => ({
+  meta: {
+    // matches ESDB conventions
+    $correlationId: ctx.correlationId,
+    $causationId: ctx.causationId,
+    userId: ctx.userId,
+  },
 })
 
 const codec = Codec.json<Event, Context>(mapMeta)
@@ -131,4 +130,3 @@ The `Context` is supplied at decider resolution time
 ```ts
 Decider.forStream(category, streamId, context)
 ```
-

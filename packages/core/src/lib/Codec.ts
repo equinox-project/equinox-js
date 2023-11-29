@@ -1,27 +1,39 @@
 import { IEventData, ITimelineEvent } from "./Types.js"
 import zlib from "zlib"
 
-export interface ICodec<E, F, C = undefined> {
+export interface ICodec<E, F, C = void> {
   decode(event: ITimelineEvent<F>): E | undefined
   encode(event: E, ctx: C): IEventData<F>
 }
 
 type DomainEvent = IEventData<Record<string, any>>
-type MapMeta<E, C> = (e: E, ctx: C) => Record<string, any>
+type MapMeta<E, C> = (
+  e: E,
+  ctx: C,
+) => {
+  id?: string
+  meta?: Record<string, any>
+}
 
 /** Naive json codec, will stringify data and meta */
-export function json<E extends DomainEvent>(): ICodec<E, string, null>
+export function json<E extends DomainEvent>(): ICodec<E, string, void>
 export function json<E extends DomainEvent, C>(mapMeta: MapMeta<E, C>): ICodec<E, string, C>
 export function json(mapMeta?: MapMeta<any, any>): ICodec<any, string, any> {
   return {
     decode: (e) => ({ type: e.type, data: e.data ? JSON.parse(e.data) : undefined }),
     encode(e, _ctx) {
-      const meta = JSON.stringify(mapMeta ? mapMeta(e, _ctx) : e.meta)
+      let id = e.id
+      let meta = e.meta
+      if (mapMeta) {
+        const mapped = mapMeta(e, _ctx)
+        if (mapped.id) id = mapped.id
+        if (mapped.meta) meta = mapped.meta
+      }
       return {
-        id: e.id,
+        id,
         type: e.type,
         data: "data" in e && e.data ? JSON.stringify(e.data) : undefined,
-        meta,
+        meta: meta ? JSON.stringify(meta) : undefined,
       }
     },
   }
@@ -44,7 +56,7 @@ export namespace Upcast {
     }
 }
 
-export const upcast = <E extends DomainEvent, Ctx = null>(
+export const upcast = <E extends DomainEvent, Ctx = void>(
   codec: ICodec<DomainEvent, string, Ctx>,
   upcast: (e: DomainEvent) => E | undefined,
 ): ICodec<E, string, Ctx> => {

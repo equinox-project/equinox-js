@@ -1,5 +1,4 @@
 import "./tracing.js"
-import { ITimelineEvent, StreamName } from "@equinox-js/core"
 import { Invoice, InvoiceAutoEmailer } from "../domain/index.js"
 import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-source"
 import { DynamoStoreSource, DynamoCheckpoints, LoadMode } from "@equinox-js/dynamo-store-source"
@@ -15,20 +14,7 @@ import { StreamsSink } from "@equinox-js/propeller"
 
 const config = createConfig()
 
-const invoiceEmailer = InvoiceAutoEmailer.Service.create(config)
-
-function impliesInvoiceEmailRequired(streamName: StreamName, events: ITimelineEvent[]) {
-  const id = Invoice.Stream.tryMatch(streamName)
-  if (!id) return
-  const ev = Invoice.Events.codec.decode(events[0])
-  if (ev?.type !== "InvoiceRaised") return
-  return { id, payer_id: ev.data.payer_id, amount: ev.data.amount }
-}
-async function handler(streamName: StreamName, events: ITimelineEvent[]) {
-  const req = impliesInvoiceEmailRequired(streamName, events)
-  if (!req) return
-  await invoiceEmailer.sendEmail(req.id, req.payer_id, req.amount)
-}
+const handler = InvoiceAutoEmailer.createHandler(config)
 
 const sink = StreamsSink.create({ handler, maxConcurrentStreams: 10, maxReadAhead: 3 })
 
