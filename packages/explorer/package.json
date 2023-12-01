@@ -1,0 +1,45 @@
+{
+  "name": "@equinox-js/explorer",
+  "version": "1.0.0-rc.8",
+  "description": "Equinox Explorer",
+  "bin": {
+    "eqx-explorer": "./bin/index.js"
+  },
+  "scripts": {
+    "build": "vite build"
+  },
+  "files": [
+    "./dist",
+    "./bin"
+  ],
+  "devDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.410.0",
+    "@equinox-js/message-db": "workspace:*",
+    "@types/d3": "^7.4.3",
+    "@types/express": "^4.17.17",
+    "@types/mithril": "^2.2.6",
+    "@types/pg": "^8.10.9",
+    "autoprefixer": "^10.4.16",
+    "mithril": "^2.2.2",
+    "pg": "^8.11.3",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.5",
+    "tsup": "^7.2.0",
+    "vite": "^5.0.3"
+  },
+  "dependencies": {
+    "@equinox-js/core": "workspace:*",
+    "commander": "^11.0.0",
+    "cors": "^2.8.5",
+    "d3": "^7.8.5",
+    "date-fns": "^2.30.0",
+    "esbuild": "^0.19.8",
+    "express": "^4.18.2",
+    "rxjs": "^7.8.1"
+  },
+  "peerDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.410.0",
+    "@equinox-js/message-db": "workspace:*",
+    "pg": "^8.11.3"
+  }
+}

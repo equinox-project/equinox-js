@@ -1,6 +1,6 @@
 import { Pool } from "pg"
 import { randomUUID } from "crypto"
-import { IEventData, ITimelineEvent } from "@equinox-js/core"
+import { IEventData, ITimelineEvent, StreamName } from "@equinox-js/core"
 
 type MdbWriteResult = { type: "Written"; position: bigint } | { type: "ConflictUnknown" }
 export type Format = string
@@ -112,6 +112,24 @@ export class MessageDbReader {
       values: [streamName, String(fromPosition), batchSize],
     })
     return result.rows.map(fromDb)
+  }
+
+  async readCorrelatedEvents(
+    correlationId: string,
+    fromPosition: bigint,
+    batchSize: number,
+  ): Promise<[StreamName, ITimelineEvent][]> {
+    const result = await this.getPool(false).query({
+      text: `select global_position as position, stream_name, type, data, metadata, id, time
+         from messages
+         where metadata->>'$correlationId' = $1
+           and global_position > $2
+         order by global_position
+         limit $3`,
+      name: "get_correlated_messages",
+      values: [correlationId, String(fromPosition), batchSize],
+    })
+    return result.rows.map((x) => [StreamName.parse(x.stream_name), fromDb(x)])
   }
 }
 
