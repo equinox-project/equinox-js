@@ -66,7 +66,7 @@ class D3BarChart {
     const xValues = d3.range(8).map((i) => format(subDays(now, 7 - i), "yyyy-MM-dd"))
     const x = this.xAxis().range([0, this.width]).domain(xValues).padding(0.2)
     const y = this.yAxis()
-      .domain(d3.extent(data, (d) => d.y) as [number, number])
+      .domain([0, d3.max(data, (d) => d.y)!])
       .range([this.height, 0])
 
     this.renderAxes()
