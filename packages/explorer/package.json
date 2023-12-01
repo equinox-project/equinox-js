@@ -6,8 +6,7 @@
     "eqx-explorer": "./bin/index.js"
   },
   "scripts": {
-    "build": "vite build",
-    "test": "vitest run"
+    "build": "vite build"
   },
   "files": [
     "./dist",
