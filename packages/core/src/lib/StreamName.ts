@@ -11,7 +11,9 @@ export namespace StreamName {
     export function validate(raw: string) {
       if (raw === "") throw new Error("StreamName: Category element must not be empty")
       if (raw.includes(separator))
-        throw new Error("StreamName: Category element must not contain embedded '-' symbols")
+        throw new Error(
+          `StreamName: Category element "${raw}" must not contain embedded '-' symbols`,
+        )
     }
     export function ofStreamName(x: StreamName) {
       return x.slice(0, x.indexOf(separator))
