@@ -1,6 +1,6 @@
 {
   "name": "@equinox-js/explorer",
-  "version": "1.0.0-rc.8",
+  "version": "1.0.0-rc.8.1",
   "description": "Equinox Explorer",
   "bin": {
     "eqx-explorer": "./bin/index.js"
