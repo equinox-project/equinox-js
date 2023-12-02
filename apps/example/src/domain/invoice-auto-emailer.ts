@@ -1,4 +1,4 @@
-import { Codec, Decider, ITimelineEvent, StreamId, StreamName } from "@equinox-js/core"
+import { Codec, Decider, ITimelineEvent, StreamName } from "@equinox-js/core"
 import { InvoiceId, PayerId } from "./identifiers.js"
 import * as Payer from "./payer.js"
 import z from "zod"
@@ -7,12 +7,7 @@ import * as Config from "../config/equinox.js"
 import * as Invoice from "./invoice.js"
 import { Context } from "../context/context.js"
 
-export namespace Stream {
-  export const category = "InvoiceAutoEmail"
-  export const streamId = StreamId.gen(InvoiceId.toString)
-  export const decodeId = StreamId.dec(InvoiceId.parse)
-  export const tryMatch = StreamName.tryMatch(category, decodeId)
-}
+export const Stream = StreamName.from("InvoiceAutoEmail", InvoiceId)
 
 export namespace Events {
   export const EmailSentSchema = z.object({

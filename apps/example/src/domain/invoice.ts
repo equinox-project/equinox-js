@@ -1,16 +1,11 @@
 import { PayerId, InvoiceId } from "./identifiers.js"
 import z from "zod"
-import { Codec, Decider, LoadOption, StreamId, StreamName } from "@equinox-js/core"
+import { Codec, Decider, LoadOption, StreamName } from "@equinox-js/core"
 import { reduce } from "ramda"
 import * as Config from "../config/equinox.js"
 import { Context } from "../context/context.js"
 
-export namespace Stream {
-  export const CATEGORY = "Invoice"
-  export const streamId = StreamId.gen(InvoiceId.toString)
-  export const decodeId = StreamId.dec(InvoiceId.parse)
-  export const tryMatch = StreamName.tryMatch(CATEGORY, decodeId)
-}
+export const Stream = StreamName.from("Invoice", InvoiceId)
 
 export namespace Events {
   export const InvoiceRaised = z.object({
@@ -200,9 +195,9 @@ export class Service {
   // prettier-ignore
   static resolveCategory(config: Config.Config) {
     switch (config.store) {
-      case Config.Store.Memory: return Config.MemoryStore.create(Stream.CATEGORY, Events.codec, Fold.fold, Fold.initial, config)
-      case Config.Store.MessageDb: return Config.MessageDb.createUnoptimized(Stream.CATEGORY, Events.codec, Fold.fold, Fold.initial, config)
-      case Config.Store.Dynamo: return Config.Dynamo.createUnoptimized(Stream.CATEGORY, Events.codec, Fold.fold, Fold.initial, config)
+      case Config.Store.Memory: return Config.MemoryStore.create(Stream.category, Events.codec, Fold.fold, Fold.initial, config)
+      case Config.Store.MessageDb: return Config.MessageDb.createUnoptimized(Stream.category, Events.codec, Fold.fold, Fold.initial, config)
+      case Config.Store.Dynamo: return Config.Dynamo.createUnoptimized(Stream.category, Events.codec, Fold.fold, Fold.initial, config)
     }
   }
 

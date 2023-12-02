@@ -1,17 +1,11 @@
-import { Codec, Decider, StreamId, StreamName } from "@equinox-js/core"
+import { Codec, Decider, StreamName } from "@equinox-js/core"
 import { PayerId } from "./identifiers.js"
 import z from "zod"
 import { equals } from "ramda"
 import * as Config from "../config/equinox.js"
 import { Context } from "../context/context.js"
 
-export namespace Stream {
-  export const category = "Payer"
-  export const streamId = StreamId.gen(PayerId.toString)
-  export const decodeId = StreamId.dec(PayerId.parse)
-  export const tryMatch = StreamName.tryMatch(category, decodeId)
-  export const name = StreamName.gen(category, streamId)
-}
+export const Stream = StreamName.from("Payer", PayerId)
 
 export namespace Events {
   export const PayerProfile = z.object({

@@ -29,7 +29,7 @@ async function createSource() {
       return MessageDbSource.create({
         pool: followerPool() ?? leaderPool(),
         batchSize: 500,
-        categories: [Invoice.Stream.CATEGORY],
+        categories: [Invoice.Stream.category],
         groupName: "InvoiceAutoEmailer",
         checkpoints,
         sink,
@@ -52,7 +52,7 @@ async function createSource() {
       )
       return DynamoStoreSource.create({
         context,
-        categories: [Invoice.Stream.CATEGORY],
+        categories: [Invoice.Stream.category],
         groupName: "InvoiceAutoEmailer",
         checkpoints,
         sink,

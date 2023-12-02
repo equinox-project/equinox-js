@@ -77,4 +77,59 @@ export namespace StreamName {
   ): (...args: Parameters<Id>) => StreamName {
     return (...args: Parameters<Id>) => create(category, streamId(...args))
   }
+
+  type Id<T> = {
+    toString(v: T): string
+    parse(raw: string): T
+  }
+
+  type StreamNameModule<Ids extends any[]> = {
+    category: string
+    streamId: (...args: Ids) => StreamId
+    decodeId: (id: StreamId) => Ids
+    tryMatch: (x: StreamName) => Ids | undefined
+    name: (...args: Ids) => StreamName
+  }
+
+  type SingleIdStreamNameModule<A> = {
+    category: string
+    streamId: (id: A) => StreamId
+    decodeId: (id: StreamId) => A
+    tryMatch: (x: StreamName) => A | undefined
+    name: (id: A) => StreamName
+  }
+
+  export function from<A>(category: string, id: Id<A>): SingleIdStreamNameModule<A>
+  export function from<A, B>(category: string, id: Id<A>, id2: Id<B>): StreamNameModule<[A, B]>
+  export function from<A, B, C>(
+    category: string,
+    id: Id<A>,
+    id2: Id<B>,
+    id3: Id<C>,
+  ): StreamNameModule<[A, B, C]>
+  export function from<A, B, C, D>(
+    category: string,
+    id: Id<A>,
+    id2: Id<B>,
+    id3: Id<C>,
+    id4: Id<D>,
+  ): StreamNameModule<[A, B, C, D]>
+  export function from(
+    category: string,
+    ...ids: [Id<any>, ...Id<any>[]]
+  ): StreamNameModule<any[]> | SingleIdStreamNameModule<any> {
+    // @ts-ignore
+    const streamId = StreamId.gen(...ids.map((id) => id.toString))
+    // @ts-ignore
+    const decodeId = StreamId.dec(...ids.map((id) => id.parse))
+    const tryMatch_ = tryMatch(category, decodeId)
+    const name = gen(category, streamId)
+    return {
+      category,
+      streamId,
+      decodeId,
+      tryMatch: tryMatch_,
+      name,
+    }
+  }
 }
