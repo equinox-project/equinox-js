@@ -16,11 +16,11 @@
   },
   "devDependencies": {
     "@equinox-js/memory-store": "workspace:*",
-    "@types/node": "^20.6.5",
+    "@types/node": "^20.10.5",
     "p-limit": "^4.0.0",
-    "tsup": "^7.2.0",
-    "typescript": "^5.2.2",
-    "vitest": "^0.34.5"
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.4"
   },
   "dependencies": {
     "@equinox-js/core": "workspace:*",
