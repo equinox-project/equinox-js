@@ -8,16 +8,29 @@ EquinoxJS is a ground-up re-implementation of the Equinox project, an F# event
 sourcing library. It provides a programming model centered around Deciders as
 the central domain abstraction.
 
+# Install dependencies
+
+You'll need the `core` library in addition to a concrete store library.
+
+```sh
+# The core library
+pnpm add @equinox-js/core 
+# And the concrete store library
+pnpm add @equinox-js/memory-store @equinox-js/message-db # or @equinox-js/dynamo-store
+```
+
 # Quick example
 
 ```ts
-import { Decider, StreamId, StreamName, Uuid, Codec } from "@equinox-js/core"
+import { Decider, StreamId, StreamName, Uuid, Codec, ICache, CachingStrategy } from "@equinox-js/core"
+import { MessageDbCategory, MessageDbContext, AccessStrategy } from "@equinox-js/message-db"
+import { VolatileStore, MemoryStoreCategory } from "@equinox-js/memory-store"
 
 export type AccountId = Uuid.Uuid<"AccountId">
 export const AccountId = Uuid.create<"AccountId">()
 
 export namespace Stream {
-  export const Category = "Account"
+  export const category = "Account"
   export const id = StreamId.gen(AccountId.toString)
   export const decodeId = StreamId.dec(AccountId.parse)
   export const match = StreamName.tryMatch(Category, decodeId)
@@ -66,7 +79,7 @@ export namespace Decide {
 }
 
 export class Service {
-  constructor(private readonly resolve: (accountId: AccountId) => Decider<Event, State>) {}
+  constructor(private readonly resolve: (accountId: AccountId) => Decider<Events.Event, Fold.State>) {}
 
   deposit(accountId: AccountId, amount: number) {
     const decider = this.resolve(accountId)
@@ -82,42 +95,42 @@ export class Service {
     const decider = this.resolve(accountId)
     return decider.query((state) => state)
   }
+
+  // Creates a service instance wired up against MessageDB
+  static create(context: MessageDbContext, cache: ICache) {
+    const caching = CachingStrategy.Cache(cache)
+    const access = AccessStrategy.Unoptimized()
+    const category = MessageDbCategory.create(context, Stream.category, Events.codec, Fold.fold, Fold.initial, caching, access)
+    const resolve = (id: AccountId) => Decider.forStream(category, Stream.id(id), null)
+    return new Service(resolve)
+  }
+
+  // Creates a service instance wired up against MemoryStore
+  static createMem(store: VolatileStore<string>) {
+    const category = MemoryStoreCategory.create(store , Stream.category, Events.codec, Fold.fold, Fold.initial)
+    const resolve = (id: AccountId) => Decider.forStream(category, Stream.id(id), null)
+    return new Service(resolve)
+  }
 }
 ```
 
-The `resolve` function you pass to the `Service` will resolve a decider against
-a concrete category, concrete meaning wired up to a particular store.
+:::tip
 
-```ts
-import { MessageDbCategory, MessageDbContext, AccessStrategy } from "@equinox-js/message-db"
-import { ICache, CachingStrategy, Decider } from "@equinox-js/core"
+We generally use a project specific `Config` abstraction instead of individual `create` functions.
+See [Anatomy](/docs/anatomy#the-config)
 
-export function create(context: MessageDbContext, cache: ICache) {
-  const caching = CachingStrategy.Cache(cache)
-  const access = AccessStrategy.Unoptimized()
-  const category = MessageDbCategory.create(
-    context,
-    Stream.Category,
-    Events.codec,
-    Fold.fold,
-    Fold.initial,
-    caching,
-    access
-  )
-  const resolve = (id: AccountId) => Decider.forStream(category, Stream.id(id), null)
-  return new Service(resolve)
-}
-```
+:::
 
-Different stores will have different access strategies and optimisations available.
 
 # Testing
 
 When testing you can either test the constituent parts of the decider by wiring them up yourself
 
 ```ts
+import { Fold, Decide } from './service'
+
 const given = (events: Event[], interpret: (state: State) => Event[]) =>
-  interpret(fold(initial, events))
+  interpret(Fold.fold(Fold.initial, events))
 
 test("Depositing", () => {
   expect(given([], Decide.deposit(100))).toEqual([{ type: "Deposited", data: { amount: 100 } }])
@@ -143,7 +156,7 @@ Or you can test it through the `Service` using the included memory store.
 import { VolatileStore } from "@equinox-js/memory-store"
 
 const createService = () => {
-  const store = new VolatileStore<Record<string, any>>()
+  const store = new VolatileStore<string>()
   return Service.createMem(store)
 }
 
