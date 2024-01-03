@@ -2,15 +2,11 @@ import { randomUUID } from "crypto"
 
 export type Uuid<T> = string & { __brand: T }
 
-namespace Validate {
-  const zero = "0".charCodeAt(0)
-  const nine = "9".charCodeAt(0)
-  const a = "a".charCodeAt(0)
-  const f = "f".charCodeAt(0)
-  const isDigit = (c: number) => zero <= c && c <= nine
-  const isHexLetter = (c: number) => a <= c && c <= f
-  export const isHex = (c: number) => isDigit(c) || isHexLetter(c)
-}
+const zero = "0".charCodeAt(0)
+const nine = "9".charCodeAt(0)
+const a = "a".charCodeAt(0)
+const f = "f".charCodeAt(0)
+const dash = "-".charCodeAt(0)
 
 function parse<T>(str: string): Uuid<T> {
   str = str.toLowerCase()
@@ -19,11 +15,12 @@ function parse<T>(str: string): Uuid<T> {
   }
   let dashCount = 0
   for (let i = 0; i < str.length; ++i) {
-    if (str[i] === "-") {
+    const code = str.charCodeAt(i)
+    if (code === dash) {
       ++dashCount
       continue
     }
-    if (!Validate.isHex(str.charCodeAt(i))) {
+    if (!((zero <= code && code <= nine) || (a <= code && code <= f))) {
       throw new Error(`Uuid: expected hex character but got '${str[i]}' at position ${i}`)
     }
   }
