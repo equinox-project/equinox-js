@@ -2,32 +2,15 @@ import { randomUUID } from "crypto"
 
 export type Uuid<T> = string & { __brand: T }
 
-const zero = "0".charCodeAt(0)
-const nine = "9".charCodeAt(0)
-const a = "a".charCodeAt(0)
-const f = "f".charCodeAt(0)
-const dash = "-".charCodeAt(0)
+// permissive uuid regex that allows non-standard uuids
+const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 function parse<T>(str: string): Uuid<T> {
-  str = str.toLowerCase()
-  if (str.length !== 36 && str.length !== 32) {
-    throw new Error(`Uuid: expected 32 or 36 characters but got ${str.length}`)
+  const lower = str.toLowerCase()
+  if (!regex.test(str)) {
+    throw new Error(`Uuid: invalid format '${str}'`)
   }
-  let dashCount = 0
-  for (let i = 0; i < str.length; ++i) {
-    const code = str.charCodeAt(i)
-    if (code === dash) {
-      ++dashCount
-      continue
-    }
-    if (!((zero <= code && code <= nine) || (a <= code && code <= f))) {
-      throw new Error(`Uuid: expected hex character but got '${str[i]}' at position ${i}`)
-    }
-  }
-  if (dashCount !== 4 && dashCount !== 0) {
-    throw new Error(`Uuid: expected 0 or 4 dashes but got ${dashCount}`)
-  }
-  return str as Uuid<T>
+  return lower as Uuid<T>
 }
 
 export type UuidModule<T> = {
