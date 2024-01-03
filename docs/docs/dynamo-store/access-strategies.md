@@ -115,7 +115,7 @@ namespace Decide {
   }
   export const removeUser = (id: string, version: number) => (state: State) => {
     if (state[id] && state[id].version >= version) return []
-    if (!state[id] || state[i].deleted) return []
+    if (!state[id] || state[id].deleted) return []
     return [Ingested({ ...state, [id]: { ...state[id], deleted: true } })]
   }
 }

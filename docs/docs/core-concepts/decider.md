@@ -124,7 +124,7 @@ const checkout = (at: Date) => (state: State): [CheckoutResult, Event[]] => {
     case 'Active': {
       const residual = state.balance
       if (residual === 0) {
-        return [{ type: 'Ok' }, [{ type: 'CheckedOut', { at } }]]
+        return [{ type: 'Ok' }, [{ type: 'CheckedOut', data: { at } }]]
       } else {
         return [{ type: 'BalanceOutstanding', amount: state.balance }, []]
       }
@@ -157,12 +157,12 @@ const fold = (state: State, events: Event[]) => {
 }
 
 const increment = (state: State) => {
-  if (state < 10) return [{ type: 'Incremented'  }]
+  if (state.count < 10) return [{ type: 'Incremented'  }]
   return []
 }
 
 const decrement = (state: State) => {
-  if (state > 0) return [{ type: 'Decremented'  }]
+  if (state.count > 0) return [{ type: 'Decremented'  }]
   return []
 }
 
@@ -194,11 +194,11 @@ It should be noted that these modifications do not sacrifice the testability of
 the decider.
 
 ```ts
-const given (events: Event[], decide: (state: State) => Event[]) =>
+const given = (events: Event[], decide: (state: State) => Event[]) =>
   decide(fold(initial, events))
 
 test('Increment', () => 
-  expect(given([], increment)).toEqual([{ type: 'Incremented' }])
+  expect(given([], increment)).toEqual([{ type: 'Incremented' }]))
 
 test('Cannot increment over 10', () => 
   expect(given(Array(10).fill({type: 'Incremented'}), increment)).toEqual([]))

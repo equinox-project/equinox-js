@@ -16,12 +16,15 @@ category in your system. You might want to display a drop-down of payers when
 raising an invoice.
 
 ```ts
+import * as Payer from '@domain/payer'
+import { PayerId } from '@domain/identifiers'
+
 type Sql = {
   text: string
   values: string[]
 }
 
-function change(payerId: PayerId, event: Payer.Event): Sql {
+function change(payerId: PayerId, event: Payer.Events.Event): Sql {
   const id = PayerId.toString(payerId)
   switch (event.type) {
     case "PayerProfileUpdated":
@@ -38,8 +41,8 @@ function change(payerId: PayerId, event: Payer.Event): Sql {
 }
 
 function changes(streamName: string, events: ITimelineEvent[]): Sql[] {
-  const payerId = PayerId.parse(StreamName.parseId(streamName))
-  const decodedEvents = keepMap(events, Payer.codec.decode)
+  const payerId = Payer.Stream.tryMatch(streamName)
+  if (!payerId) return []
   const changes: Sql[] = []
   for (const event of events) {
     const ev = Payer.codec.decode(event)
@@ -54,9 +57,11 @@ Having written these function we can now wire them up to a reaction.
 
 ```ts
 import { MessageDbSource, PgCheckpoints } from "@equinox-js/message-db-source"
+import { ITimelineEvent } from '@equinox-js/core'
+import { StreamsSink } from '@equinox-js/propeller'
 import pg from "pg"
 
-const checkpointer = new PgCheckpoints(new pg.Pool({ connectionString: "..." }), "public")
+const checkpoints = new PgCheckpoints(new pg.Pool({ connectionString: "..." }), "public")
 const pool = new pg.Pool({ connectionString: "..." })
 
 async function handler(streamName: string, events: ITimelineEvent[]) {
@@ -77,16 +82,20 @@ async function handler(streamName: string, events: ITimelineEvent[]) {
   }
 }
 
+const sink = StreamsSink.create({
+  handler,
+  maxConcurrentStreams: 10,
+  maxReadAhead: 3,
+})
+
 const source = MessageDbSource.create({
   pool,
   batchSize: 500,
   categories: [Payer.CATEGORY],
   groupName: "PayerListModel",
   checkpoints,
-  handler,
+  sink,
   tailSleepIntervalMs: 5000,
-  maxConcurrentStreams: 10,
-  maxReadAhead: 3,
 })
 
 const ctrl = new AbortController()
@@ -94,5 +103,5 @@ const ctrl = new AbortController()
 process.on("SIGINT", () => ctrl.abort())
 process.on("SIGTERM", () => ctrl.abort())
 
-await source.start(ctrl.signal)
+source.start(ctrl.signal)
 ```

@@ -16,7 +16,9 @@ In EquinoxJS codecs as a first class citizen. A codec implementation might look
 like this:
 
 ```ts
-const codec: Codec<Event, string> = {
+import { ICodec } from "@equinox-js/core"
+
+const codec: ICodec<Event, string> = {
   decode(ev): Event | undefined {
     const data = JSON.parse(ev.data || "{}")
     switch (ev.type) {
@@ -54,6 +56,9 @@ In order to make it easier for you to use such types in your domain we do offer
 utilities for upcasting events.
 
 ```ts
+import { Codec } from "@equinox-js/core"
+import * as z from 'zod'
+
 const date = z
   .string()
   .datetime()
@@ -68,8 +73,8 @@ type Event =
   | { type: "Charged"; data: z.infer<typeof ChargedSchema> }
   | { type: "Paid"; data: z.infer<typeof PaidSchema> }
 
-const codec = Codec.map(
-  Codec.json,
+const codec = Codec.upcast<Event>(
+  Codec.json(),
   Codec.Upcast.body({
     CheckedIn: CheckedInSchema.parse,
     CheckedOut: CheckedOutSchema.parse,

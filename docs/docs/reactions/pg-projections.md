@@ -18,8 +18,8 @@ The Payer read model from the previous section could be written as:
 ```ts
 import { ITimelineEvent, StreamName } from "@equinox-js/core"
 import { Pool } from "pg"
-import { PayerId } from "../domain/identifiers.js"
-import { Payer } from "../domain/index.js"
+import { PayerId } from "@domain/identifiers"
+import * as Payer from "@domain/payer"
 import { forEntity, Change, createProjection } from "@equinox-js/projection-pg"
 
 type Payer = { id: PayerId; name: string; email: string }
