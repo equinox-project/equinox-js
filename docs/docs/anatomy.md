@@ -31,6 +31,13 @@ checking in and out for an Appointment Booking.
 ## The Stream
 
 ```ts
+import { StreamId, StreamName, Uuid } from "@equinox-js/core"
+
+export type AppointmentId = Uuid.Uuid<"AppointmentId">
+export const AppointmentId = Uuid.create<"AppointmentId">()
+export type UserId = Uuid.Uuid<"UserId">
+export const UserId = Uuid.create<"UserId">()
+
 export namespace Stream {
   export const category = "AppointmentActuals"
   export const streamId = StreamId.gen(AppointmentId.toString, UserId.toString)
@@ -42,10 +49,14 @@ export namespace Stream {
 ## The Events
 
 ```ts
+import * as z from "zod"
+import { Codec } from "@equinox-js/core"
+
 export namespace Events {
   // prettier-ignore
   const date = z.string().datetime().transform((x) => new Date(x))
   export const Timestamp = z.object({ timestamp: date })
+  export type Timestamp = z.infer<typeof Timestamp>
   export const ActualsOverridden = z.object({ checkedIn: date, checkedOut: date })
   export type ActualsOverridden = z.infer<typeof ActualsOverridden>
 
@@ -56,9 +67,9 @@ export namespace Events {
 
   export const codec = Codec.upcast<Event>(
     Codec.json(),
-    Codec.Upcast.from({
-      CheckedIn: Timstamp.parse,
-      CheckedOut: Timstamp.parse,
+    Codec.Upcast.body({
+      CheckedIn: Timestamp.parse,
+      CheckedOut: Timestamp.parse,
       ActualsOverridden: ActualsOverridden.parse,
     }),
   )
@@ -82,6 +93,7 @@ export namespace Fold {
         return event.data
     }
   }
+  export const fold = (state: State, events: Event[]) => events.reduce(evolve, state)
 }
 ```
 
@@ -116,16 +128,22 @@ export namespace Decide {
       return [{ type: "CheckedOut", data: { timestamp } }]
     }
 
-  export const manuallyOverride = (checkedIn: Date, checkedOut: Date) => (state: State) => {
-    if (+checkedIn === +state?.checkedIn && +checkedOut === +state?.checkedIn) return []
-    return [{ type: "ActualsOverridden", data: { checkedIn, checkedOut } }]
-  }
+  const isSameDate = (a: Date, b?: Date) => b && +a === +b
+
+  export const manuallyOverride =
+    (checkedIn: Date, checkedOut: Date) =>
+    (state: State): Event[] => {
+      if (isSameDate(checkedIn, state?.checkedIn) && isSameDate(checkedOut, state?.checkedOut))
+        return []
+      return [{ type: "ActualsOverridden", data: { checkedIn, checkedOut } }]
+    }
 }
 ```
 
 ## The Queries
 
 ```ts
+import { ISyncContext } from "@equinox-js/core"
 export namespace Query {
   type Status =
     | { type: "not-started"; version: bigint }
@@ -149,6 +167,7 @@ export namespace Query {
 ## The Service
 
 ```ts
+import { Decider, LoadOption } from "@equinox-js/core"
 export class Service {
   constructor(
     private readonly resolve: (
