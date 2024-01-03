@@ -14,7 +14,7 @@ the central domain abstraction.
 import { Decider, StreamId, StreamName, Uuid, Codec } from "@equinox-js/core"
 
 export type AccountId = Uuid.Uuid<"AccountId">
-export const AccountId = Uuid.create<"AccountId">()
+export const AccountId = Uuid.create("AccountId")
 
 export namespace Stream {
   export const Category = "Account"

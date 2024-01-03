@@ -23,7 +23,7 @@ describe("StreamName", () => {
   })
 
   test("tryMatch", () => {
-    const SomeId = Uuid.create<"SomeId">()
+    const SomeId = Uuid.create("SomeId")
     const id = SomeId.create()
     const streamId= StreamId.gen(SomeId.toString)
     const decodeId = StreamId.dec(SomeId.parse)
@@ -34,8 +34,8 @@ describe("StreamName", () => {
   })
 
   test("match with multiple ids", () => {
-    const SomeId = Uuid.create<"SomeId">()
-    const OtherId = Uuid.create<"OtherId">()
+    const SomeId = Uuid.create("SomeId")
+    const OtherId = Uuid.create("OtherId")
     const streamId = StreamId.gen(SomeId.toString, OtherId.toString)
     const decodeId = StreamId.dec(SomeId.parse, OtherId.parse)
     const id1 = SomeId.create()
