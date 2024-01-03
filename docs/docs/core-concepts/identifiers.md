@@ -6,7 +6,7 @@ EquinoxJS exposes a helper module for dealing with branded UUIDs.
 import { Uuid } from "@equinox-js/core"
 
 export type UserId = Uuid.Uuid<"UserId">
-export const UserId = Uuid.create("UserId")
+export const UserId = Uuid.create<"UserId">()
 ```
 
 the `Uuid.create` function returns an object with some utilities

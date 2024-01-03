@@ -5,7 +5,7 @@ export const Category = "Cart"
 export type CartId = Uuid.Uuid<"CartId">
 export type SkuId = string
 
-export const CartId = Uuid.create("CartId")
+export const CartId = Uuid.create<"CartId">()
 const streamId = StreamId.gen(CartId.toString)
 
 export namespace Events {

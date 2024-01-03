@@ -2,7 +2,7 @@ import { bench } from "vitest"
 import * as Uuid from "../src/lib/Uuid.js"
 import { randomUUID } from "crypto"
 
-const Id = Uuid.create("Id")
+const Id = Uuid.create<"Id">()
 
 const random = randomUUID()
 
