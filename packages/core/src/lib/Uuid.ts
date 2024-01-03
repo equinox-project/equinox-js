@@ -4,13 +4,14 @@ export type Uuid<T> = string & { __brand: T }
 
 // Custom regex: admits any hex values matching the normal dashed cluster grouping structure
 // loose in that it does not attempt to reject 'impossible/undefined' based on the UUID spec
-const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 function parse<T>(str: string): Uuid<T> {
-  if (!regex.test(str)) {
+  const lower = str.toLowerCase()
+  if (!regex.test(lower)) {
     throw new Error(`Uuid: invalid format '${str}'`)
   }
-  return str.toLowerCase() as Uuid<T>
+  return lower as Uuid<T>
 }
 
 export type UuidModule<T> = {
