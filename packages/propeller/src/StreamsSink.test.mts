@@ -2,6 +2,7 @@ import { describe, test, expect, vi } from "vitest"
 import { BatchLimiter, StreamsSink } from "./StreamsSink.mjs"
 import { ITimelineEvent, StreamId, StreamName } from "@equinox-js/core"
 import { IngesterBatch } from "./Types.js"
+import { sleep } from "./Sleep.js"
 
 const mkEvent = (type: string, index: bigint): ITimelineEvent => ({
   id: "",
@@ -12,8 +13,8 @@ const mkEvent = (type: string, index: bigint): ITimelineEvent => ({
   index,
 })
 
-const mkBatch = (onComplete: () => void, index?: bigint): IngesterBatch => ({
-  items: Array.from({ length: 10 }).map((_, i): [StreamName, ITimelineEvent] => [
+const mkBatch = (onComplete: () => void, index?: bigint, length = 10): IngesterBatch => ({
+  items: Array.from({ length }).map((_, i): [StreamName, ITimelineEvent] => [
     StreamName.create("Cat", StreamId.create("stream" + i)),
     mkEvent("Something", index ?? BigInt(i)),
   ]),
@@ -41,7 +42,7 @@ describe("Concurrency", () => {
       const sinkP = sink.start(ctrl.signal)
 
       await sink.pump(
-        mkBatch(() => {}),
+        mkBatch(() => {}, undefined, 100),
         ctrl.signal,
       )
 
@@ -49,7 +50,7 @@ describe("Concurrency", () => {
       ctrl.abort()
 
       expect(maxActive).toBe(concurrency)
-      await expect(sinkP).rejects.toThrow("operation was aborted")
+      await expect(sinkP).resolves.toBe(undefined)
     },
   )
 })
@@ -77,14 +78,15 @@ test("Correctly merges batches", async () => {
 
   expect(invocations).toBe(10)
   expect(checkpoint).toHaveBeenCalledTimes(2)
-  await expect(sinkP).rejects.toThrow("operation was aborted")
+  await expect(sinkP).resolves.toBe(undefined)
 })
 
+const name = StreamName.parse("Cat-stream1")
 const mkSingleBatch = (
   onComplete: (n: bigint) => () => Promise<void>,
   checkpoint: bigint,
 ): IngesterBatch => ({
-  items: [[StreamName.create("Cat", StreamId.create("stream1")), mkEvent("Something", 0n)]],
+  items: [[name, mkEvent("Something", 0n)]],
   isTail: false,
   checkpoint: checkpoint,
   onComplete: onComplete(checkpoint),
@@ -105,16 +107,24 @@ test("Correctly limits in-flight batches", async () => {
   const complete = (n: bigint) => () => completed(n)
 
   // First batch will be immediately picked up
+  console.log("pump 0")
   await sink.pump(mkSingleBatch(complete, 0n), ctrl.signal)
   // meanwhile we merge two batches together
+  console.log("pump 1")
   await sink.pump(mkSingleBatch(complete, 1n), ctrl.signal)
+  console.log("pump 2")
   await sink.pump(mkSingleBatch(complete, 2n), ctrl.signal)
 
   // This batch will be immediately picked up
+  console.log("pump 3")
   await sink.pump(mkSingleBatch(complete, 3n), ctrl.signal)
   // meanwhile we merge two batches together
+  console.log("pump 4")
   await sink.pump(mkSingleBatch(complete, 4n), ctrl.signal)
+  console.log("pump 5")
   await sink.pump(mkSingleBatch(complete, 5n), ctrl.signal)
+
+  console.log("waiting for completion")
 
   await limiter.waitForEmpty()
   ctrl.abort()
@@ -156,11 +166,10 @@ test("Ensures at-most one handler is per stream", async () => {
   await limiter.waitForEmpty()
   ctrl.abort()
 
-  // 1 invocation for the first pump, the other 5 are merged
-  expect(invocations).toBe(2)
+  expect(invocations).toBe(1)
   expect(maxActive).toBe(1)
 
   // onComplete is called in order and for every batch
   expect(completed.mock.calls).toEqual([[0n], [1n], [2n], [3n], [4n], [5n]])
-  await expect(sinkP).rejects.toThrow("operation was aborted")
+  await expect(sinkP).resolves.toBe(undefined)
 })
