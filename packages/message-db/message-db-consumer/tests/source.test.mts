@@ -70,14 +70,11 @@ test("Ships batches to the sink", async () => {
   const ctrl = new AbortController()
   const sourceP = src.start(ctrl.signal).catch(throwIfActive(ctrl.signal))
 
-  console.log("waiting for source to complete")
   await wait
-  console.log("aborting source")
   ctrl.abort()
   expect(streams.size).toBe(3)
   expect(Array.from(streams.values()).flat()).toHaveLength(4)
 
-  console.log("waiting for source to complete")
   await sourceP
 })
 test("it fails fast", async () => {
