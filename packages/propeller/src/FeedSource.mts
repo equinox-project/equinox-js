@@ -116,13 +116,13 @@ export class TailingFeedSource extends EventEmitter {
     )
 
     const cancelAndThrow = (e: unknown) => {
-      if (signal.aborted) throw e
+      if (signal.aborted) return
       ctrl.abort()
       throw e
     }
 
+    const sinkP = this.options.sink.waitForShutdown(signal).catch(cancelAndThrow)
     const checkpointsP = checkpointWriter.start(signal).catch(cancelAndThrow)
-    const sinkP = this.options.sink.start?.(signal).catch(cancelAndThrow)
     const sourceP = this._start(trancheId, pos, (cp) => checkpointWriter.commit(cp), signal).catch(
       cancelAndThrow,
     )
