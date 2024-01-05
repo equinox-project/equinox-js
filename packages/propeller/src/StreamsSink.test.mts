@@ -37,6 +37,7 @@ describe("Concurrency", () => {
       }
       const limiter = new BatchLimiter(1)
       const sink = new StreamsSink(handler, concurrency, limiter)
+      const sinkP = sink.start(ctrl.signal)
 
       await sink.pump(
         mkBatch(() => {}),
@@ -47,6 +48,7 @@ describe("Concurrency", () => {
       ctrl.abort()
 
       expect(maxActive).toBe(concurrency)
+      await sinkP
     },
   )
 })
@@ -60,6 +62,7 @@ test("Correctly merges batches", async () => {
   }
   const limiter = new BatchLimiter(3)
   const sink = new StreamsSink(handler, 10, limiter)
+  const sinkP = sink.start(ctrl.signal)
 
   const checkpoint = vi.fn().mockResolvedValue(undefined)
 
@@ -72,6 +75,7 @@ test("Correctly merges batches", async () => {
 
   expect(invocations).toBe(10)
   expect(checkpoint).toHaveBeenCalledTimes(2)
+  await sinkP
 })
 
 const streamName = StreamName.parse("Cat-stream1")
@@ -94,6 +98,7 @@ test("Correctly limits in-flight batches", async () => {
   }
   const limiter = new BatchLimiter(3)
   const sink = new StreamsSink(handler, 1, limiter)
+  const sinkP = sink.start(ctrl.signal)
 
   const completed = vi.fn().mockResolvedValue(undefined)
   const complete = (n: bigint) => () => completed(n)
@@ -109,6 +114,7 @@ test("Correctly limits in-flight batches", async () => {
 
   // onComplete is called in order and for every batch
   expect(completed.mock.calls).toEqual(Array.from({ length: 6 }, (_, i) => [BigInt(i)]))
+  await sinkP
 })
 
 test("Ensures at-most one handler is per stream", async () => {
@@ -127,6 +133,7 @@ test("Ensures at-most one handler is per stream", async () => {
   }
   const limiter = new BatchLimiter(10)
   const sink = new StreamsSink(handler, 100, limiter)
+  const sinkP = sink.start(ctrl.signal)
 
   const completed = vi.fn().mockResolvedValue(undefined)
   const complete = (n: bigint) => () => completed(n)
@@ -147,4 +154,5 @@ test("Ensures at-most one handler is per stream", async () => {
 
   // onComplete is called in order and for every batch
   expect(completed.mock.calls).toEqual(Array.from({ length: count }).map((_, i) => [BigInt(i)]))
+  await sinkP
 })

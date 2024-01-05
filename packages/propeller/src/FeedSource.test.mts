@@ -6,12 +6,12 @@ import { StreamName, StreamId } from "@equinox-js/core"
 import { sleep } from "./Sleep.js"
 
 class MemorySink implements Sink {
+  async start() {}
+
   async pump(batch: IngesterBatch, signal: AbortSignal): Promise<void> {
     batch.onComplete()
   }
   addTracingAttrs = vi.fn()
-
-  async waitForShutdown() {}
 }
 
 const throwIfActive = (signal: AbortSignal) => (e: unknown) => {
@@ -98,6 +98,4 @@ test("Checkpointing happens asynchronously", async () => {
   expect(CheckpointWriter.prototype.flush).toHaveBeenCalledTimes(2)
 })
 
-test("It fails fast", async () => {
-})
-
+test("It fails fast", async () => {})
