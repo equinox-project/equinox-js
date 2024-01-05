@@ -16,6 +16,6 @@ export type IngesterBatch = {
 
 export interface Sink {
   pump(batch: IngesterBatch, signal: AbortSignal): Promise<void> | void
-  addTracingAttrs(attrs: Attributes): void
   start(signal: AbortSignal): Promise<void>
+  addTracingAttrs(attrs: Attributes): void
 }

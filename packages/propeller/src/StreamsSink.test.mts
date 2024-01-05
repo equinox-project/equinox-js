@@ -103,14 +103,18 @@ test("Correctly limits in-flight batches", async () => {
   const completed = vi.fn().mockResolvedValue(undefined)
   const complete = (n: bigint) => () => completed(n)
 
-  for (let i = 0; i < 6; ++i) {
-    await sink.pump(mkSingleBatch(complete, BigInt(i)), ctrl.signal)
-  }
+  expect(sink.pump(mkSingleBatch(complete, 0n), ctrl.signal)).toBeUndefined()
+  expect(sink.pump(mkSingleBatch(complete, 1n), ctrl.signal)).toBeUndefined()
+  // every third batch is delayed
+  await expect(sink.pump(mkSingleBatch(complete, 2n), ctrl.signal)).resolves.toBeUndefined()
+  expect(sink.pump(mkSingleBatch(complete, 3n), ctrl.signal)).toBeUndefined()
+  expect(sink.pump(mkSingleBatch(complete, 4n), ctrl.signal)).toBeUndefined()
+  await expect(sink.pump(mkSingleBatch(complete, 5n), ctrl.signal)).resolves.toBeUndefined()
 
   await limiter.waitForEmpty()
   ctrl.abort()
 
-  expect(invocations).toBe(3)
+  expect(invocations).toBe(2)
 
   // onComplete is called in order and for every batch
   expect(completed.mock.calls).toEqual(Array.from({ length: 6 }, (_, i) => [BigInt(i)]))
