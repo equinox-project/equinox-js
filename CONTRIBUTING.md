@@ -6,15 +6,17 @@ to follow:
 
 ## <a href="question"></a> Got a question or problem?
 
-**Do not open issues for general support questions. Github issues are reserved
-for bug reports and feature requests**. To get your questions answered please
-head over to the [DDD-CQRS-ES discord][discord].
+> [!IMPORTANT]
+> For general support questions and inquiries, please head over to the [DDD-CQRS-ES discord][discord].
+
+Github issues are reservered for bug reports and feature requests only.
 
 ## <a href="bug"></a> Found a bug?
 
 If you find a bug in the source code, you can help us by
-[submitting an issue](#submit-issue) to our [GitHub Repository][github]. Even better, you can
-[submit a Pull Request](#submit-pr) with a fix.
+
+- [submitting an issue](#submit-issue) to our [GitHub Repository][github]
+- [submiting a Pull Request](#submit-pr) with a fix.
 
 ## <a name="feature"></a> Missing a Feature?
 
@@ -29,16 +31,18 @@ Please consider what kind of change it is:
   that it is successfully accepted into the project. For your issue name,
   please prefix your proposal with `[discussion]`, for example "[discussion]:
   your feature idea".
-- **Small Features** can be crafted and directly [submitted as a Pull
-  Request](#submit-pr).
+- **Small Features**, it is always best to start by opening an issue. Even small features can introduce
+  unwarranted complexity into a codebase that the maintainers might not want to take on. By opening the
+  issue first and describing your intent you'll reduce the chance that your PR will be rejected.
 
 ## <a name="submit"></a> Submission Guidelines
 
 ### <a name="submit-issue"></a> Submitting an Issue
 
-Before you submit an issue, please search the issue tracker, maybe an issue for
-your problem already exists and the discussion might inform you of workarounds
-readily available.
+> [!NOTE]
+> Before you submit an issue, please search the [issue tracker][issues]. Maybe
+> an issue for your problem already exists and the discussion might inform you
+> of workarounds readily available.
 
 We want to fix all the issues as soon as possible, but before fixing a bug we
 need to reproduce and confirm it. In order to reproduce bugs we will
@@ -96,12 +100,14 @@ Before you submit your Pull Request (PR) consider the following guidelines:
   - Re-run the test suites to ensure tests are still passing.
   - Rebase your branch and force push to your GitHub repository (this will update your Pull Request):
 
-    ```shell
-    git rebase master -i
-    git push -f
-    ```
+        ```shell
+        git rebase main -i
+        git push -f
+        ```
 
-That's it! Thank you for your contribution!
+    While we do not provide guarantees we'll try our best to respond quickly and
+    successfully integrate your change. Please consider that Equinox is developed
+    in the spare time of its maintainers.
 
 ## <a name="development"></a> Development Setup
 
@@ -110,13 +116,19 @@ You should have [corepack](https://nodejs.org/api/corepack.html) enabled to
 ensure you're using the same version of `pnpm` as other contributors, this
 avoids large unrelated changes to the lockfile.
 
+1. Clone the repo
+```bash
+$ git clone https://github.com/equinox-project/equinox-js
+$ cd equinox-js
+```
+
 1. After cloning the repo, run:
 
 ```bash
 $ pnpm i
 ```
 
-2. start the docker-compose services
+2. Start the docker-compose services
 
 ```bash
 $ docker-compose up -d
@@ -149,6 +161,8 @@ $ pnpm start:http
 > When contributing to this project, you must agree that you have authored 100%
 > of the content, that you have the necessary rights to the content and that
 > the content you contribute may be provided under the project license.
+
+
 
 [github]: https://github.com/equinox-project/equinox-js
 [discord]: https://discord.gg/sEZGSHNNbH
