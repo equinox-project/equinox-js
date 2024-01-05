@@ -154,7 +154,7 @@ $ cd ./apps/example
 $ pnpm start:http
 ```
 
-## <a name="rules"></a> Coding Rules
+## <a name="rules"></a> Contribution Rules
 
 > ### Legal Notice
 >
@@ -162,6 +162,19 @@ $ pnpm start:http
 > of the content, that you have the necessary rights to the content and that
 > the content you contribute may be provided under the project license.
 
+### Code style
+While we do not have an explicit code style, we do use prettier to format the
+files. 
+
+<!-- taken from https://github.com/eventide-project/contributor-assets/blob/master/contributor-guide/contributor-bill-of-rights.md -->
+### Your rights as a contributor
+
+- You have the right to try
+- You have the right to support from the community and project maintainers in
+  your efforts to make a contribution
+- You have a right to be treated with honour and integrity
+- You have a right to the consideration that your time and attention may not be
+  immediately-available
 
 
 [github]: https://github.com/equinox-project/equinox-js
