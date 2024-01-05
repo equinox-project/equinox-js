@@ -2,7 +2,6 @@
   "name": "equinox-js",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "pnpm@8.7.0",
   "workspaces": [
     "apps/*",
     "packages/*"
