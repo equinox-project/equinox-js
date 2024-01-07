@@ -1,4 +1,4 @@
-import { Pool } from "pg"
+import { Client, Pool, PoolClient } from "pg"
 import { randomUUID } from "crypto"
 import { IEventData, ITimelineEvent, StreamName } from "@equinox-js/core"
 
@@ -39,8 +39,9 @@ export class MessageDbWriter {
     streamName: string,
     messages: IEventData<Format>[],
     expectedVersion: bigint | null,
+    runInSameTransaction?: (client: Client) => Promise<void>,
   ): Promise<MdbWriteResult> {
-    if (messages.length === 1)
+    if (messages.length === 1 && !runInSameTransaction)
       return this.writeSingleMessage(streamName, messages[0], expectedVersion)
     const client = await this.pool.connect()
     let position = -1n
@@ -64,6 +65,10 @@ export class MessageDbWriter {
 
         position = BigInt(results.rows[0].write_message)
       }
+
+      // Seems silly to use `PoolClient` as the type because we don't
+      // want to expose the `release` method
+      if (runInSameTransaction) await runInSameTransaction(client as any as Client)
 
       await client.query("COMMIT")
     } catch (err: any) {

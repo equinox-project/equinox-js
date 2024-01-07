@@ -12,13 +12,8 @@ import * as Snapshot from "./Snapshot.js"
 import * as Read from "./Read.js"
 import { trace } from "@opentelemetry/api"
 import { Format, MessageDbReader, MessageDbWriter } from "./MessageDbClient.js"
-import { Pool } from "pg"
-import {
-  CachingCategory,
-  ICachingStrategy,
-  IReloadableCategory,
-  Tags,
-} from "@equinox-js/core"
+import { Client, Pool, PoolClient } from "pg"
+import { CachingCategory, ICachingStrategy, IReloadableCategory, Tags } from "@equinox-js/core"
 
 function keepMap<T, V>(arr: T[], fn: (v: T) => V | undefined): V[] {
   const result: V[] = []
@@ -167,6 +162,7 @@ export class MessageDbContext {
     streamName: string,
     token: StreamToken,
     encodedEvents: IEventData<Format>[],
+    runAfter?: (conn: Client) => Promise<void>,
   ): Promise<GatewaySyncResult> {
     const span = trace.getActiveSpan()
     const streamVersion = Token.streamVersion(token)
@@ -174,7 +170,12 @@ export class MessageDbContext {
     if (appendedTypes.size <= 10) {
       span?.setAttribute(Tags.append_types, Array.from(appendedTypes))
     }
-    const result = await this.conn.write.writeMessages(streamName, encodedEvents, streamVersion)
+    const result = await this.conn.write.writeMessages(
+      streamName,
+      encodedEvents,
+      streamVersion,
+      runAfter,
+    )
 
     switch (result.type) {
       case "ConflictUnknown":
@@ -199,9 +200,14 @@ export class MessageDbContext {
   }
 }
 
-type AccessStrategy<Event, State> =
+export type AccessStrategy<Event, State> =
   | { type: "Unoptimized" }
   | { type: "LatestKnownEvent" }
+  | {
+      type: "AdjacentProjection"
+      access: AccessStrategy<Event, State>
+      project: (conn: Client, streamId: Equinox.StreamId, state: State) => Promise<void>
+    }
   | {
       type: "AdjacentSnapshots"
       eventName: string
@@ -212,6 +218,14 @@ type AccessStrategy<Event, State> =
 export namespace AccessStrategy {
   export const Unoptimized = <E, S>(): AccessStrategy<E, S> => ({ type: "Unoptimized" })
   export const LatestKnownEvent = <E, S>(): AccessStrategy<E, S> => ({ type: "LatestKnownEvent" })
+  export const AdjacentProjection = <E, S>(
+    project: (conn: Client, streamId: Equinox.StreamId, state: S) => Promise<void>,
+    access: AccessStrategy<E, S> = Unoptimized(),
+  ): AccessStrategy<E, S> => ({
+    type: "AdjacentProjection",
+    access,
+    project,
+  })
   export const AdjacentSnapshots = <E, S>(
     eventName: string,
     toSnapshot: (state: S) => E,
@@ -237,6 +251,7 @@ class InternalCategory<Event, State, Context>
   ) {}
 
   private async loadAlgorithm(
+    access: AccessStrategy<Event, State>,
     streamId: Equinox.StreamId,
     requireLeader: boolean,
   ): Promise<[StreamToken, State]> {
@@ -247,7 +262,9 @@ class InternalCategory<Event, State, Context>
       [Tags.category]: this.categoryName,
       [Tags.stream_name]: streamName,
     })
-    switch (this.access.type) {
+    switch (access.type) {
+      case "AdjacentProjection":
+        return this.loadAlgorithm(access.access, streamId, requireLeader)
       case "Unoptimized":
         return this.context.loadBatched(
           streamName,
@@ -270,7 +287,7 @@ class InternalCategory<Event, State, Context>
           streamId,
           requireLeader,
           this.codec.decode,
-          this.access.eventName,
+          access.eventName,
         )
         if (!result)
           return this.context.loadBatched(
@@ -298,7 +315,7 @@ class InternalCategory<Event, State, Context>
   supersedes = Token.supersedes
 
   async load(streamId: Equinox.StreamId, _maxStaleMs: number, requireLeader: boolean) {
-    const [token, state] = await this.loadAlgorithm(streamId, requireLeader)
+    const [token, state] = await this.loadAlgorithm(this.access, streamId, requireLeader)
     return { token, state }
   }
 
@@ -330,7 +347,13 @@ class InternalCategory<Event, State, Context>
     })
     const encode = (ev: Event) => this.codec.encode(ev, ctx)
     const encodedEvents = await Promise.all(events.map(encode))
-    const result = await this.context.sync(streamName, token, encodedEvents)
+    const access = this.access
+    const newState = this.fold(state, events)
+    const runInSameTransaction =
+      access.type === "AdjacentProjection"
+        ? (conn: Client) => access.project(conn, streamId, newState)
+        : undefined
+    const result = await this.context.sync(streamName, token, encodedEvents, runInSameTransaction)
     switch (result.type) {
       case "ConflictUnknown":
         return {
@@ -338,7 +361,6 @@ class InternalCategory<Event, State, Context>
           resync: () => this.reload(streamId, true, { token, state }),
         }
       case "Written": {
-        const newState = this.fold(state, events)
         switch (this.access.type) {
           case "LatestKnownEvent":
           case "Unoptimized":
@@ -356,6 +378,8 @@ class InternalCategory<Event, State, Context>
                 this.access.toSnapshot(newState),
               )
             }
+          }
+          case "AdjacentProjection": {
           }
         }
         return { type: "Written", data: { token: result.token, state: newState } }
