@@ -98,5 +98,4 @@ test("Checkpointing happens asynchronously", async () => {
   expect(CheckpointWriter.prototype.flush).toHaveBeenCalledTimes(2)
 })
 
-test("Checkpoint is flushed on abort or source error", async () => {
-})
+test("It fails fast", async () => {})

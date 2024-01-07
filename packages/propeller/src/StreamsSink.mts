@@ -2,7 +2,8 @@ import { ITimelineEvent, StreamName } from "@equinox-js/core"
 import { traceHandler, EventHandler } from "./Tracing.js"
 import { Attributes, trace } from "@opentelemetry/api"
 import { IngesterBatch, Sink } from "./Types.js"
-import { AsyncQueue } from "./Queue.js"
+import { Queue } from "./Queue.js"
+import EventEmitter from "node:events"
 
 const tracer = trace.getTracer("@equinox-js/propeller")
 
@@ -17,57 +18,82 @@ class Stream {
   }
 }
 
-class QueueWorker {
-  private stopped = true
+class ConcurrentDispatcher {
+  private active = new Set<StreamName>()
+  private queue = new Queue<Stream>()
+  private delayed = new Map<StreamName, Queue<Stream>>()
   constructor(
-    private readonly tryGetNext: (signal: AbortSignal) => Promise<Stream>,
-    private readonly handle: EventHandler<string>,
-    private readonly tracingAttrs: Attributes,
-    private readonly onHandled: (stream: Stream) => void,
+    private readonly concurrency: number,
+    private readonly computation: (stream: Stream) => Promise<void>,
+    private readonly signal: AbortSignal,
   ) {}
 
-  stop() {
-    this.stopped = true
+  post(stream: Stream) {
+    this.queue.add(stream)
+    process.nextTick(() => this.processMessages())
   }
 
-  async run(signal: AbortSignal): Promise<void> {
-    this.stopped = false
-    while (!signal.aborted && !this.stopped) {
-      const stream = await this.tryGetNext(signal)
-      await traceHandler(tracer, this.tracingAttrs, stream.name, stream.events, this.handle)
-      this.onHandled(stream)
+  private delayActive(stream: Stream) {
+    if (this.active.has(stream.name)) {
+      if (!this.delayed.has(stream.name)) this.delayed.set(stream.name, new Queue<Stream>())
+      this.delayed.get(stream.name)!.add(stream)
+      this.processMessages()
+      return true
     }
   }
+
+  private reintroduceDelayed(stream: Stream) {
+    const q = this.delayed.get(stream.name)
+    if (!q) return
+    this.queue.prepend(q.tryGet()!)
+    if (q.size === 0) this.delayed.delete(stream.name)
+  }
+
+  processMessages(): void {
+    if (this.signal.aborted) return
+    if (this.active.size >= this.concurrency) return
+    const stream = this.queue.tryGet()
+    if (!stream) return
+    if (this.delayActive(stream)) return
+
+    this.active.add(stream.name)
+    this.computation(stream).finally(() => {
+      this.reintroduceDelayed(stream)
+      this.active.delete(stream.name)
+      this.processMessages()
+    })
+    if (this.active.size < this.concurrency) this.processMessages()
+  }
+}
+
+function waitForEvent(emitter: EventEmitter, event: string, signal?: AbortSignal) {
+  if (!signal) return new Promise<void>((resolve) => emitter.once(event, () => resolve()))
+  return new Promise<void>((resolve, reject) => {
+    const abort = () => {
+      signal.removeEventListener("abort", abort)
+      reject(new Error("Aborted"))
+    }
+    signal.addEventListener("abort", abort)
+    emitter.once(event, () => {
+      signal.removeEventListener("abort", abort)
+      resolve()
+    })
+  })
 }
 
 export class BatchLimiter {
   private inProgressBatches = 0
-  private onReady?: () => void
-  private onEmpty?: () => void
+  private events = new EventEmitter()
   constructor(private maxReadAhead: number) {}
 
-  waitForCapacity(signal: AbortSignal) {
+  waitForCapacity(signal: AbortSignal): Promise<void> | void {
     if (this.inProgressBatches < this.maxReadAhead) return
-    return new Promise<void>((resolve, reject) => {
-      const abort = () => {
-        signal.removeEventListener("abort", abort)
-        reject(new Error("Aborted"))
-      }
-      signal.addEventListener("abort", abort)
-      this.onReady = () => {
-        signal.removeEventListener("abort", abort)
-        resolve()
-      }
-    })
+    return waitForEvent(this.events, "ready", signal)
   }
 
-  waitForEmpty() {
-    if (this.inProgressBatches === 0) return
-    return new Promise<void>((resolve) => {
-      this.onEmpty = () => {
-        resolve()
-      }
-    })
+  async waitForEmpty() {
+    if (this.inProgressBatches === 0) return 
+    await waitForEvent(this.events, "empty")
   }
 
   startBatch() {
@@ -76,12 +102,8 @@ export class BatchLimiter {
 
   endBatch() {
     this.inProgressBatches--
-    this.onReady?.()
-    delete this.onReady
-    if (this.inProgressBatches === 0) {
-      this.onEmpty?.()
-      delete this.onEmpty
-    }
+    this.events.emit("ready")
+    if (this.inProgressBatches === 0) this.events.emit("empty")
   }
 }
 
@@ -98,25 +120,31 @@ type CreateOptions = {
 }
 
 export class StreamsSink implements Sink {
-  private queue = new AsyncQueue<Stream>()
   private streams = new Map<StreamName, Stream>()
-  private activeStreams = new Set<StreamName>()
   private batchStreams = new Map<IngesterBatch, Set<Stream>>()
-  private readonly tracingAttrs: Attributes = {}
+  private events = new EventEmitter()
+  private readonly handler: EventHandler<string>
+  private dispatcher!: ConcurrentDispatcher
+  private tracingAttrs: Attributes
   constructor(
-    private readonly handle: EventHandler<string>,
-    private maxConcurrentStreams: number,
+    handler: EventHandler<string>,
+    private readonly maxConcurrentStreams: number,
     private readonly batchLimiter: BatchLimiter,
+    tracingAttrs: Attributes = {},
   ) {
-    this.addTracingAttrs({ "eqx.max_concurrent_streams": maxConcurrentStreams })
+    this.tracingAttrs = Object.assign({ "eqx.max_read_ahead": maxConcurrentStreams }, tracingAttrs)
+    this.handler = traceHandler(tracer, this.tracingAttrs, handler)
   }
 
   addTracingAttrs(attrs: Attributes) {
     Object.assign(this.tracingAttrs, attrs)
   }
 
+  onError(handler: (err: Error) => void) {
+    this.events.on("error", handler)
+  }
+
   private handleStreamCompletion(stream: Stream) {
-    this.activeStreams.delete(stream.name)
     const batches = Array.from(this.batchStreams)
     for (const [batch, streams] of this.batchStreams) {
       streams.delete(stream)
@@ -129,43 +157,7 @@ export class StreamsSink implements Sink {
     }
   }
 
-  async start(signal: AbortSignal) {
-    // set up a linked abort controller to avoid attaching too many event listeners to the provided signal
-    // node has a default limit of 11 before it emits a warning to the console. We have entirely legitimate reasons
-    // for attaching more than 11 listeners
-    const ctrl = new AbortController()
-    signal.addEventListener("abort", () => ctrl.abort())
-    const _signal = ctrl.signal
-    // Starts N workers that will process streams in parallel
-
-    const workers = new Array<QueueWorker>(this.maxConcurrentStreams)
-
-    for (let i = 0; i < this.maxConcurrentStreams; ++i) {
-      workers[i] = new QueueWorker(
-        async (signal) => {
-          const stream = await this.queue.tryFindAsync(
-            (stream) => !this.activeStreams.has(stream.name),
-            signal,
-          )
-          this.activeStreams.add(stream.name)
-          this.streams.delete(stream.name)
-          return stream
-        },
-        this.handle,
-        this.tracingAttrs,
-        (stream) => this.handleStreamCompletion(stream),
-      )
-    }
-
-    try {
-      await Promise.all(workers.map((w) => w.run(_signal)))
-    } catch (err) {
-      workers.forEach((w) => w.stop())
-      throw err
-    }
-  }
-
-  async pump(batch: IngesterBatch, signal: AbortSignal): Promise<void> {
+  pump(batch: IngesterBatch, signal: AbortSignal): void | Promise<void> {
     this.batchLimiter.startBatch()
     const streamsInBatch = new Set<Stream>()
     this.batchStreams.set(batch, streamsInBatch)
@@ -176,16 +168,40 @@ export class StreamsSink implements Sink {
       streamsInBatch.add(stream)
       if (!current) {
         this.streams.set(sn, stream)
-        this.queue.add(stream)
+        this.dispatcher.post(stream)
       }
     }
-    await this.batchLimiter.waitForCapacity(signal)
+    return this.batchLimiter.waitForCapacity(signal)
   }
 
-  static create(options: CreateOptions) {
-    const limiter = new BatchLimiter(options.maxReadAhead)
-    const sink = new StreamsSink(options.handler, options.maxConcurrentStreams, limiter)
-    if (options.tracingAttrs) sink.addTracingAttrs(options.tracingAttrs)
+  async start(signal: AbortSignal) {
+    this.dispatcher = new ConcurrentDispatcher(
+      this.maxConcurrentStreams,
+      async (stream) => {
+        // once we start handling a stream we do not want to merge more events into it
+        this.streams.delete(stream.name)
+        try {
+          await this.handler(stream.name, stream.events)
+          return this.handleStreamCompletion(stream)
+        } catch (err) {
+          this.events.emit("error", err)
+        }
+      },
+      signal,
+    )
+    return this.waitForErrorOrAbort(signal)
+  }
+
+  waitForErrorOrAbort(signal: AbortSignal): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.onError(reject)
+      signal.addEventListener("abort", () => resolve(), { once: true })
+    })
+  }
+
+  static create({ handler, maxReadAhead, maxConcurrentStreams, tracingAttrs }: CreateOptions) {
+    const limiter = new BatchLimiter(maxReadAhead)
+    const sink = new StreamsSink(handler, maxConcurrentStreams, limiter, tracingAttrs)
     return sink
   }
 }

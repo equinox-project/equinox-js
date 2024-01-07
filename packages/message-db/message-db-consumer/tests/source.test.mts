@@ -74,6 +74,7 @@ test("Ships batches to the sink", async () => {
   ctrl.abort()
   expect(streams.size).toBe(3)
   expect(Array.from(streams.values()).flat()).toHaveLength(4)
+
   await sourceP
 })
 test("it fails fast", async () => {
