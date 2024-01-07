@@ -459,12 +459,7 @@ describe("AccessStrategy.LatestKnownEvent", () => {
   test("Reads and updates against Store", async () => {
     const id = randomUUID() as ContactPreferences.ClientId
     const service = ContactPreferencesService.createService(client)
-    const value: ContactPreferences.Preferences = {
-      littlePromotions: Math.random() > 0.5,
-      manyPromotions: Math.random() > 0.5,
-      productReview: Math.random() > 0.5,
-      quickSurveys: Math.random() > 0.5,
-    }
+    const value = ContactPreferences.randomPreferences()
 
     // Feed some junk into the stream
     for (let i = 0; i < 12; ++i) {
@@ -665,12 +660,8 @@ describe("AccessStrategy.AdjacentProjection", () => {
       AccessStrategy.AdjacentProjection(project, AccessStrategy.LatestKnownEvent()),
     )
     const id = randomUUID() as ContactPreferences.ClientId
-    const value: ContactPreferences.Preferences = {
-      littlePromotions: Math.random() > 0.5,
-      manyPromotions: Math.random() > 0.5,
-      productReview: Math.random() > 0.5,
-      quickSurveys: Math.random() > 0.5,
-    }
+    const value = ContactPreferences.randomPreferences()
+
     await service.update(id, value)
     const expectedId = ContactPreferences.ClientId.toStreamId(id)
     expect(project).toHaveBeenCalledWith(expect.anything(), expectedId, value)
