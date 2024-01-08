@@ -18,10 +18,6 @@ type Fold<E, S> = {
   fold: (s: S, e: E[]) => S
   initial: S
 }
-type SnapshottedFold<E, S> = Fold<E, S> & {
-  toSnapshot: (s: S) => E
-  eventName: string
-}
 
 type Events<E, C> = {
   codec: ICodec<E, string, C>
@@ -32,6 +28,11 @@ export namespace MessageDb {
   import AccessStrategy = MessageDB.AccessStrategy
   import MessageDbCategory = MessageDB.MessageDbCategory
   import MessageDbContext = MessageDB.MessageDbContext
+
+  type SnapshottedFold<E, S> = Fold<E, S> & {
+    toSnapshot: (s: S) => E
+    eventName: string
+  }
 
   export function createCached<E, S, C>(name: string, events: Events<E, C>, fold: Fold<E,S>, access: AccessStrategy<E, S>, { context, cache }: { context: MessageDbContext; cache: ICache }) {
     const caching = CachingStrategy.Cache(cache)
