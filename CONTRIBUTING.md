@@ -25,12 +25,10 @@ Repository. If you would like to _implement_ a new feature, please submit an iss
 a proposal for your work first, to be sure that we can use it.
 Please consider what kind of change it is:
 
-- For a **Major Feature**, first open an issue and outline your proposal so
+- For a **Major Feature**, first open a [discussion][discussions] and outline your proposal so
   that it can be discussed. This will also allow us to better coordinate our
   efforts, prevent duplication of work, and help you to craft the change so
-  that it is successfully accepted into the project. For your issue name,
-  please prefix your proposal with `[discussion]`, for example "[discussion]:
-  your feature idea".
+  that it is successfully accepted into the project.
 - **Small Features**, it is always best to start by opening an issue. Even small features can introduce
   unwarranted complexity into a codebase that the maintainers might not want to take on. By opening the
   issue first and describing your intent you'll reduce the chance that your PR will be rejected.
@@ -117,6 +115,7 @@ ensure you're using the same version of `pnpm` as other contributors, this
 avoids large unrelated changes to the lockfile.
 
 1. Clone the repo
+
 ```bash
 $ git clone https://github.com/equinox-project/equinox-js
 $ cd equinox-js
@@ -163,10 +162,12 @@ $ pnpm start:http
 > the content you contribute may be provided under the project license.
 
 ### Code style
+
 While we do not have an explicit code style, we do use prettier to format the
-files. 
+files.
 
 <!-- taken from https://github.com/eventide-project/contributor-assets/blob/master/contributor-guide/contributor-bill-of-rights.md -->
+
 ### Your rights as a contributor
 
 - You have the right to try
@@ -176,8 +177,8 @@ files.
 - You have a right to the consideration that your time and attention may not be
   immediately-available
 
-
 [github]: https://github.com/equinox-project/equinox-js
 [discord]: https://discord.gg/sEZGSHNNbH
 [new_issue]: https://github.com/equinox-project/equinox-js/issues/new
+[discussions]: https://github.com/equinox-project/equinox-js/discussions
 [gh_prs]: https://github.com/equinox-project/equinox-js/pulls
