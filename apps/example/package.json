@@ -9,8 +9,8 @@
     "test": "vitest run",
     "explorer": "NODE_PATH=./node_modules eqx-explorer -cs $MDB_RO_CONN_STR -c ./src/explorer-config.ts",
     "create-db": "createdb --host 127.0.0.1 -U postgres equinox_example",
-    "migrate:message-db": "pg-migrations apply --database $DBURL_ADMIN --directory ./migrations/message-db --version-table mdb_migrations_version --migrations-table mdb_migrations_applied",
-    "migrate:app": "pg-migrations apply --database $DBURL_ADMIN --directory ./migrations/app",
+    "migrate:message-db": "pg-migrations apply --database $DBURL_ADMIN --directory ./node_modules/@equinox-js/message-db/migrations --version-table mdb_migrations_version --migrations-table mdb_migrations_applied",
+    "migrate:app": "pg-migrations apply --database $DBURL_ADMIN --directory ./migrations",
     "migrate": "pnpm migrate:message-db && pnpm migrate:app"
   },
   "dependencies": {
