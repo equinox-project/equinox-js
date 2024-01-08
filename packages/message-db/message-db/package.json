@@ -16,7 +16,8 @@
   },
   "version": "1.0.0-rc.8.2",
   "files": [
-    "./dist"
+    "./dist",
+    "./migrations"
   ],
   "devDependencies": {
     "@opentelemetry/sdk-trace-base": "^1.9.0",
