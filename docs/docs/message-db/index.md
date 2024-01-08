@@ -11,6 +11,8 @@ of their choosing.
 
 # Installing
 
+## MessageDB installer
+
 MessageDB offers its [own installer](http://docs.eventide-project.org/user-guide/message-db/install.html),
 it can be used as such
 
@@ -25,6 +27,10 @@ $ tar -xf /tmp/message_db.tar.gz --directory /tmp/mdb
 $ (cd /tmp/mdb/message-db-$MDB_VERSION/database && ./install.sh)
 ```
 
+<!-- Uncomment once we actually release --> 
+<!--
+## pg-migrations
+
 While this can work well it's not particularly great to use in IaC scenarios as
 the installer is not idempotent. To combat this we offer a set of migrations you
 can use with `@database/pg-migrations`.
@@ -36,4 +42,4 @@ $ npx pg-migrations \
   --version-table eqx_mdb_migrations_version \
   --migrations-table eqx_mdb_migrations_applied
 ```
-
+-->
