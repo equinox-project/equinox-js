@@ -71,7 +71,6 @@ jobs:
         working-directory: ./apps/example
         run: |
           pnpm create-db
-          pnpm migrate:message-db
           pnpm migrate
 
       - name: Test
