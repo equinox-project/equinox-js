@@ -80,9 +80,9 @@ export class Service {
   // prettier-ignore
   static resolveCategory(config: Config.Config) {
     switch (config.store) {
-      case Config.Store.Memory: return Config.MemoryStore.create(Stream.category, Events.codec, Fold.fold, Fold.initial, config)
-      case Config.Store.MessageDb: return Config.MessageDb.createLatestKnown(Stream.category, Events.codec, Fold.fold, Fold.initial, config)
-      case Config.Store.Dynamo: return Config.Dynamo.createLatestKnown(Stream.category, Events.codec, Fold.fold, Fold.initial, config)
+      case Config.Store.Memory: return Config.MemoryStore.create(Stream.category, Events, Fold, config)
+      case Config.Store.MessageDb: return Config.MessageDb.createLatestKnown(Stream.category, Events, Fold, config)
+      case Config.Store.Dynamo: return Config.Dynamo.createLatestKnown(Stream.category, Events, Fold, config)
     }
   }
 
