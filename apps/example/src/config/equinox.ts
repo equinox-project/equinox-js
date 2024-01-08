@@ -14,30 +14,47 @@ export type Config =
   | { store: Store.MessageDb; context: MessageDB.MessageDbContext; cache: ICache }
   | { store: Store.Dynamo; context: DynamoDB.DynamoStoreContext; cache: ICache }
 
+type Fold<E, S> = {
+  fold: (s: S, e: E[]) => S
+  initial: S
+}
+type SnapshottedFold<E, S> = Fold<E, S> & {
+  toSnapshot: (s: S) => E
+  eventName: string
+}
+
+type Events<E, C> = {
+  codec: ICodec<E, string, C>
+}
+
 // prettier-ignore
 export namespace MessageDb {
   import AccessStrategy = MessageDB.AccessStrategy
   import MessageDbCategory = MessageDB.MessageDbCategory
   import MessageDbContext = MessageDB.MessageDbContext
 
-  export function createCached<E, S, C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, access: AccessStrategy<E, S>, { context, cache }: { context: MessageDbContext; cache: ICache }) {
+  export function createCached<E, S, C>(name: string, events: Events<E, C>, fold: Fold<E,S>, access: AccessStrategy<E, S>, { context, cache }: { context: MessageDbContext; cache: ICache }) {
     const caching = CachingStrategy.Cache(cache)
-    return MessageDbCategory.create(context, name, codec, fold, initial, caching, access);
+    return MessageDbCategory.create(context, name, events.codec, fold.fold, fold.initial, caching, access);
   }
 
-  export function createUnoptimized<E, S, C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, config: { context: MessageDbContext; cache: ICache }) {
+  export function createUnoptimized<E, S, C>(name: string, events: Events<E, C>, fold: Fold<E,S>, config: { context: MessageDbContext; cache: ICache }) {
     const access = AccessStrategy.Unoptimized<E, S>()
-    return MessageDb.createCached(name, codec, fold, initial, access, config)
+    return MessageDb.createCached(name, events, fold, access, config)
   }
 
-  export function createSnapshotted<E, S, C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, eventName: string, toSnapshot: (s: S) => E, config: { context: MessageDbContext; cache: ICache }) {
-    const access = AccessStrategy.AdjacentSnapshots(eventName, toSnapshot)
-    return MessageDb.createCached(name, codec, fold, initial, access, config)
+  export function createSnapshotted<E, S, C>(name: string, events: Events<E,C>, fold: SnapshottedFold<E,S>, config: { context: MessageDbContext; cache: ICache }) {
+    const access = AccessStrategy.AdjacentSnapshots(fold.eventName, fold.toSnapshot)
+    return MessageDb.createCached(name, events, fold, access, config)
   }
 
-  export function createLatestKnown<E, S, C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, config: { context: MessageDbContext; cache: ICache }) {
+  export function createLatestKnown<E, S, C>(name: string, events: Events<E, C>, fold: Fold<E,S>, config: { context: MessageDbContext; cache: ICache }) {
     const access = AccessStrategy.LatestKnownEvent<E, S>()
-    return MessageDb.createCached(name, codec, fold, initial, access, config)
+    return MessageDb.createCached(name, events, fold, access, config)
+  }
+
+  export function createProjected<E, S, C>(name: string, events: Events<E, C>, fold: Fold<E,S>, config: { context: MessageDbContext; cache: ICache }) {
+    const access = AccessStrategy.AdjacentSnapshots
   }
 }
 
@@ -47,34 +64,40 @@ export namespace Dynamo {
   import Category = DynamoDB.DynamoStoreCategory
   import Context = DynamoDB.DynamoStoreContext
   type Config = { context: Context; cache: ICache }
-  export function createCached<E, S, C>(name: string, codec_: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, access: AccessStrategy<E, S>, { context, cache }: Config) {
+type RollingStateFold<E, S> = Fold<E, S> & {
+    toSnapshot: (s: S) => E
+  }
+  type SnapshottedFold<E, S> = RollingStateFold<E, S> & {
+    isOrigin: (e: E) => boolean
+  }
+  export function createCached<E, S, C>(name: string, events: Events<E, C>, fold: Fold<E,S>, access: AccessStrategy<E, S>, { context, cache }: Config) {
     const caching = CachingStrategy.Cache(cache)
-    const codec = Codec.compress(codec_)
-    return Category.create(context, name, codec, fold, initial, caching, access);
+    const codec = Codec.compress(events.codec)
+    return Category.create(context, name, codec, fold.fold, fold.initial, caching, access);
   }
 
-  export function createUnoptimized<E, S, C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, config: Config) {
+  export function createUnoptimized<E, S, C>(name: string, events: Events<E, C>, fold: Fold<E,S>, config: Config) {
     const access = AccessStrategy.Unoptimized()
-    return Dynamo.createCached(name, codec, fold, initial, access, config)
+    return Dynamo.createCached(name, events, fold, access, config)
   }
 
-  export function createLatestKnown<E,S,C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, config: Config) {
+  export function createLatestKnown<E, S, C>(name: string, events: Events<E, C>, fold: Fold<E,S>, config: Config) {
     const access = AccessStrategy.LatestKnownEvent()
-    return Dynamo.createCached(name, codec, fold, initial, access, config)
+    return Dynamo.createCached(name, events, fold, access, config)
   }
-  export function createSnapshotted<E,S,C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, isOrigin: (e: E) => boolean, toSnapshot: (s: S) => E, config: Config) {
-    const access = AccessStrategy.Snapshot(isOrigin, toSnapshot)
-    return Dynamo.createCached(name, codec, fold, initial, access, config)
+  export function createSnapshotted<E, S, C>(name: string, events: Events<E, C>, fold: SnapshottedFold<E,S>, config: Config) {
+    const access = AccessStrategy.Snapshot(fold.isOrigin, fold.toSnapshot)
+    return Dynamo.createCached(name, events, fold, access, config)
   }
-  export function createRollingState<E,S,C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, toSnapshot: (s: S) => E, config: Config) {
-    const access = AccessStrategy.RollingState(toSnapshot)
-    return Dynamo.createCached(name, codec, fold, initial, access, config)
+  export function createRollingState<E, S, C>(name: string, events: Events<E, C>, fold: RollingStateFold<E,S>, config: Config) {
+    const access = AccessStrategy.RollingState(fold.toSnapshot)
+    return Dynamo.createCached(name, events, fold, access, config)
   }
 }
 
 // prettier-ignore
 export namespace MemoryStore {
-  export function create<E, S, C>(name: string, codec: ICodec<E, string, C>, fold: (s: S, e: E[]) => S, initial: S, { context: store }: { context: VolatileStore<string> }) {
-    return MemoryStoreCategory.create(store, name, codec, fold, initial)
+  export function create<E, S, C>(name: string, events: Events<E,C>, fold: Fold<E,S>, { context: store }: { context: VolatileStore<string> }) {
+    return MemoryStoreCategory.create(store, name, events.codec, fold.fold, fold.initial)
   }
 }
