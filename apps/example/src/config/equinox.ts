@@ -1,7 +1,9 @@
-import { ICodec, ICache, CachingStrategy, Codec } from "@equinox-js/core"
+import { ICodec, ICache, CachingStrategy, Codec, StreamId } from "@equinox-js/core"
 import { MemoryStoreCategory, VolatileStore } from "@equinox-js/memory-store"
 import * as MessageDB from "@equinox-js/message-db"
 import * as DynamoDB from "@equinox-js/dynamo-store"
+import { MinimalClient } from "@equinox-js/projection-pg"
+import { Client } from "pg"
 
 export enum Store {
   Memory,
@@ -54,8 +56,9 @@ export namespace MessageDb {
     return MessageDb.createCached(name, events, fold, access, config)
   }
 
-  export function createProjected<E, S, C>(name: string, events: Events<E, C>, fold: Fold<E,S>, config: { context: MessageDbContext; cache: ICache }) {
-    const access = AccessStrategy.AdjacentSnapshots
+  export function createProjected<E, S, C>(name: string, events: Events<E, C>, fold: Fold<E,S>, project: (client: Client, streamId: StreamId, state: S) => Promise<void>, sub: AccessStrategy<E, S> | undefined, config: { context: MessageDbContext; cache: ICache }) {
+    const access = AccessStrategy.AdjacentProjection(project, sub)
+    return MessageDb.createCached(name, events, fold, access, config)
   }
 }
 

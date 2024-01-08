@@ -67,6 +67,13 @@ jobs:
           tar -xf /tmp/message_db.tar.gz --directory /tmp/mdb
           (cd /tmp/mdb/message-db-$MDB_VERSION/database && ./install.sh)
 
+      - name: Set up example
+        working-directory: ./apps/example
+        run: |
+          pnpm create-db
+          pnpm migrate:message-db
+          pnpm migrate
+
       - name: Test
         run: pnpm dlx turbo test
 

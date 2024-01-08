@@ -364,6 +364,7 @@ class InternalCategory<Event, State, Context>
         switch (this.access.type) {
           case "LatestKnownEvent":
           case "Unoptimized":
+          case "AdjacentProjection":
             break
           case "AdjacentSnapshots": {
             const shapshotFrequency = this.access.frequency ?? this.context.batchSize
@@ -378,8 +379,6 @@ class InternalCategory<Event, State, Context>
                 this.access.toSnapshot(newState),
               )
             }
-          }
-          case "AdjacentProjection": {
           }
         }
         return { type: "Written", data: { token: result.token, state: newState } }

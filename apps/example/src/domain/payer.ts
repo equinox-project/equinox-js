@@ -4,6 +4,8 @@ import z from "zod"
 import { equals } from "ramda"
 import * as Config from "../config/equinox.js"
 import { Context } from "../context/context.js"
+import * as PayerReadModel from "../read-models/PayerReadModel.js"
+import { AccessStrategy } from "@equinox-js/message-db"
 
 export namespace Stream {
   export const category = "Payer"
@@ -77,11 +79,19 @@ export class Service {
     return decider.query((state) => state)
   }
 
+  static resolveMdb(config: Extract<Config.Config, { store: Config.Store.MessageDb }>) {
+    const access = AccessStrategy.AdjacentProjection<Events.Event, Fold.State>(
+      PayerReadModel.project,
+      AccessStrategy.LatestKnownEvent(),
+    )
+    return Config.MessageDb.createCached(Stream.category, Events, Fold, access, config)
+  }
+
   // prettier-ignore
   static resolveCategory(config: Config.Config) {
     switch (config.store) {
       case Config.Store.Memory: return Config.MemoryStore.create(Stream.category, Events, Fold, config)
-      case Config.Store.MessageDb: return Config.MessageDb.createLatestKnown(Stream.category, Events, Fold, config)
+      case Config.Store.MessageDb: return Service.resolveMdb(config)
       case Config.Store.Dynamo: return Config.Dynamo.createLatestKnown(Stream.category, Events, Fold, config)
     }
   }

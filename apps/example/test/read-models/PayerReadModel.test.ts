@@ -1,4 +1,3 @@
-import { ITimelineEvent, StreamId, StreamName } from "@equinox-js/core"
 import { Pool, PoolClient } from "pg"
 import { describe, test, expect, afterAll } from "vitest"
 import { PayerId } from "../../src/domain/identifiers.js"
@@ -15,7 +14,6 @@ afterAll(() => pool.end())
 
 function execute(fn: (client: PoolClient) => Promise<void>) {
   return async () => {
-    await PayerReadModel.ensureTable(pool)
     const client = await pool.connect()
     try {
       await client.query("truncate table payer")

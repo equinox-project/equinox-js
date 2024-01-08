@@ -19,16 +19,18 @@ function changes(streamId: StreamId, state: State): Change[] {
   return [Upsert({ id, name: state.name, email: state.email })]
 }
 
-export const ensureTable = (pool: Pool) =>
-  pool.query(
-    `create table if not exists payer (
-      id uuid not null primary key,
-      version bigint not null,
-      name text not null,
-      email text not null
-    )`,
-  )
-
 const handler = createHandler(projection)
 export const project = (client: MinimalClient, streamId: StreamId, state: State) =>
   handler(client, changes(streamId, state))
+
+export class PayerReadModel {
+  constructor(private readonly pool: Pool) {}
+
+  readAll() {
+    return this.pool.query<Payer>("SELECT * FROM payer").then((x) => x.rows)
+  }
+}
+
+export function create(pool: Pool) {
+  return new PayerReadModel(pool)
+}
