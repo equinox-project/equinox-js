@@ -69,11 +69,16 @@ jobs:
 
       - name: Set up example
         working-directory: ./apps/example
+        env:
+          DBURL_ADMIN: postgresql://postgres:@localhost:5432/equinox_example
         run: |
           pnpm create-db
           pnpm migrate
 
       - name: Test
+        env:
+          DBURL: postgresql://postgres:@localhost:5432/equinox_example
+          DBURL_RO: postgresql://postgres:@localhost:5432/equinox_example
         run: pnpm dlx turbo test
 
       - name: Lint
