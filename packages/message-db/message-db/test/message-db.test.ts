@@ -89,9 +89,8 @@ namespace SimplestThing {
 namespace ContactPreferencesService {
   const { fold, initial, codec } = ContactPreferences
 
-  export const createWithAccess = (
+  export const createService = (
     client: MessageDbConnection,
-    access: AccessStrategy<ContactPreferences.Event, ContactPreferences.State>,
     project?: Project<ContactPreferences.State>,
   ) => {
     const context = createContext(client, defaultBatchSize)
@@ -102,17 +101,10 @@ namespace ContactPreferencesService {
       fold,
       initial,
       undefined,
-      access,
+      AccessStrategy.LatestKnownEvent(),
       project,
     )
     return ContactPreferences.Service.create(category)
-  }
-
-  export const createService = (
-    client: MessageDbConnection,
-    project?: Project<ContactPreferences.State>,
-  ) => {
-    return createWithAccess(client, AccessStrategy.LatestKnownEvent(), project)
   }
 }
 
