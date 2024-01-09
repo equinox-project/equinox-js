@@ -10,6 +10,7 @@ import {
   MessageDbCategory,
   MessageDbConnection,
   MessageDbContext,
+  Project,
 } from "../src/index.js"
 
 const Category = MessageDbCategory
@@ -91,6 +92,7 @@ namespace ContactPreferencesService {
   export const createWithAccess = (
     client: MessageDbConnection,
     access: AccessStrategy<ContactPreferences.Event, ContactPreferences.State>,
+    project?: Project<ContactPreferences.State>,
   ) => {
     const context = createContext(client, defaultBatchSize)
     const category = Category.create(
@@ -101,12 +103,16 @@ namespace ContactPreferencesService {
       initial,
       undefined,
       access,
+      project,
     )
     return ContactPreferences.Service.create(category)
   }
 
-  export const createService = (client: MessageDbConnection) => {
-    return createWithAccess(client, AccessStrategy.LatestKnownEvent())
+  export const createService = (
+    client: MessageDbConnection,
+    project?: Project<ContactPreferences.State>,
+  ) => {
+    return createWithAccess(client, AccessStrategy.LatestKnownEvent(), project)
   }
 }
 
@@ -652,19 +658,16 @@ test("Version is 0-based", async () => {
   expect([before, after]).toEqual([0n, 1n])
 })
 
-describe("AccessStrategy.AdjacentProjection", () => {
+describe("Immediately consistent projections", () => {
   test("Calls the projection with the client and new state", async () => {
     const project = vi.fn().mockResolvedValue(undefined)
-    const service = ContactPreferencesService.createWithAccess(
-      client,
-      AccessStrategy.AdjacentProjection(project, AccessStrategy.LatestKnownEvent()),
-    )
+    const service = ContactPreferencesService.createService(client, project)
     const id = randomUUID() as ContactPreferences.ClientId
     const value = ContactPreferences.randomPreferences()
 
     await service.update(id, value)
     const expectedId = ContactPreferences.ClientId.toStreamId(id)
-    expect(project).toHaveBeenCalledWith(expect.anything(), expectedId, value)
+    expect(project).toHaveBeenCalledWith(expect.anything(), expectedId, value, 1n)
   })
 
   const pool = new Pool({
@@ -688,11 +691,8 @@ describe("AccessStrategy.AdjacentProjection", () => {
           values: [id, JSON.stringify(value)],
         })
         .then(() => undefined)
-    const service = ContactPreferencesService.createWithAccess(
-      conn,
-      AccessStrategy.AdjacentProjection(project, AccessStrategy.LatestKnownEvent()),
-    )
 
+    const service = ContactPreferencesService.createService(conn, project)
     const id = ContactPreferences.ClientId.parse(randomUUID())
     const value = ContactPreferences.randomPreferences()
     await service.update(id, value)

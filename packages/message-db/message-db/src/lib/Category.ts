@@ -12,7 +12,7 @@ import * as Snapshot from "./Snapshot.js"
 import * as Read from "./Read.js"
 import { trace } from "@opentelemetry/api"
 import { Format, MessageDbReader, MessageDbWriter } from "./MessageDbClient.js"
-import { Client, Pool, PoolClient } from "pg"
+import { Client, Pool } from "pg"
 import { CachingCategory, ICachingStrategy, IReloadableCategory, Tags } from "@equinox-js/core"
 
 function keepMap<T, V>(arr: T[], fn: (v: T) => V | undefined): V[] {
@@ -200,14 +200,12 @@ export class MessageDbContext {
   }
 }
 
+
+export type Project<State> = (conn: Client, streamId: Equinox.StreamId, state: State, version: bigint) => Promise<void>
+
 export type AccessStrategy<Event, State> =
   | { type: "Unoptimized" }
   | { type: "LatestKnownEvent" }
-  | {
-      type: "AdjacentProjection"
-      access: AccessStrategy<Event, State>
-      project: (conn: Client, streamId: Equinox.StreamId, state: State) => Promise<void>
-    }
   | {
       type: "AdjacentSnapshots"
       eventName: string
@@ -218,14 +216,6 @@ export type AccessStrategy<Event, State> =
 export namespace AccessStrategy {
   export const Unoptimized = <E, S>(): AccessStrategy<E, S> => ({ type: "Unoptimized" })
   export const LatestKnownEvent = <E, S>(): AccessStrategy<E, S> => ({ type: "LatestKnownEvent" })
-  export const AdjacentProjection = <E, S>(
-    project: (conn: Client, streamId: Equinox.StreamId, state: S) => Promise<void>,
-    access: AccessStrategy<E, S> = Unoptimized(),
-  ): AccessStrategy<E, S> => ({
-    type: "AdjacentProjection",
-    access,
-    project,
-  })
   export const AdjacentSnapshots = <E, S>(
     eventName: string,
     toSnapshot: (state: S) => E,
@@ -248,10 +238,10 @@ class InternalCategory<Event, State, Context>
     private readonly fold: (state: State, events: Event[]) => State,
     private readonly initial: State,
     private readonly access: AccessStrategy<Event, State> = AccessStrategy.Unoptimized(),
+    private readonly project?: Project<State>,
   ) {}
 
   private async loadAlgorithm(
-    access: AccessStrategy<Event, State>,
     streamId: Equinox.StreamId,
     requireLeader: boolean,
   ): Promise<[StreamToken, State]> {
@@ -262,9 +252,7 @@ class InternalCategory<Event, State, Context>
       [Tags.category]: this.categoryName,
       [Tags.stream_name]: streamName,
     })
-    switch (access.type) {
-      case "AdjacentProjection":
-        return this.loadAlgorithm(access.access, streamId, requireLeader)
+    switch (this.access.type) {
       case "Unoptimized":
         return this.context.loadBatched(
           streamName,
@@ -287,7 +275,7 @@ class InternalCategory<Event, State, Context>
           streamId,
           requireLeader,
           this.codec.decode,
-          access.eventName,
+          this.access.eventName,
         )
         if (!result)
           return this.context.loadBatched(
@@ -315,7 +303,7 @@ class InternalCategory<Event, State, Context>
   supersedes = Token.supersedes
 
   async load(streamId: Equinox.StreamId, _maxStaleMs: number, requireLeader: boolean) {
-    const [token, state] = await this.loadAlgorithm(this.access, streamId, requireLeader)
+    const [token, state] = await this.loadAlgorithm(streamId, requireLeader)
     return { token, state }
   }
 
@@ -347,12 +335,10 @@ class InternalCategory<Event, State, Context>
     })
     const encode = (ev: Event) => this.codec.encode(ev, ctx)
     const encodedEvents = await Promise.all(events.map(encode))
-    const access = this.access
     const newState = this.fold(state, events)
-    const runInSameTransaction =
-      access.type === "AdjacentProjection"
-        ? (conn: Client) => access.project(conn, streamId, newState)
-        : undefined
+    const newVersion = token.version + BigInt(events.length)
+    const project = this.project
+    const runInSameTransaction = project && ((conn: Client) => project(conn, streamId, newState, newVersion))
     const result = await this.context.sync(streamName, token, encodedEvents, runInSameTransaction)
     switch (result.type) {
       case "ConflictUnknown":
@@ -364,7 +350,6 @@ class InternalCategory<Event, State, Context>
         switch (this.access.type) {
           case "LatestKnownEvent":
           case "Unoptimized":
-          case "AdjacentProjection":
             break
           case "AdjacentSnapshots": {
             const shapshotFrequency = this.access.frequency ?? this.context.batchSize
@@ -408,8 +393,9 @@ export class MessageDbCategory {
     initial: State,
     caching?: ICachingStrategy,
     access?: AccessStrategy<Event, State>,
+    project?: Project<State>,
   ) {
-    const inner = new InternalCategory(context, categoryName, codec, fold, initial, access)
+    const inner = new InternalCategory(context, categoryName, codec, fold, initial, access, project)
     const category = CachingCategory.apply(categoryName, inner, caching)
     const empty: TokenAndState<State> = { token: context.tokenEmpty, state: initial }
     return new Equinox.Category(category, empty)

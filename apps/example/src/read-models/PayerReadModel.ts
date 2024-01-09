@@ -4,24 +4,24 @@ import { PayerId } from "../domain/identifiers.js"
 import { Payer } from "../domain/index.js"
 import { forEntity, Change, createHandler, MinimalClient } from "@equinox-js/projection-pg"
 
-type Payer = { id: PayerId; name: string; email: string }
+type Payer = { id: PayerId; name: string; email: string; version: string }
 
-const { Delete, Upsert } = forEntity<Payer, "id">()
+const { Delete, Upsert } = forEntity<Payer, "id" | "version">()
 
-export const projection = { table: "payer", id: ["id"] }
+export const projection = { table: "payer", id: ["id"], version: "version" }
 
 type State = { name: string; email: string } | null
 
-function changes(streamId: StreamId, state: State): Change[] {
+function changes(streamId: StreamId, state: State, version: string): Change[] {
   const id = Payer.Stream.decodeId(streamId)
   if (!id) return []
-  if (!state) return [Delete({ id })]
-  return [Upsert({ id, name: state.name, email: state.email })]
+  if (!state) return [Delete({ id, version })]
+  return [Upsert({ id, version, name: state.name, email: state.email })]
 }
 
 const handler = createHandler(projection)
-export const project = (client: MinimalClient, streamId: StreamId, state: State) =>
-  handler(client, changes(streamId, state))
+export const project = (client: MinimalClient, streamId: StreamId, state: State, version: bigint) =>
+  handler(client, changes(streamId, state, version.toString()))
 
 export class PayerReadModel {
   constructor(private readonly pool: Pool) {}

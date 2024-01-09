@@ -30,7 +30,7 @@ describe("PayerReadModel", () => {
     execute(async (client) => {
       const id = PayerId.create()
       const streamId = Payer.Stream.streamId(id)
-      await PayerReadModel.project(client, streamId, { name: "Test", email: "test@example.com" })
+      await PayerReadModel.project(client, streamId, { name: "Test", email: "test@example.com" }, 1n)
       const result = await client.query("select * from payer")
       expect(result.rows).toEqual([{ name: "Test", email: "test@example.com" }])
     }))
@@ -38,8 +38,8 @@ describe("PayerReadModel", () => {
     execute(async (client) => {
       const id = PayerId.create()
       const streamId = Payer.Stream.streamId(id)
-      await PayerReadModel.project(client, streamId, { name: "Test", email: "test@example.com" })
-      await PayerReadModel.project(client, streamId, { name: "Test 2", email: "test@example.com" })
+      await PayerReadModel.project(client, streamId, { name: "Test", email: "test@example.com" }, 1n)
+      await PayerReadModel.project(client, streamId, { name: "Test 2", email: "test@example.com" }, 2n)
       const result = await client.query("select * from payer")
       expect(result.rows).toEqual([{ name: "Test 2", email: "test@example.com" }])
     }))
@@ -49,7 +49,7 @@ describe("PayerReadModel", () => {
       const id = PayerId.create()
       const streamId = Payer.Stream.streamId(id)
 
-      await PayerReadModel.project(client, streamId, { name: "Test", email: "test@example.com" })
-      await PayerReadModel.project(client, streamId, null)
+      await PayerReadModel.project(client, streamId, { name: "Test", email: "test@example.com" }, 1n)
+      await PayerReadModel.project(client, streamId, null, 2n)
     }))
 })
