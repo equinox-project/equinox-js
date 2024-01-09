@@ -1,4 +1,4 @@
-import { Pool } from "pg"
+import { Client, Pool } from "pg"
 import { collapseChanges } from "./collapse"
 import { Action, Change } from "./types"
 import { ident } from "./quote"
@@ -118,11 +118,17 @@ function changeToQuery(projection: Projection, change: Change) {
   }
 }
 
-export async function executeChanges(projection: Projection, pool: Pool, changes: Change[]) {
-  const change = collapseChanges(changes)
-  if (change == null) return
-  const query = changeToQuery(projection, change)
-  await pool.query(query)
+export interface MinimalClient {
+  query: Client["query"]
+}
+
+export function createHandler(projection: Projection) {
+  return async function handle(client: MinimalClient, changes: Change[]) {
+    const change = collapseChanges(changes)
+    if (change == null) return
+    const query = changeToQuery(projection, change)
+    await client.query(query)
+  }
 }
 
 export function createProjection<T1, T2>(
@@ -130,8 +136,9 @@ export function createProjection<T1, T2>(
   pool: Pool,
   changes: (stream: T1, events: T2[]) => Change[],
 ) {
+  const handler = createHandler(projection)
   return (stream: T1, events: T2[]) => {
     const changeset = changes(stream, events)
-    return executeChanges(projection, pool, changeset)
+    return handler(pool, changeset)
   }
 }

@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto"
 import { Pool } from "pg"
 import { describe, test, expect, afterAll, beforeAll } from "vitest"
-import { Delete, Insert, Update, Upsert, createProjection, executeChanges } from "../src/index.js"
+import { Delete, Insert, Update, Upsert, createHandler, createProjection } from "../src/index.js"
 
 const pool = new Pool({
   connectionString:
@@ -21,32 +21,33 @@ describe("User table", () => {
   })
 
   const projection = { table: "view_data_test", id: ["id"] }
+  const handler = createHandler(projection)
 
   test("Insert", async () => {
     const id = randomUUID()
-    await executeChanges(projection, pool, [Insert({ id, name: "bob", age: 30 })])
+    await handler(pool, [Insert({ id, name: "bob", age: 30 })])
     const { rows } = await pool.query("select * from view_data_test where id = $1", [id])
     expect(rows).toEqual([{ id, name: "bob", age: 30 }])
   })
   test("Update", async () => {
     const id = randomUUID()
-    await executeChanges(projection, pool, [Insert({ id, name: "bob", age: 30 })])
-    await executeChanges(projection, pool, [Update({ id, name: "bob", age: 31 })])
+    await handler(pool, [Insert({ id, name: "bob", age: 30 })])
+    await handler(pool, [Update({ id, name: "bob", age: 31 })])
     const { rows } = await pool.query("select * from view_data_test where id = $1", [id])
     expect(rows).toEqual([{ id, name: "bob", age: 31 }])
   })
   test("Delete", async () => {
     const id = randomUUID()
-    await executeChanges(projection, pool, [Insert({ id, name: "bob", age: 30 })])
-    await executeChanges(projection, pool, [Delete({ id })])
+    await handler(pool, [Insert({ id, name: "bob", age: 30 })])
+    await handler(pool, [Delete({ id })])
     const { rows } = await pool.query("select * from view_data_test where id = $1", [id])
     expect(rows).toEqual([])
   })
 
   test("Upsert", async () => {
     const id = randomUUID()
-    await executeChanges(projection, pool, [Upsert({ id, name: "bob", age: 30 })])
-    await executeChanges(projection, pool, [Upsert({ id, name: "bob", age: 31 })])
+    await handler(pool, [Upsert({ id, name: "bob", age: 30 })])
+    await handler(pool, [Upsert({ id, name: "bob", age: 31 })])
     const { rows } = await pool.query("select * from view_data_test where id = $1", [id])
     expect(rows).toEqual([{ id, name: "bob", age: 31 }])
   })
@@ -69,27 +70,28 @@ describe("Composite primary key", () => {
     table: "view_data_composite_key",
     id: ["id", "tenant_id"],
   }
+  const handler = createHandler(projection)
 
   test("Insert", async () => {
     const id = randomUUID()
     const tenant_id = randomUUID()
-    await executeChanges(projection, pool, [Insert({ id, tenant_id, name: "bob", age: 30 })])
+    await handler(pool, [Insert({ id, tenant_id, name: "bob", age: 30 })])
     const { rows } = await pool.query("select * from view_data_composite_key where id = $1", [id])
     expect(rows).toEqual([{ id, tenant_id, name: "bob", age: 30 }])
   })
   test("Update", async () => {
     const id = randomUUID()
     const tenant_id = randomUUID()
-    await executeChanges(projection, pool, [Insert({ id, tenant_id, name: "bob", age: 30 })])
-    await executeChanges(projection, pool, [Update({ id, tenant_id, name: "bob", age: 31 })])
+    await handler(pool, [Insert({ id, tenant_id, name: "bob", age: 30 })])
+    await handler(pool, [Update({ id, tenant_id, name: "bob", age: 31 })])
     const { rows } = await pool.query("select * from view_data_composite_key where id = $1", [id])
     expect(rows).toEqual([{ id, tenant_id, name: "bob", age: 31 }])
   })
   test("Delete", async () => {
     const id = randomUUID()
     const tenant_id = randomUUID()
-    await executeChanges(projection, pool, [Insert({ id, tenant_id, name: "bob", age: 30 })])
-    await executeChanges(projection, pool, [Delete({ id, tenant_id })])
+    await handler(pool, [Insert({ id, tenant_id, name: "bob", age: 30 })])
+    await handler(pool, [Delete({ id, tenant_id })])
     const { rows } = await pool.query("select * from view_data_composite_key where id = $1", [id])
     expect(rows).toEqual([])
   })
@@ -97,8 +99,8 @@ describe("Composite primary key", () => {
   test("Upsert", async () => {
     const id = randomUUID()
     const tenant_id = randomUUID()
-    await executeChanges(projection, pool, [Upsert({ id, tenant_id, name: "bob", age: 30 })])
-    await executeChanges(projection, pool, [Upsert({ id, tenant_id, name: "bob", age: 31 })])
+    await handler(pool, [Upsert({ id, tenant_id, name: "bob", age: 30 })])
+    await handler(pool, [Upsert({ id, tenant_id, name: "bob", age: 31 })])
     const { rows } = await pool.query("select * from view_data_composite_key where id = $1", [id])
     expect(rows).toEqual([{ id, tenant_id, name: "bob", age: 31 }])
   })
@@ -110,6 +112,7 @@ describe("With version numbers", () => {
     id: ["id"],
     version: "version",
   }
+  const handler = createHandler(projection)
 
   beforeAll(async () => {
     await pool.query(
@@ -124,51 +127,51 @@ describe("With version numbers", () => {
 
   test("Insert", async () => {
     const id = randomUUID()
-    await executeChanges(projection, pool, [Insert({ id, version: 1, name: "bob" })])
+    await handler(pool, [Insert({ id, version: 1, name: "bob" })])
     const { rows } = await pool.query("select * from with_version where id = $1", [id])
     expect(rows).toEqual([{ id, name: "bob", version: "1" }])
   })
   test("Update with expired version", async () => {
     const id = randomUUID()
-    await executeChanges(projection, pool, [Insert({ id, version: 10, name: "bob" })])
-    await executeChanges(projection, pool, [Update({ id, version: 2, name: "bobby" })])
+    await handler(pool, [Insert({ id, version: 10, name: "bob" })])
+    await handler(pool, [Update({ id, version: 2, name: "bobby" })])
     const { rows } = await pool.query("select * from with_version where id = $1", [id])
     expect(rows).toEqual([{ id, name: "bob", version: "10" }])
   })
   test("Delete", async () => {
     const id = randomUUID()
-    await executeChanges(projection, pool, [Insert({ id, version: 0, name: "bob" })])
-    await executeChanges(projection, pool, [Delete({ id, version: 1 })])
+    await handler(pool, [Insert({ id, version: 0, name: "bob" })])
+    await handler(pool, [Delete({ id, version: 1 })])
     const { rows } = await pool.query("select * from with_version where id = $1", [id])
     expect(rows).toEqual([])
   })
   test("Delete with expired version", async () => {
     const id = randomUUID()
-    await executeChanges(projection, pool, [Insert({ id, version: 10, name: "bob" })])
-    await executeChanges(projection, pool, [Delete({ id, version: 2 })])
+    await handler(pool, [Insert({ id, version: 10, name: "bob" })])
+    await handler(pool, [Delete({ id, version: 2 })])
     const { rows } = await pool.query("select * from with_version where id = $1", [id])
     expect(rows).toEqual([{ id, name: "bob", version: "10" }])
   })
   test("Delete with lower version", async () => {
     const id = randomUUID()
-    await executeChanges(projection, pool, [Insert({ id, version: 0, name: "bob" })])
-    await executeChanges(projection, pool, [Update({ id, version: 1, name: "bobby" })])
-    await executeChanges(projection, pool, [Delete({ id, version: 2 })])
-    await executeChanges(projection, pool, [Insert({ id, version: 3, name: "bob" })])
-    await executeChanges(projection, pool, [Delete({ id, version: 2 })])
+    await handler(pool, [Insert({ id, version: 0, name: "bob" })])
+    await handler(pool, [Update({ id, version: 1, name: "bobby" })])
+    await handler(pool, [Delete({ id, version: 2 })])
+    await handler(pool, [Insert({ id, version: 3, name: "bob" })])
+    await handler(pool, [Delete({ id, version: 2 })])
     const { rows } = await pool.query("select * from with_version where id = $1", [id])
     expect(rows).toEqual([{ id, name: "bob", version: "3" }])
   })
   test("Upsert with expired version", async () => {
     const id = randomUUID()
-    await executeChanges(projection, pool, [Insert({ id, version: 10, name: "bob" })])
-    await executeChanges(projection, pool, [Upsert({ id, version: 2, name: "bobby" })])
+    await handler(pool, [Insert({ id, version: 10, name: "bob" })])
+    await handler(pool, [Upsert({ id, version: 2, name: "bobby" })])
     const { rows } = await pool.query("select * from with_version where id = $1", [id])
     expect(rows).toEqual([{ id, name: "bob", version: "10" }])
   })
   test("More complicated case", async () => {
     const id = randomUUID()
-    await executeChanges(projection, pool, [
+    await handler(pool, [
       Insert({ id, version: 1, name: "bob" }),
       Update({ id, version: 2, name: "bobby" }),
       Delete({ id, version: 3 }),
@@ -185,21 +188,21 @@ describe("With version numbers", () => {
   })
   test("When a component restarts", async () => {
     const id = randomUUID()
-    await executeChanges(projection, pool, [Insert({ id, version: 1, name: "bob" })])
-    await executeChanges(projection, pool, [Update({ id, version: 2, name: "bobby" })])
-    await executeChanges(projection, pool, [Delete({ id, version: 3 })])
-    await executeChanges(projection, pool, [Update({ id, version: 2, name: "bobby" })])
-    await executeChanges(projection, pool, [Delete({ id, version: 3 })])
-    await executeChanges(projection, pool, [Insert({ id, version: 4, name: "bobby2" })])
-    await executeChanges(projection, pool, [Update({ id, version: 5, name: "bobby3" })])
-    await executeChanges(projection, pool, [Insert({ id, version: 4, name: "bobby2" })])
-    await executeChanges(projection, pool, [Update({ id, version: 5, name: "bobby3" })])
+    await handler(pool, [Insert({ id, version: 1, name: "bob" })])
+    await handler(pool, [Update({ id, version: 2, name: "bobby" })])
+    await handler(pool, [Delete({ id, version: 3 })])
+    await handler(pool, [Update({ id, version: 2, name: "bobby" })])
+    await handler(pool, [Delete({ id, version: 3 })])
+    await handler(pool, [Insert({ id, version: 4, name: "bobby2" })])
+    await handler(pool, [Update({ id, version: 5, name: "bobby3" })])
+    await handler(pool, [Insert({ id, version: 4, name: "bobby2" })])
+    await handler(pool, [Update({ id, version: 5, name: "bobby3" })])
     const { rows } = await pool.query("select * from with_version where id = $1", [id])
     expect(rows).toEqual([{ id, name: "bobby3", version: "5" }])
   })
 })
 
-describe("handler", () => {
+describe("createProjection", () => {
   const projection = { table: "view_data_composite_key", id: ["id", "tenant_id"] }
 
   test("Collapses", async () => {
