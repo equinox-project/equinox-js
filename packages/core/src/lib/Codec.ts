@@ -39,6 +39,31 @@ export function json(mapMeta?: MapMeta<any, any>): ICodec<any, string, any> {
   }
 }
 
+type UnionToIntersection<U> =
+  (U extends any ? (k: U) => void : never) extends ((k: infer I) => void) ? I : never
+  
+type LastOf<T> =
+  UnionToIntersection<T extends any ? () => T : never> extends () => (infer R) ? R : never
+
+type Push<T extends any[], V> = [...T, V];
+
+type UnionToTuple<T, L = LastOf<T>, N = [T] extends [never] ? true : false> =
+  true extends N ? [] : Push<UnionToTuple<Exclude<T, L>>, L>
+
+export function include<E extends DomainEvent, C>(
+  codec: ICodec<E, string, C>,
+  types: UnionToTuple<E["type"]>,
+) {
+  const known = new Set(types as string[])
+  return {
+    decode: (e: ITimelineEvent<string>) => {
+      if (!known.has(e.type)) return
+      return codec.decode(e)
+    },
+    encode: codec.encode,
+  }
+}
+
 type FromRecord<E> = (e: Record<string, any>) => E
 
 export type CodecMapping<E extends DomainEvent> = {
