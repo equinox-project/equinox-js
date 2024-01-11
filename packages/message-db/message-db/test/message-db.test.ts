@@ -687,6 +687,8 @@ describe("Immediately consistent projections", () => {
     const service = ContactPreferencesService.createService(conn, project)
     const id = ContactPreferences.ClientId.parse(randomUUID())
     const value = ContactPreferences.randomPreferences()
+    // manually set one value to true to ensure we're not just getting the default
+    value.quickSurveys = true
     await service.update(id, value)
     const result = await client.query({
       text: "select preferences from test.contact_preferences where id = $1",
