@@ -201,7 +201,7 @@ export class MessageDbContext {
 }
 
 
-export type Project<State> = (conn: Client, streamId: Equinox.StreamId, state: State, version: bigint) => Promise<void>
+export type OnSync<State> = (conn: Client, streamId: Equinox.StreamId, state: State, version: bigint) => Promise<void>
 
 export type AccessStrategy<Event, State> =
   | { type: "Unoptimized" }
@@ -238,7 +238,7 @@ class InternalCategory<Event, State, Context>
     private readonly fold: (state: State, events: Event[]) => State,
     private readonly initial: State,
     private readonly access: AccessStrategy<Event, State> = AccessStrategy.Unoptimized(),
-    private readonly project?: Project<State>,
+    private readonly onSync?: OnSync<State>,
   ) {}
 
   private async loadAlgorithm(
@@ -337,8 +337,8 @@ class InternalCategory<Event, State, Context>
     const encodedEvents = await Promise.all(events.map(encode))
     const newState = this.fold(state, events)
     const newVersion = token.version + BigInt(events.length)
-    const project = this.project
-    const runInSameTransaction = project && ((conn: Client) => project(conn, streamId, newState, newVersion))
+    const onSync = this.onSync
+    const runInSameTransaction = onSync && ((conn: Client) => onSync(conn, streamId, newState, newVersion))
     const result = await this.context.sync(streamName, token, encodedEvents, runInSameTransaction)
     switch (result.type) {
       case "ConflictUnknown":
@@ -393,7 +393,7 @@ export class MessageDbCategory {
     initial: State,
     caching?: ICachingStrategy,
     access?: AccessStrategy<Event, State>,
-    project?: Project<State>,
+    project?: OnSync<State>,
   ) {
     const inner = new InternalCategory(context, categoryName, codec, fold, initial, access, project)
     const category = CachingCategory.apply(categoryName, inner, caching)

@@ -1,4 +1,4 @@
-# Immediately Consistent Projections
+# Inline Projections
 
 Equinox's MessageDb store is designed to allow updating a read model in the
 same transaction as appending events. That is, it ensures that either both the
@@ -51,21 +51,21 @@ alter role my_user set search_path to message_store, public;
 grant message_store to my_user;
 ```
 
-Then when creating your category you supply the optional `project` function.
+Then when creating your category you supply the optional `onSync` function.
 
 ```ts
 import { MessageDbCategory, MessageDbContext, AccessStrategy } from "@equinox-js/message-db"
 import { Decider, ICachingStrategy, StreamId } from "@equinox-js/core"
 import { Client } from "pg"
 
-async function project(conn: Client, streamId: StreamId, state: Fold.State) {
+async function onSync(conn: Client, streamId: StreamId, state: Fold.State) {
   await conn.query(...)
 }
 
 export class Service {
   static create(ctx: MessageDbContext, caching: ICachingStrategy) {
     const access = AccessStrategy.Unoptimized()
-    const category = MessageDbCategory.create(ctx, name, codec, fold, initial, caching, access, project)
+    const category = MessageDbCategory.create(ctx, name, codec, fold, initial, caching, access, onSync)
     const resolve = (...) => Decider.forStream(category, streamId(...), null)
     return new Service(resolve)
   }
@@ -105,7 +105,7 @@ function changes(streamId: StreamId, state: State): Change[] {
 }
 
 const handler = createHandler(projection)
-export const project = (client: Client, streamId: StreamId, state: State) =>
+export const onSync = (client: Client, streamId: StreamId, state: State) =>
   handler(client, changes(streamId, state))
 ```
 
@@ -122,7 +122,7 @@ class Service {
   static create(ctx: MessageDbContext, cache: ICache) {
     const caching = CachingStrategy.Cache(cache)
     const access = AccessStrategy.LatestKnownEvent()
-    return MessageDbCategory.create(..., access, caching, PayerReadModel.project)
+    return MessageDbCategory.create(..., access, caching, PayerReadModel.onSync)
   }
 }
 ```

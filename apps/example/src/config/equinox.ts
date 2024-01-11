@@ -1,9 +1,7 @@
-import { ICodec, ICache, CachingStrategy, Codec, StreamId } from "@equinox-js/core"
+import { ICodec, ICache, CachingStrategy, Codec } from "@equinox-js/core"
 import { MemoryStoreCategory, VolatileStore } from "@equinox-js/memory-store"
 import * as MessageDB from "@equinox-js/message-db"
 import * as DynamoDB from "@equinox-js/dynamo-store"
-import { MinimalClient } from "@equinox-js/projection-pg"
-import { Client } from "pg"
 
 export enum Store {
   Memory,
@@ -30,7 +28,7 @@ export namespace MessageDb {
   import AccessStrategy = MessageDB.AccessStrategy
   import MessageDbCategory = MessageDB.MessageDbCategory
   import MessageDbContext = MessageDB.MessageDbContext
-  type Project<S> = MessageDB.Project<S>
+  type Project<S> = MessageDB.OnSync<S>
   type Config = { context: MessageDbContext; cache: ICache }
 
   type SnapshottedFold<E, S> = Fold<E, S> & {

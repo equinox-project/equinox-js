@@ -10,7 +10,7 @@ import {
   MessageDbCategory,
   MessageDbConnection,
   MessageDbContext,
-  Project,
+  OnSync,
 } from "../src/index.js"
 
 const Category = MessageDbCategory
@@ -91,7 +91,7 @@ namespace ContactPreferencesService {
 
   export const createService = (
     client: MessageDbConnection,
-    project?: Project<ContactPreferences.State>,
+    project?: OnSync<ContactPreferences.State>,
   ) => {
     const context = createContext(client, defaultBatchSize)
     const category = Category.create(
