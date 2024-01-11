@@ -67,7 +67,18 @@ jobs:
           tar -xf /tmp/message_db.tar.gz --directory /tmp/mdb
           (cd /tmp/mdb/message-db-$MDB_VERSION/database && ./install.sh)
 
+      - name: Set up example
+        working-directory: ./apps/example
+        env:
+          DBURL_ADMIN: postgresql://postgres:@localhost:5432/equinox_example
+        run: |
+          pnpm create-db
+          pnpm migrate
+
       - name: Test
+        env:
+          DBURL: postgresql://postgres:@localhost:5432/equinox_example
+          DBURL_RO: postgresql://postgres:@localhost:5432/equinox_example
         run: pnpm dlx turbo test
 
       - name: Lint

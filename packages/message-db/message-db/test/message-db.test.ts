@@ -1,7 +1,7 @@
 import { Cart, ContactPreferences } from "../../../test-domain/src/index.js"
 import { Decider, MemoryCache, Codec, CachingStrategy, Tags, StreamId } from "@equinox-js/core"
 import { describe, test, expect, afterEach, afterAll, vi } from "vitest"
-import { Pool } from "pg"
+import { Client, Pool } from "pg"
 import { randomUUID } from "crypto"
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
 import { InMemorySpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base"
@@ -10,6 +10,7 @@ import {
   MessageDbCategory,
   MessageDbConnection,
   MessageDbContext,
+  OnSync,
 } from "../src/index.js"
 
 const Category = MessageDbCategory
@@ -88,7 +89,10 @@ namespace SimplestThing {
 namespace ContactPreferencesService {
   const { fold, initial, codec } = ContactPreferences
 
-  export const createService = (client: MessageDbConnection) => {
+  export const createService = (
+    client: MessageDbConnection,
+    project?: OnSync<ContactPreferences.State>,
+  ) => {
     const context = createContext(client, defaultBatchSize)
     const category = Category.create(
       context,
@@ -98,6 +102,7 @@ namespace ContactPreferencesService {
       initial,
       undefined,
       AccessStrategy.LatestKnownEvent(),
+      project,
     )
     return ContactPreferences.Service.create(category)
   }
@@ -452,12 +457,7 @@ describe("AccessStrategy.LatestKnownEvent", () => {
   test("Reads and updates against Store", async () => {
     const id = randomUUID() as ContactPreferences.ClientId
     const service = ContactPreferencesService.createService(client)
-    const value: ContactPreferences.Preferences = {
-      littlePromotions: Math.random() > 0.5,
-      manyPromotions: Math.random() > 0.5,
-      productReview: Math.random() > 0.5,
-      quickSurveys: Math.random() > 0.5,
-    }
+    const value = ContactPreferences.randomPreferences()
 
     // Feed some junk into the stream
     for (let i = 0; i < 12; ++i) {
@@ -648,4 +648,51 @@ test("Version is 0-based", async () => {
     (result, ctx) => [result, ctx.version],
   )
   expect([before, after]).toEqual([0n, 1n])
+})
+
+describe("Immediately consistent projections", () => {
+  test("Calls the projection with the client and new state", async () => {
+    const project = vi.fn().mockResolvedValue(undefined)
+    const service = ContactPreferencesService.createService(client, project)
+    const id = randomUUID() as ContactPreferences.ClientId
+    const value = ContactPreferences.randomPreferences()
+
+    await service.update(id, value)
+    const expectedId = ContactPreferences.ClientId.toStreamId(id)
+    expect(project).toHaveBeenCalledWith(expect.anything(), expectedId, value, 1n)
+  })
+
+  const pool = new Pool({
+    connectionString: "postgres://postgres:postgres@localhost:5432/message_store",
+  })
+
+  test("Can be used to project to a separate table", async () => {
+    const client = await pool.connect()
+
+    await client.query(
+      `create schema if not exists test;
+       create table if not exists test.contact_preferences (
+         id text primary key, preferences jsonb not null);
+       alter role postgres in database message_store set search_path to message_store, public;`,
+    )
+    const conn = MessageDbConnection.create(pool)
+    const project = (conn: Client, id: StreamId, value: ContactPreferences.Preferences) =>
+      conn
+        .query({
+          text: "insert into test.contact_preferences (id, preferences) values ($1, $2)",
+          values: [id, JSON.stringify(value)],
+        })
+        .then(() => undefined)
+
+    const service = ContactPreferencesService.createService(conn, project)
+    const id = ContactPreferences.ClientId.parse(randomUUID())
+    const value = ContactPreferences.randomPreferences()
+    await service.update(id, value)
+    const result = await client.query({
+      text: "select preferences from test.contact_preferences where id = $1",
+      values: [ContactPreferences.ClientId.toStreamId(id)],
+    })
+    expect(result.rows[0].preferences).toEqual(value)
+    client.release()
+  })
 })

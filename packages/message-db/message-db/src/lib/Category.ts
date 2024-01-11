@@ -12,13 +12,8 @@ import * as Snapshot from "./Snapshot.js"
 import * as Read from "./Read.js"
 import { trace } from "@opentelemetry/api"
 import { Format, MessageDbReader, MessageDbWriter } from "./MessageDbClient.js"
-import { Pool } from "pg"
-import {
-  CachingCategory,
-  ICachingStrategy,
-  IReloadableCategory,
-  Tags,
-} from "@equinox-js/core"
+import { Client, Pool } from "pg"
+import { CachingCategory, ICachingStrategy, IReloadableCategory, Tags } from "@equinox-js/core"
 
 function keepMap<T, V>(arr: T[], fn: (v: T) => V | undefined): V[] {
   const result: V[] = []
@@ -167,6 +162,7 @@ export class MessageDbContext {
     streamName: string,
     token: StreamToken,
     encodedEvents: IEventData<Format>[],
+    runAfter?: (conn: Client) => Promise<void>,
   ): Promise<GatewaySyncResult> {
     const span = trace.getActiveSpan()
     const streamVersion = Token.streamVersion(token)
@@ -174,7 +170,12 @@ export class MessageDbContext {
     if (appendedTypes.size <= 10) {
       span?.setAttribute(Tags.append_types, Array.from(appendedTypes))
     }
-    const result = await this.conn.write.writeMessages(streamName, encodedEvents, streamVersion)
+    const result = await this.conn.write.writeMessages(
+      streamName,
+      encodedEvents,
+      streamVersion,
+      runAfter,
+    )
 
     switch (result.type) {
       case "ConflictUnknown":
@@ -199,7 +200,10 @@ export class MessageDbContext {
   }
 }
 
-type AccessStrategy<Event, State> =
+
+export type OnSync<State> = (conn: Client, streamId: Equinox.StreamId, state: State, version: bigint) => Promise<void>
+
+export type AccessStrategy<Event, State> =
   | { type: "Unoptimized" }
   | { type: "LatestKnownEvent" }
   | {
@@ -234,6 +238,7 @@ class InternalCategory<Event, State, Context>
     private readonly fold: (state: State, events: Event[]) => State,
     private readonly initial: State,
     private readonly access: AccessStrategy<Event, State> = AccessStrategy.Unoptimized(),
+    private readonly onSync?: OnSync<State>,
   ) {}
 
   private async loadAlgorithm(
@@ -330,7 +335,11 @@ class InternalCategory<Event, State, Context>
     })
     const encode = (ev: Event) => this.codec.encode(ev, ctx)
     const encodedEvents = await Promise.all(events.map(encode))
-    const result = await this.context.sync(streamName, token, encodedEvents)
+    const newState = this.fold(state, events)
+    const newVersion = token.version + BigInt(events.length)
+    const onSync = this.onSync
+    const runInSameTransaction = onSync && ((conn: Client) => onSync(conn, streamId, newState, newVersion))
+    const result = await this.context.sync(streamName, token, encodedEvents, runInSameTransaction)
     switch (result.type) {
       case "ConflictUnknown":
         return {
@@ -338,7 +347,6 @@ class InternalCategory<Event, State, Context>
           resync: () => this.reload(streamId, true, { token, state }),
         }
       case "Written": {
-        const newState = this.fold(state, events)
         switch (this.access.type) {
           case "LatestKnownEvent":
           case "Unoptimized":
@@ -385,8 +393,9 @@ export class MessageDbCategory {
     initial: State,
     caching?: ICachingStrategy,
     access?: AccessStrategy<Event, State>,
+    project?: OnSync<State>,
   ) {
-    const inner = new InternalCategory(context, categoryName, codec, fold, initial, access)
+    const inner = new InternalCategory(context, categoryName, codec, fold, initial, access, project)
     const category = CachingCategory.apply(categoryName, inner, caching)
     const empty: TokenAndState<State> = { token: context.tokenEmpty, state: initial }
     return new Equinox.Category(category, empty)

@@ -1,17 +1,23 @@
-import "./tracing.js"
 import "express-async-errors"
 import express from "express"
 import { Payer, Invoice } from "../domain/index.js"
 import { InvoiceId, PayerId } from "../domain/identifiers.js"
-import { createConfig } from "./config.js"
+import { createConfig, leaderPool } from "./config.js"
+import * as PayerReadModel from "../read-models/PayerReadModel.js"
 
 const config = createConfig()
 
 const payerService = Payer.Service.create(config)
+const payerReadModel = PayerReadModel.create(leaderPool())
 const invoiceService = Invoice.Service.create(config)
 
 const app = express()
 app.use(express.json())
+
+app.get('/payers', async (req, res) => {
+  const payers = await payerReadModel.readAll()
+  res.status(200).json(payers)
+})
 
 app.get("/payer/:id", async (req, res) => {
   const profile = await payerService.readProfile(PayerId.parse(req.params.id))

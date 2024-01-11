@@ -18,6 +18,12 @@ export type Preferences = {
   productReview: boolean
   quickSurveys: boolean
 }
+export const randomPreferences = (): Preferences => ({
+  manyPromotions: Math.random() < 0.5,
+  littlePromotions: Math.random() < 0.5,
+  productReview: Math.random() < 0.5,
+  quickSurveys: Math.random() < 0.5,
+})
 export type Value = { email: string; preferences: Preferences }
 
 export type Event = { type: "ContactPreferencesChanged"; data: Value }

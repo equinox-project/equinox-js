@@ -28,34 +28,32 @@ export namespace MessageDb {
   import AccessStrategy = MessageDB.AccessStrategy
   import MessageDbCategory = MessageDB.MessageDbCategory
   import MessageDbContext = MessageDB.MessageDbContext
+  type Project<S> = MessageDB.OnSync<S>
+  type Config = { context: MessageDbContext; cache: ICache }
 
   type SnapshottedFold<E, S> = Fold<E, S> & {
     toSnapshot: (s: S) => E
     eventName: string
   }
 
-  export function createCached<E, S, C>(name: string, events: Events<E, C>, fold: Fold<E,S>, access: AccessStrategy<E, S>, { context, cache }: { context: MessageDbContext; cache: ICache }) {
+  export function createCached<E, S, C>(name: string, events: Events<E, C>, fold: Fold<E,S>, access: AccessStrategy<E, S>, { context, cache }: Config, project?: Project<S>) {
     const caching = CachingStrategy.Cache(cache)
-    return MessageDbCategory.create(context, name, events.codec, fold.fold, fold.initial, caching, access);
+    return MessageDbCategory.create(context, name, events.codec, fold.fold, fold.initial, caching, access, project);
   }
 
-  export function createUnoptimized<E, S, C>(name: string, events: Events<E, C>, fold: Fold<E,S>, config: { context: MessageDbContext; cache: ICache }) {
+  export function createUnoptimized<E, S, C>(name: string, events: Events<E, C>, fold: Fold<E,S>, config: Config, project?: Project<S>) {
     const access = AccessStrategy.Unoptimized<E, S>()
-    return MessageDb.createCached(name, events, fold, access, config)
+    return MessageDb.createCached(name, events, fold, access, config, project)
   }
 
-  export function createSnapshotted<E, S, C>(name: string, events: Events<E,C>, fold: SnapshottedFold<E,S>, config: { context: MessageDbContext; cache: ICache }) {
+  export function createSnapshotted<E, S, C>(name: string, events: Events<E,C>, fold: SnapshottedFold<E,S>, config: Config, project?: Project<S>) {
     const access = AccessStrategy.AdjacentSnapshots(fold.eventName, fold.toSnapshot)
-    return MessageDb.createCached(name, events, fold, access, config)
+    return MessageDb.createCached(name, events, fold, access, config, project)
   }
 
-  export function createLatestKnown<E, S, C>(name: string, events: Events<E, C>, fold: Fold<E,S>, config: { context: MessageDbContext; cache: ICache }) {
+  export function createLatestKnown<E, S, C>(name: string, events: Events<E, C>, fold: Fold<E,S>, config: Config, project?: Project<S>) {
     const access = AccessStrategy.LatestKnownEvent<E, S>()
-    return MessageDb.createCached(name, events, fold, access, config)
-  }
-
-  export function createProjected<E, S, C>(name: string, events: Events<E, C>, fold: Fold<E,S>, config: { context: MessageDbContext; cache: ICache }) {
-    const access = AccessStrategy.AdjacentSnapshots
+    return MessageDb.createCached(name, events, fold, access, config, project)
   }
 }
 

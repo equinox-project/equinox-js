@@ -32,8 +32,8 @@ const lazy = <T>(fn: () => T) => {
   }
 }
 
-export const leaderPool = lazy(() => createPool(process.env.MDB_CONN_STR)!)
-export const followerPool = lazy(() => createPool(process.env.MDB_RO_CONN_STR))
+export const leaderPool = lazy(() => createPool(process.env.DBURL)!)
+export const followerPool = lazy(() => createPool(process.env.DBURL_RO))
 
 function createMessageDbConfig(): Config {
   return {

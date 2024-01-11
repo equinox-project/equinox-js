@@ -4,7 +4,6 @@ The access strategy allows you to opt into custom loading or reloading
 algorithms. For almost all categories in almost all most systems, `Unoptimized`
 is a good choice; you can always switch later.
 
-
 # Unoptimized
 
 The first, and likely most used access strategy is the unoptimized one. It'll
@@ -33,8 +32,8 @@ In Equinox the snapshot is a member of the Event DU
 
 ```ts
 type Event =
-  | { type: "Increment", data: { amount: number } }
-  | { type: "Snapshot", data: { current: number } }
+  | { type: "Increment"; data: { amount: number } }
+  | { type: "Snapshot"; data: { current: number } }
 
 const codec = Codec.json<Event>()
 ```
@@ -46,8 +45,10 @@ type State = number
 const initial = 0
 const evolve = (state: State, event: Event) => {
   switch (event.type) {
-    case "Increment": return state + event.data.amount
-    case "Snapshot": return event.data.current
+    case "Increment":
+      return state + event.data.amount
+    case "Snapshot":
+      return event.data.current
   }
 }
 const fold = reduce(evolve)
@@ -58,11 +59,11 @@ snapshot and how to transform the current state into a snapshot
 
 ```ts
 const snapshotEventType: Event["type"] = "Snapshot"
-const toSnapshot = (state: State): Event => 
-  ({ type: snapshotEventType, data: { current: state } })
+const toSnapshot = (state: State): Event => ({ type: snapshotEventType, data: { current: state } })
 ```
 
 We can then create the access strategy
+
 ```ts
 const access = AccessStrategy.AdjacentSnapshots(snapshotEventType, toSnapshot)
 ```
@@ -75,4 +76,5 @@ will be used to fetch "events since version" from the source stream. In practise
 this guarantees that the state of a stream can be reconstructed in 2 round-trips
 (aside from some interactions with the cache that can cause it to need an extra
 round trip in exceedingly rare cases).
+
 
