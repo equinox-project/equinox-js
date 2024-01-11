@@ -36,6 +36,22 @@ describe("Codec", () => {
     })
   })
 
+  describe("filter", () => {
+    type Event = { type: "a" } | { type: "b" } | { type: "c" }
+    // the typesystem ensures all defined events are in the array
+    const codec = Codec.include(Codec.json<Event>(), ["a", "b", "c"])
+    const endcodedA = codec.encode({ type: "a" }) as any
+    const endcodedB = codec.encode({ type: "b" }) as any
+    const endcodedC = codec.encode({ type: "c" }) as any
+    const encodedD = codec.encode({ type: "d" } as any) as any
+    test("filters out unknown events", () => {
+      expect(codec.decode(endcodedA)).toEqual({ type: "a" })
+      expect(codec.decode(endcodedB)).toEqual({ type: "b" })
+      expect(codec.decode(endcodedC)).toEqual({ type: "c" })
+      expect(codec.decode(encodedD)).toEqual(undefined)
+    })
+  })
+
   describe("upcast", () => {
     describe("with zod", () => {
       const HelloSchema = z.object({
@@ -148,7 +164,7 @@ describe("Mapping metadata", () => {
       return { id, meta: { $correlationId: id, $causationId: id } }
     }
     const codec = Codec.json<any, void>(correlate)
-    const event = { id: '456', type: "Hello", data: { world: "hello" } }
+    const event = { id: "456", type: "Hello", data: { world: "hello" } }
     expect(codec.encode(event)).toEqual({
       type: "Hello",
       data: '{"world":"hello"}',
