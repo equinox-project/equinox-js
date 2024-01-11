@@ -1,6 +1,6 @@
 {
   "name": "@equinox-js/dynamo-store-cdk",
-  "version": "1.0.0-rc.8.2",
+  "version": "1.0.0-rc.9",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
