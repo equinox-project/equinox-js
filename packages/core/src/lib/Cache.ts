@@ -2,7 +2,7 @@ import { StreamToken, SyncResult, TokenAndState } from "./Core.js"
 import LRUCache from "lru-cache"
 import { ICategory } from "./Category.js"
 import { trace } from "@opentelemetry/api"
-import * as Tags from './Tags.js'
+import * as Tags from "./Tags.js"
 import { StreamId } from "./StreamId.js"
 
 export class CacheEntry<T> {
@@ -21,7 +21,7 @@ export class CacheEntry<T> {
   }
 
   updateCachedAt(now: number) {
-     this.cachedAt = now
+    this.cachedAt = now
   }
   value(): TokenAndState<T> {
     return { token: this.token, state: this.state }
@@ -37,9 +37,10 @@ export interface ICache {
     key: string,
     skipReloadIfYoungerThanMs: number,
     read: (tokenAndState?: TokenAndState<State>) => Promise<TokenAndState<State>>,
+    ttl?: number,
   ): Promise<TokenAndState<State>>
 
-  updateIfNewer<State>(key: string, entry: CacheEntry<State>): void
+  updateIfNewer<State>(key: string, entry: CacheEntry<State>, ttl?: number): void
 }
 
 export const supersedes = (current: StreamToken, x: StreamToken) => x.version > current.version
@@ -56,17 +57,35 @@ export class MemoryCache implements ICache {
    * @param max Maximum number of entries to cache
    */
   constructor(max = 1_000_000) {
-    this.cache = new LRUCache({ max, ttl: 0 })
+    this.cache = new LRUCache({
+      max,
+      allowStale: true,
+      // we disable autopurge because it creates a timer for each item
+      // we instead create an interval that purges the stale items every 5s
+      ttlAutopurge: false,
+    })
+    this.startPurgeTimer()
+  }
+
+  private startPurgeTimer() {
+    setTimeout(() => {
+      this.cache.purgeStale()
+      this.startPurgeTimer()
+    }, 5000).unref()
   }
 
   loadsInProgress: Map<string, Promise<any>> = new Map()
 
-  private readWithExactlyOneFetch<State>(key: string, read: () => Promise<TokenAndState<State>>) {
+  private readWithExactlyOneFetch<State>(
+    key: string,
+    read: () => Promise<TokenAndState<State>>,
+    ttl?: number,
+  ) {
     const fetcher = this.loadsInProgress.get(key)
     if (fetcher) return fetcher
     const p = read()
       .then((tns) => {
-        this.updateIfNewer(key, CacheEntry.ofTokenAndState(tns))
+        this.updateIfNewer(key, CacheEntry.ofTokenAndState(tns), ttl)
         return tns
       })
       .finally(() => {
@@ -80,13 +99,14 @@ export class MemoryCache implements ICache {
     key: string,
     skipReloadIfYoungerThanMs: number,
     read: (tns?: TokenAndState<State>) => Promise<TokenAndState<State>>,
+    ttl?: number,
   ): Promise<TokenAndState<State>> {
     const span = trace.getActiveSpan()
     const current = this.cache.get(key)
     span?.setAttribute(Tags.cache_hit, !!current)
     span?.setAttribute(Tags.max_staleness, skipReloadIfYoungerThanMs)
     if (!current) {
-      return this.readWithExactlyOneFetch(key, () => read())
+      return this.readWithExactlyOneFetch(key, () => read(), ttl)
     }
     const now = Date.now()
     const age = now - current.cachedAt
@@ -97,10 +117,10 @@ export class MemoryCache implements ICache {
     return this.readWithExactlyOneFetch(key, () => read(current.value()))
   }
 
-  updateIfNewer<State>(key: string, entry: CacheEntry<State>): void {
+  updateIfNewer<State>(key: string, entry: CacheEntry<State>, ttl?: number): void {
     const current = this.cache.get(key)
     if (!current) {
-      this.cache.set(key, entry)
+      this.cache.set(key, entry, { ttl })
     } else {
       current.updateIfNewer(entry)
     }
@@ -114,12 +134,19 @@ export interface IReloadableCategory<E, S, C> extends ICategory<E, S, C> {
 export interface ICachingStrategy {
   cache: ICache
   cacheKey: (streamName: string) => string
+  ttl: number
 }
 
 export namespace CachingStrategy {
+  export const CacheTtl = (cache: ICache, ttl: number, prefix?: string): ICachingStrategy => ({
+    cache,
+    cacheKey: (streamName: string) => (prefix || "") + streamName,
+    ttl,
+  })
   export const Cache = (cache: ICache, prefix?: string): ICachingStrategy => ({
     cache,
     cacheKey: (streamName: string) => (prefix || "") + streamName,
+    ttl: 0,
   })
   export const NoCache = (): ICachingStrategy | undefined => undefined
 }
@@ -144,7 +171,12 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
       tns
         ? this.inner.reload(streamId, requireLeader, tns)
         : this.inner.load(streamId, maxStaleMs, requireLeader)
-    return this.strategy.cache.readThrough(this.cacheKey(streamId), maxStaleMs, reload)
+    return this.strategy.cache.readThrough(
+      this.cacheKey(streamId),
+      maxStaleMs,
+      reload,
+      this.strategy.ttl,
+    )
   }
 
   async sync(
@@ -164,6 +196,7 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
             this.strategy.cache.updateIfNewer(
               this.cacheKey(streamId),
               CacheEntry.ofTokenAndState(res),
+              this.strategy.ttl,
             )
             return res
           },
@@ -172,6 +205,7 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
         this.strategy.cache.updateIfNewer(
           this.cacheKey(streamId),
           CacheEntry.ofTokenAndState(result.data),
+          this.strategy.ttl,
         )
         return { type: "Written", data: result.data }
     }
