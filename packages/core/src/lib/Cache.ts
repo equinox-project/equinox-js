@@ -68,9 +68,8 @@ export class MemoryCache implements ICache {
   }
 
   private startPurgeTimer() {
-    setTimeout(() => {
+    setInterval(() => {
       this.cache.purgeStale()
-      this.startPurgeTimer()
     }, 5000).unref()
   }
 
@@ -114,7 +113,7 @@ export class MemoryCache implements ICache {
     if (age < skipReloadIfYoungerThanMs) {
       return current.value()
     }
-    return this.readWithExactlyOneFetch(key, () => read(current.value()))
+    return this.readWithExactlyOneFetch(key, () => read(current.value()), ttl)
   }
 
   updateIfNewer<State>(key: string, entry: CacheEntry<State>, ttl?: number): void {
