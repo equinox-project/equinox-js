@@ -46,4 +46,16 @@ export class Queue<T> {
       return value
     }
   }
+
+  peek(): T | undefined {
+    if (this.firstAndLast) return this.firstAndLast[0].value
+  }
+
+  *[Symbol.iterator]() {
+    let node = this.firstAndLast?.[0]
+    while (node) {
+      yield node.value
+      node = node.next
+    }
+  }
 }
