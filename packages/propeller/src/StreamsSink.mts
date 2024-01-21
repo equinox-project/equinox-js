@@ -11,9 +11,9 @@ import { StreamResult } from "./Sinks.js"
 
 const tracer = trace.getTracer("@equinox-js/propeller")
 
-type StreamSpan = ITimelineEvent[]
+export type StreamSpan = ITimelineEvent[]
 type StreamEvent = [StreamName, ITimelineEvent]
-namespace StreamSpan {
+export namespace StreamSpan {
   export const idx = (span: StreamSpan): bigint => span[0].index
   export const ver = (span: StreamSpan): bigint => idx(span) + BigInt(span.length)
   export const dropBeforeIndex = (min: bigint, span: StreamSpan): StreamSpan => {
@@ -135,6 +135,7 @@ class Batch {
     public readonly onComplete: () => void,
     public requests: Map<StreamName, bigint>,
   ) {}
+
   static create(onComplete: () => void, streamEvents: StreamEvent[]) {
     const streams = new Streams()
     const requests = new Map<StreamName, bigint>()
