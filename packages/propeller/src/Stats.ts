@@ -1,4 +1,4 @@
-import { Attributes, trace } from "@opentelemetry/api"
+import { trace } from "@opentelemetry/api"
 import { Batch } from "./Types.js"
 
 const tracer = trace.getTracer("@equinox-js/propeller")
