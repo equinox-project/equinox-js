@@ -3,11 +3,9 @@ export class Semaphore {
   private count = 0
 
   tryTake(): boolean {
-    if (this.count < this.max) {
-      this.count++
-      return true
-    }
-    return false
+    if (this.count >= this.max) return false
+    this.count++
+    return true
   }
 
   release() {
