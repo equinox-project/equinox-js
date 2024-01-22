@@ -1,5 +1,4 @@
-import { ITimelineEvent, StreamName } from "@equinox-js/core"
-import { keepMap } from "./Array.js"
+import { ITimelineEvent, StreamName, Internal } from "@equinox-js/core"
 import { Queue } from "./Queue.js"
 import { IngesterBatch, Sink } from "./Types.js"
 import { EventHandler, traceHandler } from "./Tracing.js"
@@ -24,7 +23,7 @@ export namespace StreamSpan {
   }
 
   export const merge = (min: bigint, spans: StreamSpan[]): StreamSpan[] => {
-    const candidates = keepMap(spans, (span) => {
+    const candidates = Internal.keepMap(spans, (span) => {
       if (span.length === 0) return undefined
       const trimmed = dropBeforeIndex(min, span)
       if (!trimmed || trimmed.length === 0) return undefined
