@@ -21,9 +21,9 @@ import {
   SyncResult,
   Tags,
   TokenAndState,
+  Internal
 } from "@equinox-js/core"
 import { randomUUID } from "crypto"
-import { keepMapRev, keepMap } from "./Array.js"
 import { context, trace } from "@opentelemetry/api"
 
 /** A single Domain Event from the array held in a Batch */
@@ -963,10 +963,8 @@ namespace Query {
       [Tags.loaded_count]: events.length,
     })
 
-    const decoded =
-      direction === Direction.Forward
-        ? keepMap(events, (x) => x[1])
-        : keepMapRev(events, (x) => x[1])
+    const keepMap = direction === Direction.Forward ? Internal.keepMap : Internal.keepMapRev
+    const decoded = keepMap(events, (x) => x[1])
     const minMax = events.reduce(
       (acc, [x]): [number, number] => {
         if (acc == null) return [x.i, x.i]

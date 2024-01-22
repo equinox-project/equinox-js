@@ -92,7 +92,7 @@ export class BatchLimiter {
   }
 
   async waitForEmpty() {
-    if (this.inProgressBatches === 0) return 
+    if (this.inProgressBatches === 0) return
     await waitForEvent(this.events, "empty")
   }
 

@@ -1,4 +1,4 @@
-import { Client, Pool, PoolClient } from "pg"
+import { Client, Pool } from "pg"
 import { randomUUID } from "crypto"
 import { IEventData, ITimelineEvent, StreamName } from "@equinox-js/core"
 

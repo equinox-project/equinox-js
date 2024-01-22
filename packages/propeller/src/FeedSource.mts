@@ -1,7 +1,7 @@
 import { Batch, Sink } from "./Types.js"
 import { ICheckpoints } from "./Checkpoints.js"
-import { sleep } from "./Sleep.js"
 import { Stats } from "./Stats.js"
+import { Internal } from "@equinox-js/core"
 
 export class CheckpointWriter {
   constructor(
@@ -15,7 +15,7 @@ export class CheckpointWriter {
 
   async start(signal: AbortSignal) {
     while (!signal.aborted) {
-      await sleep(this.intervalMs, signal)
+      await Internal.sleep(this.intervalMs, signal)
       await this.flush()
     }
   }
@@ -54,7 +54,7 @@ export class TailingFeedSource {
     position: bigint,
     signal: AbortSignal,
   ): AsyncIterable<Batch> {
-    if (wasTail) await sleep(this.options.tailSleepIntervalMs, signal)
+    if (wasTail) await Internal.sleep(this.options.tailSleepIntervalMs, signal)
     yield* this.options.crawl(trancheId, position, signal)
   }
 
