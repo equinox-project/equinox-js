@@ -224,31 +224,15 @@ describe("At-least once woes", () => {
     const checkpoint = vi.fn().mockResolvedValue(undefined)
 
     const sn = StreamName.parse("Cat-stream")
-    const mkBatch = (items: ITimelineEvent[]): IngesterBatch => ({
-      items: items.map((x) => [sn, x]),
+    const mkBatch = (items: bigint[]): IngesterBatch => ({
+      items: items.map((x) => [sn, mkEvent("Something", x)]),
       isTail: false,
       checkpoint: 1n,
       onComplete: checkpoint,
     })
-    const batch1 = mkBatch([
-      mkEvent("Something", 0n),
-      mkEvent("Something", 1n),
-      mkEvent("Something", 2n),
-      mkEvent("Something", 3n),
-      mkEvent("Something", 4n),
-      mkEvent("Something", 2n),
-    ])
+    const batch1 = mkBatch([0n, 1n, 2n, 3n, 4n, 2n])
+    const batch2 = mkBatch([5n, 3n, 6n, 1n, 7n, 3n])
 
-    const batch2 = mkBatch([
-      mkEvent("Something", 5n),
-      mkEvent("Something", 3n),
-      mkEvent("Something", 6n),
-      mkEvent("Something", 1n),
-      mkEvent("Something", 7n),
-      mkEvent("Something", 3n),
-    ])
-
-    // each mkBatch has 1 event in 10 streams
     await sink.pump(batch1, ctrl.signal)
     if (waitBeforeMerge) await limiter.waitForEmpty()
     await sink.pump(batch2, ctrl.signal)
@@ -285,20 +269,14 @@ describe("Handling gaps", () => {
     const checkpoint = vi.fn().mockResolvedValue(undefined)
 
     const sn = StreamName.parse("Cat-stream")
-    const mkBatch = (items: ITimelineEvent[]): IngesterBatch => ({
-      items: items.map((x) => [sn, x]),
+    const mkBatch = (items: bigint[]): IngesterBatch => ({
+      items: items.map((x) => [sn, mkEvent("Something", x)]),
       isTail: false,
       checkpoint: 1n,
       onComplete: checkpoint,
     })
-    const batch1 = mkBatch([
-      mkEvent("Something", 0n),
-      mkEvent("Something", 1n),
-      mkEvent("Something", 3n),
-      mkEvent("Something", 4n),
-    ])
+    const batch1 = mkBatch([0n, 1n, 3n, 4n])
 
-    // each mkBatch has 1 event in 10 streams
     await sink.pump(batch1, ctrl.signal)
 
     await limiter.waitForEmpty()
@@ -328,21 +306,15 @@ describe("Handling gaps", () => {
     const checkpoint = vi.fn().mockResolvedValue(undefined)
 
     const sn = StreamName.parse("Cat-stream")
-    const mkBatch = (items: ITimelineEvent[]): IngesterBatch => ({
-      items: items.map((x) => [sn, x]),
+    const mkBatch = (items: bigint[]): IngesterBatch => ({
+      items: items.map((x) => [sn, mkEvent("Something", x)]),
       isTail: false,
       checkpoint: 1n,
       onComplete: checkpoint,
     })
-    const batch1 = mkBatch([
-      mkEvent("Something", 0n),
-      mkEvent("Something", 1n),
-      mkEvent("Something", 3n),
-      mkEvent("Something", 4n),
-    ])
-    const batch2 = mkBatch([mkEvent("Something", 2n)])
+    const batch1 = mkBatch([0n, 1n, 3n, 4n])
+    const batch2 = mkBatch([2n])
 
-    // each mkBatch has 1 event in 10 streams
     await sink.pump(batch1, ctrl.signal)
     await setTimeout(10)
     expect(invocations).toBe(1)
