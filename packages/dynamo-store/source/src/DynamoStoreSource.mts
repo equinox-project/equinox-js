@@ -6,18 +6,9 @@ import {
 } from "@equinox-js/dynamo-store-indexer"
 import { DynamoStoreContext, EventsContext } from "@equinox-js/dynamo-store"
 import { AppendsIndex, AppendsEpoch } from "@equinox-js/dynamo-store-indexer"
-import { EncodedBody, Codec, ITimelineEvent, StreamName, Tags } from "@equinox-js/core"
-import pLimit from "p-limit"
+import { EncodedBody, Codec, ITimelineEvent, StreamName, Tags, Internal } from "@equinox-js/core"
 import { ICheckpoints, TailingFeedSource, Sink } from "@equinox-js/propeller"
-
-function keepMap<T, V>(arr: T[], fn: (x: T) => V | undefined): V[] {
-  const out: V[] = []
-  for (const x of arr) {
-    const v = fn(x)
-    if (v !== undefined) out.push(v)
-  }
-  return out
-}
+import pLimit from "p-limit"
 
 type StreamEvent = [StreamName, ITimelineEvent]
 
@@ -72,7 +63,7 @@ namespace Impl {
       }
     }
 
-    return Object.fromEntries(keepMap(all, chooseStream))
+    return Object.fromEntries(Internal.keepMap(all, chooseStream))
   }
 
   // Includes optional hydrating of events with event bodies and/or metadata (controlled via hydrating/maybeLoad args)
@@ -91,7 +82,7 @@ namespace Impl {
     const cache = new Map<IndexStreamId, ITimelineEvent<EncodedBody>[]>()
     const materializeSpans = async () => {
       const streamsToLoad = new Set(
-        keepMap(buffer, (span) => (!cache.has(span.p) ? span.p : undefined)),
+        Internal.keepMap(buffer, (span) => (!cache.has(span.p) ? span.p : undefined)),
       )
       const loadsRequired = Array.from(streamsToLoad).map((p) => async () => {
         const items = await streamEvents[p]()

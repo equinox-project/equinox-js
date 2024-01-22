@@ -2,8 +2,7 @@ import { MemoryCheckpoints } from "./Checkpoints.js"
 import { CheckpointWriter, TailingFeedSource } from "./FeedSource.mjs"
 import { test, expect, vi } from "vitest"
 import { Batch, IngesterBatch, Sink } from "./Types.js"
-import { StreamName, StreamId } from "@equinox-js/core"
-import { sleep } from "./Sleep.js"
+import { StreamName, StreamId, Internal } from "@equinox-js/core"
 
 class MemorySink implements Sink {
   async start() {}
@@ -82,7 +81,7 @@ test("Checkpointing happens asynchronously", async () => {
   vi.spyOn(checkpoints, "commit")
   const oldFlush = CheckpointWriter.prototype.flush
   CheckpointWriter.prototype.flush = async function () {
-    await sleep(10, ctrl.signal)
+    await Internal.sleep(10, ctrl.signal)
     await oldFlush.call(this)
   }
   vi.spyOn(CheckpointWriter.prototype, "flush")

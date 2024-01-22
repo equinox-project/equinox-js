@@ -15,14 +15,7 @@ import { Format, MessageDbReader, MessageDbWriter } from "./MessageDbClient.js"
 import { Client, Pool } from "pg"
 import { CachingCategory, ICachingStrategy, IReloadableCategory, Tags } from "@equinox-js/core"
 
-function keepMap<T, V>(arr: T[], fn: (v: T) => V | undefined): V[] {
-  const result: V[] = []
-  for (let i = 0; i < arr.length; ++i) {
-    const value = fn(arr[i])
-    if (value != null) result.push(value)
-  }
-  return result
-}
+const keepMap = Equinox.Internal.keepMap
 
 type GatewaySyncResult = { type: "Written"; token: StreamToken } | { type: "ConflictUnknown" }
 
