@@ -1,6 +1,7 @@
 import { describe, test, expect, vi } from "vitest"
 import { BatchLimiter, StreamsSink } from "./StreamsSink.mjs"
 import { ITimelineEvent, StreamId, StreamName } from "@equinox-js/core"
+import { setTimeout } from "timers/promises"
 import { IngesterBatch } from "./Types.js"
 import { StreamResult } from "./Sinks.js"
 
@@ -100,7 +101,7 @@ test("Correctly limits in-flight batches", async () => {
 
   async function handler() {
     invocations++
-    await new Promise((res) => setTimeout(res, 10))
+    await setTimeout(10)
   }
 
   const limiter = new BatchLimiter(3)
@@ -140,7 +141,7 @@ test("Ensures at-most one handler is per stream", async () => {
     invocations++
     active++
     maxActive = Math.max(maxActive, active)
-    await new Promise((res) => setTimeout(res, 10))
+    await setTimeout(10)
     active--
   }
 
@@ -201,6 +202,160 @@ test("Old events are ignored even if re-submitted", async () => {
   expect(invocations).toBe(10)
   expect(checkpoint).toHaveBeenCalledTimes(4)
   await sinkP
+})
+
+describe("At-least once woes", () => {
+  async function runTest(waitBeforeMerge: boolean) {
+    let invocations = 0
+    const ctrl = new AbortController()
+    const seen: bigint[] = []
+
+    async function handler(sn: StreamName, events: ITimelineEvent[]) {
+      invocations++
+      for (const e of events) seen.push(e.index)
+
+      await new Promise(setImmediate)
+    }
+
+    const limiter = new BatchLimiter(3)
+    const sink = new StreamsSink(handler, 10, limiter)
+    const sinkP = sink.start(ctrl.signal)
+
+    const checkpoint = vi.fn().mockResolvedValue(undefined)
+
+    const sn = StreamName.parse("Cat-stream")
+    const mkBatch = (items: ITimelineEvent[]): IngesterBatch => ({
+      items: items.map((x) => [sn, x]),
+      isTail: false,
+      checkpoint: 1n,
+      onComplete: checkpoint,
+    })
+    const batch1 = mkBatch([
+      mkEvent("Something", 0n),
+      mkEvent("Something", 1n),
+      mkEvent("Something", 2n),
+      mkEvent("Something", 3n),
+      mkEvent("Something", 4n),
+      mkEvent("Something", 2n),
+    ])
+
+    const batch2 = mkBatch([
+      mkEvent("Something", 5n),
+      mkEvent("Something", 3n),
+      mkEvent("Something", 6n),
+      mkEvent("Something", 1n),
+      mkEvent("Something", 7n),
+      mkEvent("Something", 3n),
+    ])
+
+    // each mkBatch has 1 event in 10 streams
+    await sink.pump(batch1, ctrl.signal)
+    if (waitBeforeMerge) await limiter.waitForEmpty()
+    await sink.pump(batch2, ctrl.signal)
+
+    await limiter.waitForEmpty()
+    ctrl.abort()
+    expect(invocations).toBe(waitBeforeMerge ? 2 : 1)
+    expect(seen).toEqual([0n, 1n, 2n, 3n, 4n, 5n, 6n, 7n])
+
+    await sinkP
+  }
+  test("When merged before handling", () => runTest(false))
+
+  test("When handled before merge", () => runTest(true))
+})
+
+describe("Handling gaps", () => {
+  test("When disabled, gaps are ignored", async () => {
+    let invocations = 0
+    const ctrl = new AbortController()
+    const seen: bigint[] = []
+
+    async function handler(sn: StreamName, events: ITimelineEvent[]) {
+      invocations++
+      for (const e of events) seen.push(e.index)
+
+      await new Promise(setImmediate)
+    }
+
+    const limiter = new BatchLimiter(3)
+    const sink = new StreamsSink(handler, 10, limiter)
+    const sinkP = sink.start(ctrl.signal)
+
+    const checkpoint = vi.fn().mockResolvedValue(undefined)
+
+    const sn = StreamName.parse("Cat-stream")
+    const mkBatch = (items: ITimelineEvent[]): IngesterBatch => ({
+      items: items.map((x) => [sn, x]),
+      isTail: false,
+      checkpoint: 1n,
+      onComplete: checkpoint,
+    })
+    const batch1 = mkBatch([
+      mkEvent("Something", 0n),
+      mkEvent("Something", 1n),
+      mkEvent("Something", 3n),
+      mkEvent("Something", 4n),
+    ])
+
+    // each mkBatch has 1 event in 10 streams
+    await sink.pump(batch1, ctrl.signal)
+
+    await limiter.waitForEmpty()
+    ctrl.abort()
+    expect(invocations).toBe(2)
+    expect(seen).toEqual([0n, 1n, 3n, 4n])
+
+    await sinkP
+  })
+
+  test("When enabled, the missing event is waited on", async () => {
+    let invocations = 0
+    const ctrl = new AbortController()
+    const seen: bigint[] = []
+
+    async function handler(sn: StreamName, events: ITimelineEvent[]) {
+      invocations++
+      for (const e of events) seen.push(e.index)
+
+      await new Promise(setImmediate)
+    }
+
+    const limiter = new BatchLimiter(3)
+    const sink = new StreamsSink(handler, 10, limiter, true)
+    const sinkP = sink.start(ctrl.signal)
+
+    const checkpoint = vi.fn().mockResolvedValue(undefined)
+
+    const sn = StreamName.parse("Cat-stream")
+    const mkBatch = (items: ITimelineEvent[]): IngesterBatch => ({
+      items: items.map((x) => [sn, x]),
+      isTail: false,
+      checkpoint: 1n,
+      onComplete: checkpoint,
+    })
+    const batch1 = mkBatch([
+      mkEvent("Something", 0n),
+      mkEvent("Something", 1n),
+      mkEvent("Something", 3n),
+      mkEvent("Something", 4n),
+    ])
+    const batch2 = mkBatch([mkEvent("Something", 2n)])
+
+    // each mkBatch has 1 event in 10 streams
+    await sink.pump(batch1, ctrl.signal)
+    await setTimeout(10)
+    expect(invocations).toBe(1)
+    expect(seen).toEqual([0n, 1n])
+    await sink.pump(batch2, ctrl.signal)
+
+    await limiter.waitForEmpty()
+    ctrl.abort()
+    expect(invocations).toBe(2)
+    expect(seen).toEqual([0n, 1n, 2n, 3n, 4n])
+
+    await sinkP
+  })
 })
 
 describe("StreamResult", () => {

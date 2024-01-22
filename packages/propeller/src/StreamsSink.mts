@@ -59,6 +59,7 @@ export namespace StreamSpan {
 class StreamState {
   private static WRITE_POS_UNKNOWN = -2n
   private static WRITE_POS_MALFORMED = -3n
+
   constructor(
     public write: bigint,
     public queue: StreamSpan[],
@@ -85,7 +86,7 @@ class StreamState {
 
   get hasGap(): boolean {
     if (this.write === StreamState.WRITE_POS_UNKNOWN) return false
-    return this.write === this.headSpan![0].index
+    return this.write !== this.headSpan![0].index
   }
 
   get isReady(): boolean {
@@ -98,16 +99,40 @@ class StreamState {
     return this.write
   }
 
-  static combine(s1: StreamState, s2: StreamState): StreamState {
-    const writePos = s1.write > s2.write ? s1.write : s2.write
-    const malformed = s1.isMalformed || s2.isMalformed
-    const any1 = !s1.isEmpty
-    const any2 = !s2.isEmpty
-    if (any1 || any2) {
-      const items = any1 && any2 ? s1.queue.concat(s2.queue) : any1 ? s1.queue : s2.queue
-      return StreamState.create(writePos, StreamSpan.merge(writePos, items), malformed)
+  // Used while constructing a StreamState from a batch of events
+  // We allow mutating the queue here as a performance improvement
+  // Note that once the newly constructed batch is merged into the
+  // "real" state, that will go through the `combine` method
+  addEvent(event: ITimelineEvent): void {
+    if (this.queue.length === 0) {
+      this.queue.push([event])
+      return
     }
-    return StreamState.create(writePos, [], malformed)
+    if (this.queue.length === 1 && StreamSpan.ver(this.queue[0]) === event.index) {
+      this.queue[0].push(event)
+      return
+    }
+    this.queue = StreamSpan.merge(this.write, this.queue.concat([[event]]))
+  }
+
+  setWritePos(write: bigint) {
+    this.write = write
+    this.queue = StreamSpan.merge(write, this.queue)
+  }
+
+  combine(s: StreamState) {
+    this.write = this.write > s.write ? this.write : s.write
+    if (this.isMalformed || s.isMalformed) {
+      this.write = StreamState.WRITE_POS_MALFORMED
+    }
+    const any1 = !this.isEmpty
+    const any2 = !s.isEmpty
+    if (any1 || any2) {
+      const items = any1 && any2 ? this.queue.concat(s.queue) : any1 ? this.queue : s.queue
+      this.queue = StreamSpan.merge(this.write, items)
+      return
+    }
+    this.queue = []
   }
 }
 
@@ -117,11 +142,13 @@ class Streams {
   merge(name: StreamName, state: StreamState): void {
     const curr = this._states.get(name)
     if (!curr) this._states.set(name, state)
-    else this._states.set(name, StreamState.combine(curr, state))
+    else curr.combine(state)
   }
 
   addEvent(name: StreamName, event: ITimelineEvent): void {
-    this.merge(name, StreamState.create(null, [[event]]))
+    const curr = this._states.get(name)
+    if (!curr) this._states.set(name, StreamState.create(null, [[event]]))
+    else curr.addEvent(event)
   }
 
   get states() {
@@ -159,11 +186,13 @@ class StreamStates {
   private merge(name: StreamName, state: StreamState): void {
     const curr = this.states.get(name)
     if (!curr) this.states.set(name, state)
-    else this.states.set(name, StreamState.combine(curr, state))
+    else curr.combine(state)
   }
 
   private markCompleted(name: StreamName, write: bigint): void {
-    this.merge(name, StreamState.create(write, []))
+    const curr = this.states.get(name)
+    if (!curr) this.states.set(name, StreamState.create(write, []))
+    else curr.setWritePos(write)
   }
 
   markBusy(name: StreamName): void {
@@ -236,6 +265,7 @@ class ProgressState {
 
 class StreamsPrioritizer {
   streamsSuggested = new Set<StreamName>()
+
   private *collectUniqueStreams(xs: Iterable<BatchState>) {
     for (const batch of xs) {
       for (const stream of batch.streamToRequiredIndex.keys()) {
@@ -271,9 +301,11 @@ class ConcurrentDispatcher {
   private prioritizer = new StreamsPrioritizer()
   private sem: Semaphore
   private processOnNextTick = createNextTickScheduler(() => this.processMessages())
+
   constructor(
     private readonly concurrency: number,
     private readonly computation: EventHandler<string>,
+    private readonly allowGaps: boolean,
     private readonly signal: AbortSignal,
   ) {
     this.sem = new Semaphore(this.concurrency)
@@ -298,7 +330,7 @@ class ConcurrentDispatcher {
     const streamsToProcess = this.prioritizer.collectStreams(this.batches.enumPending())
 
     for (const stream of streamsToProcess) {
-      const events = this.streams.chooseDispatchable(stream, true)?.headSpan
+      const events = this.streams.chooseDispatchable(stream, this.allowGaps)?.headSpan
       if (!events) continue
       if (!this.sem.tryTake()) return
       this.streams.markBusy(stream)
@@ -316,6 +348,7 @@ class ConcurrentDispatcher {
 export class BatchLimiter {
   private inProgressBatches = 0
   private events = new EventEmitter()
+
   constructor(private maxReadAhead: number) {}
 
   waitForCapacity(signal: AbortSignal): Promise<void> | void {
@@ -347,6 +380,12 @@ type CreateOptions = {
   maxConcurrentStreams: number
   /** The number of batches the source can read ahead the currently processing batch */
   maxReadAhead: number
+  /** Where events are potentially delivered out of order, wait for first event until write position is known
+   * Note, this should likely only be used when replaying from scratch, At Least Once semantics mean that this
+   * option can brick your processing when you start up and receive an old event as your first event for the stream
+   * e.g. 1,2,3 -- restart -- 1,4,5
+   * default: false */
+  requireCompleteStreams?: boolean
   /** Attributes to add to every span */
   tracingAttrs?: Attributes
 }
@@ -356,10 +395,12 @@ export class StreamsSink implements Sink {
   private readonly handler: EventHandler<string>
   private dispatcher!: ConcurrentDispatcher
   private tracingAttrs: Attributes
+
   constructor(
     handler: EventHandler<string>,
     private readonly maxConcurrentStreams: number,
     private readonly limiter: BatchLimiter,
+    private requireCompleteStreams = false,
     tracingAttrs: Attributes = {},
   ) {
     this.tracingAttrs = Object.assign({ "eqx.max_read_ahead": maxConcurrentStreams }, tracingAttrs)
@@ -394,6 +435,7 @@ export class StreamsSink implements Sink {
           this.events.emit("error", err)
         }
       },
+      !this.requireCompleteStreams,
       signal,
     )
     return this.waitForErrorOrAbort(signal)
@@ -406,9 +448,9 @@ export class StreamsSink implements Sink {
     })
   }
 
-  static create({ handler, maxReadAhead, maxConcurrentStreams, tracingAttrs }: CreateOptions) {
+  // prettier-ignore
+  static create({ handler, maxReadAhead, maxConcurrentStreams, requireCompleteStreams, tracingAttrs }: CreateOptions) {
     const limiter = new BatchLimiter(maxReadAhead)
-    const sink = new StreamsSink(handler, maxConcurrentStreams, limiter, tracingAttrs)
-    return sink
+    return new StreamsSink(handler, maxConcurrentStreams, limiter, requireCompleteStreams, tracingAttrs)
   }
 }
