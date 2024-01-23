@@ -330,10 +330,13 @@ class ConcurrentDispatcher {
     const streamsToProcess = this.prioritizer.collectStreams(this.batches.enumPending())
 
     for (const stream of streamsToProcess) {
-      const events = this.streams.chooseDispatchable(stream, this.allowGaps)?.headSpan
-      if (!events) continue
+      const span = this.streams.chooseDispatchable(stream, this.allowGaps)?.headSpan
+      if (!span) continue
       if (!this.sem.tryTake()) return
       this.streams.markBusy(stream)
+      // the span can be mutated during the computation, so we make a copy
+      const events = span.slice()
+
       this.computation(stream, events).then((result) => {
         const nextIndex = StreamResult.toIndex(events, result ?? StreamResult.AllProcessed)
         this.batches.markStreamProgress(stream, nextIndex)
