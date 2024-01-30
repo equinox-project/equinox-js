@@ -337,6 +337,8 @@ class ConcurrentDispatcher {
       // the span can be mutated during the computation, so we make a copy
       const events = span.slice()
 
+      // NOTE: this depends on the computation never throwing, otherwise we leak the semaphore
+      // In theory, a throw would result in an unhandledRejection crashing the process
       this.computation(stream, events).then((result) => {
         const nextIndex = StreamResult.toIndex(events, result ?? StreamResult.AllProcessed)
         this.batches.markStreamProgress(stream, nextIndex)
