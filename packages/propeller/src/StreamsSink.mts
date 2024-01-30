@@ -416,9 +416,7 @@ export class StreamsSink implements Sink {
     Object.assign(this.tracingAttrs, attrs)
   }
 
-  onError(handler: (err: Error) => void) {
-    this.events.on("error", handler)
-  }
+  private onNextError(handler: (err: Error) => void) {}
 
   pump(ingesterBatch: IngesterBatch, signal: AbortSignal): void | Promise<void> {
     this.limiter.startBatch()
@@ -433,13 +431,10 @@ export class StreamsSink implements Sink {
   async start(signal: AbortSignal) {
     this.dispatcher = new ConcurrentDispatcher(
       this.maxConcurrentStreams,
-      async (stream, events) => {
-        try {
-          return await this.handler(stream, events)
-        } catch (err) {
+      async (stream, events) =>
+        this.handler(stream, events).catch((err) => {
           this.events.emit("error", err)
-        }
-      },
+        }),
       !this.requireCompleteStreams,
       signal,
     )
@@ -448,8 +443,17 @@ export class StreamsSink implements Sink {
 
   waitForErrorOrAbort(signal: AbortSignal): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.onError(reject)
-      signal.addEventListener("abort", () => resolve(), { once: true })
+      const onAbort = () => {
+        // avoid leaking the closure
+        this.events.off("error", reject)
+        resolve()
+      }
+      const onError = () => {
+        signal.removeEventListener("abort", onAbort)
+        reject()
+      }
+      this.events.once("error", onError)
+      signal.addEventListener("abort", onAbort, { once: true })
     })
   }
 

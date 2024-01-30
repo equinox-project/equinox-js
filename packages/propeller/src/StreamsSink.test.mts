@@ -1,4 +1,4 @@
-import { describe, test, expect, vi } from "vitest"
+import { describe, test, expect, vi, should } from "vitest"
 import { BatchLimiter, StreamsSink } from "./StreamsSink.mjs"
 import { ITimelineEvent, StreamId, StreamName } from "@equinox-js/core"
 import { setTimeout } from "timers/promises"
@@ -129,7 +129,7 @@ test("Correctly limits in-flight batches", async () => {
   await sinkP
 })
 
-test("Ensures at-most one handler is per stream", async () => {
+test("Ensures at-most one handler is per active for a stream", async () => {
   let active = 0
   let maxActive = 0
   let invocations = 0
@@ -169,6 +169,35 @@ test("Ensures at-most one handler is per stream", async () => {
   // onComplete is called in order and for every batch
   expect(completed.mock.calls).toEqual(Array.from({ length: count }).map((_, i) => [BigInt(i)]))
   await sinkP
+})
+
+test("Does not catch errors from handlers", async () => {
+  let invocations = 0
+  const ctrl = new AbortController()
+
+  async function handler() {
+    invocations++
+    await new Promise(setImmediate)
+    throw new Error("Test error")
+  }
+
+  const limiter = new BatchLimiter(3)
+  const sink = new StreamsSink(handler, 10, limiter)
+  const sinkP = sink.start(ctrl.signal)
+
+  const checkpoint = vi.fn().mockResolvedValue(undefined)
+  const onError = vi.fn()
+  // We need to capture all the errors otherwise the test will fail
+  sink["events"].on("error", onError)
+
+  await sink.pump(mkBatch(checkpoint, 0n), ctrl.signal)
+
+  await expect(sinkP).rejects.toThrow("Test error")
+  // we need to wait for the other errors to be emitted
+  await setTimeout(10)
+  expect(onError).toHaveBeenCalledTimes(10)
+  expect(invocations).toBe(10)
+  expect(checkpoint).toHaveBeenCalledTimes(1)
 })
 
 test("Old events are ignored even if re-submitted", async () => {
