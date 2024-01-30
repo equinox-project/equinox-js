@@ -448,9 +448,9 @@ export class StreamsSink implements Sink {
         this.events.off("error", reject)
         resolve()
       }
-      const onError = () => {
+      const onError = (err: Error) => {
         signal.removeEventListener("abort", onAbort)
-        reject()
+        reject(err)
       }
       this.events.once("error", onError)
       signal.addEventListener("abort", onAbort, { once: true })
