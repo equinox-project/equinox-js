@@ -73,8 +73,8 @@ export namespace Decide {
   export const withdraw =
     (amount: number) =>
     (state: State): Event[] => {
-      if (state > amount) return [{ type: "Withdrawn", data: { amount } }]
-      throw new Error("Insufficient funds")
+      if (state < amount) throw new Error("Insufficient funds")
+      return [{ type: "Withdrawn", data: { amount } }]
     }
 }
 
