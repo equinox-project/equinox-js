@@ -1,4 +1,4 @@
-import { test, expect } from "vitest"
+import { test, expect, vi } from "vitest"
 import { DynamoStoreSource, LoadMode } from "./DynamoStoreSource.mjs"
 import { ICheckpoints } from "@equinox-js/propeller"
 import { VolatileStore } from "@equinox-js/memory-store"
@@ -107,6 +107,9 @@ test("it fails fast", async () => {
     checkpoints: new MemoryCheckpoints(),
     sink,
   })
+
+  const onError = vi.fn()
+  sink['events'].on('error', onError)
   const epochWriter = AppendsEpoch.Config.createMem(1024 * 1024, 5000n, 100_000, store)
   await epochWriter.ingest(
     AppendsPartitionId.wellKnownId,

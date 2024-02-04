@@ -2,7 +2,12 @@ import { IStream, queryAsync, TokenAndState, transactAsync } from "./Core.js"
 import { Category } from "./Category.js"
 import { StreamId } from "./StreamId.js"
 
-type LoadOption = { requireLoad?: boolean, requireLeader?: boolean, maxStaleMs?: number, assumeEmpty?: boolean }
+type LoadOption = {
+  requireLoad?: boolean
+  requireLeader?: boolean
+  maxStaleMs?: number
+  assumeEmpty?: boolean
+}
 
 export namespace LoadOption {
   /** Default policy; Obtain the latest state from store based on consistency level configured */
@@ -19,7 +24,6 @@ export namespace LoadOption {
   /** Inhibit load from database based on the fact that the stream is likely not to have been initialized yet, and we will be generating events */
   export const AssumeEmpty: LoadOption = { assumeEmpty: true }
 }
-
 
 namespace LoadPolicy {
   export function fetch<State, Event>(
@@ -92,6 +96,29 @@ export class Decider<Event, State> {
     const decide = ({ state }: TokenAndState<State>): Promise<[null, Event[]]> =>
       Promise.resolve([null, interpret(state)])
     const mapRes = () => undefined
+    return transactAsync(
+      this.stream,
+      LoadPolicy.fetch(load),
+      decide,
+      AttemptsPolicy.validate(attempts),
+      mapRes,
+    )
+  }
+
+  /**
+   * 1. Invoke the supplied `interpret` function with the present state to determine whether any write is to occur.
+   * 2. (if events yielded) Attempt to sync the yielded events to the stream.
+   *    (Restarts up to `maxAttempts` times with updated state per attempt, throwing `MaxResyncsExhaustedException` on failure of final attempt.)
+   * 3. Returns the new version of the stream
+   */
+  transactVersion(
+    interpret: (state: State) => Event[],
+    load?: LoadOption,
+    attempts?: number,
+  ): Promise<bigint> {
+    const decide = ({ state }: TokenAndState<State>): Promise<[null, Event[]]> =>
+      Promise.resolve([null, interpret(state)])
+    const mapRes = (_: null, { token }: TokenAndState<State>) => token.version
     return transactAsync(
       this.stream,
       LoadPolicy.fetch(load),
@@ -175,7 +202,7 @@ export class Decider<Event, State> {
   /**
    * 1. Invoke the supplied `decide` function with the current complete context, holding the `'result`
    * 2. (if events yielded) Attempt to sync the yielded events to the stream.
-   *   (Restarts up to `maxAttempts` times with updated state per attempt, throwing `MaxResyncsExhaustedException` on failure of final attempt.)
+   *    (Restarts up to `maxAttempts` times with updated state per attempt, throwing `MaxResyncsExhaustedException` on failure of final attempt.)
    * 3. Yields `result`
    */
   transactEx<Result>(
@@ -197,7 +224,7 @@ export class Decider<Event, State> {
   /**
    * 1. Invoke the supplied `decide` function with the current complete context, holding the `'result`
    * 2. (if events yielded) Attempt to sync the yielded events to the stream.
-   *   (Restarts up to `maxAttempts` times with updated state per attempt, throwing `MaxResyncsExhaustedException` on failure of final attempt.)
+   *    (Restarts up to `maxAttempts` times with updated state per attempt, throwing `MaxResyncsExhaustedException` on failure of final attempt.)
    * 3. Yields a final 'view produced by `mapResult` from the `'result` and/or the final persisted `ISyncContext`
    */
   transactExMapResult<Result, View>(
@@ -230,8 +257,7 @@ export class Decider<Event, State> {
   /**
    * 1. Invoke the supplied `Async` `interpret` function with the present state
    * 2. (if events yielded) Attempt to sync the yielded events to the stream.
-   *   (Restarts up to `maxAttempts` times with updated state per attempt, throwing `MaxResyncsExhaustedException` on failure of final attempt.)
-   * 3. Uses `render` to generate a 'view from the persisted final state
+   *    (Restarts up to `maxAttempts` times with updated state per attempt, throwing `MaxResyncsExhaustedException` on failure of final attempt.)
    */
   transactAsync(
     interpret: (state: State) => Promise<Event[]>,
@@ -249,9 +275,30 @@ export class Decider<Event, State> {
   }
 
   /**
+   * 1. Invoke the supplied `Async` `interpret` function with the present state
+   * 2. (if events yielded) Attempt to sync the yielded events to the stream.
+   *    (Restarts up to `maxAttempts` times with updated state per attempt, throwing `MaxResyncsExhaustedException` on failure of final attempt.)
+   * 3. Returns the new version of the stream
+   */
+  transactVersionAsync(
+    interpret: (state: State) => Promise<Event[]>,
+    load?: LoadOption,
+    attempts?: number,
+  ): Promise<bigint> {
+    const mapRes = (_: null, { token }: TokenAndState<State>) => token.version
+    return transactAsync(
+      this.stream,
+      LoadPolicy.fetch(load),
+      ({ state }) => interpret(state).then((s) => [null, s]),
+      AttemptsPolicy.validate(attempts),
+      mapRes,
+    )
+  }
+
+  /**
    * 1. Invoke the supplied `Async` `decide` function with the present state, holding the `'result`
    * 2. (if events yielded) Attempt to sync the yielded events to the stream.
-   *   (Restarts up to `maxAttempts` times with updated state per attempt, throwing `MaxResyncsExhaustedException` on failure of final attempt.)
+   *    (Restarts up to `maxAttempts` times with updated state per attempt, throwing `MaxResyncsExhaustedException` on failure of final attempt.)
    * 3. Yield result
    */
   transactResultAsync<Result>(
@@ -272,7 +319,7 @@ export class Decider<Event, State> {
   /**
    * 1. Invoke the supplied `Async` `decide` function with the current complete context, holding the `'result`
    * 2. (if events yielded) Attempt to sync the yielded events to the stream.
-   *   (Restarts up to `maxAttempts` times with updated state per attempt, throwing `MaxResyncsExhaustedException` on failure of final attempt.)
+   *    (Restarts up to `maxAttempts` times with updated state per attempt, throwing `MaxResyncsExhaustedException` on failure of final attempt.)
    * 3. Yield result
    */
   transactExAsync<Result>(
