@@ -33,7 +33,7 @@ a Reactor:
 
 The aggregates and events are based on the scenario as outlined and implemented in
 https://github.com/oskardudycz/EventSourcing.NetCore/tree/main/Sample/HotelManagement.
-The code (in C#) and video over explains the scenario in full.
+The code (in C#) and video overview explains the scenario in full.
 
 Having said that, here's a brief overview of how the behavior or the system is split:
 
@@ -55,7 +55,7 @@ Having said that, here's a brief overview of how the behavior or the system is s
   3. (further stays can be added at any time prior to completion)
   4. A payment can be recorded as `Paid` at any time
   5. The GroupCheckout can be `Confirmed` as complete when the total residual
-     amounts`StaysMerged` gathered by the Reactor have been `Paid`
+     amounts across all `StaysMerged` gathered by the Reactor have been `Paid`
 
 ## Reactions implemented using the Process Manager pattern
 
@@ -82,7 +82,7 @@ coordinate the transfer of the balance of the GuestStay balance onto the
   to the `handler`. Propeller guarantees that there will only be a single
   handler invocation in flight at any time for a given stream.
 - While the `StaysSelected` event is the primary event that drives the need for
-  the reactor do carry out activities, we read the full state in order that we
+  the reactor to carry out activities, we read the full state in order that we
   don't have to re-visit Stays that we know we have already merged into the
   `GroupCheckout`. Instead, we load the full state of the Checkout and walk
   only the Stays that have not yet had either a success or failure outcome
@@ -95,7 +95,7 @@ immediately see the events notified on the change feed.
 
 Examples:
 1. if event 0 is `StaysSelected`, that will trigger the handler. If the
-   Handler attempts to read `GroupCheckout` state_ but that event has not yet
+   Handler attempts to read `GroupCheckout` state _but that event has not yet
    propagated to the node from which the Handler reads_, the State will be
    `Flow.Action.Ready 0`, and the Handler will immediately yield a
    `SpanResult.OverrideNextIndex 0`
@@ -109,7 +109,7 @@ Examples:
    to the stream, the version has moved from `1` to `3`, resulting in
    `SpanResult.OverrideNextIndex 3`.
 
-   This implies one of the following two possible outcomes:
+   This implies two possible outcomes:
    
    1. Propeller notes we are at Version 3 and will
       discard events 1 and 2 on receipt from the change feed, without
