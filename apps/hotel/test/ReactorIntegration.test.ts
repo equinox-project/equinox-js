@@ -37,7 +37,7 @@ async function runScenario(
     tailSleepIntervalMs: 10,
   })
   const ctrl = new AbortController()
-  const sourceP = source.start(ctrl.signal)
+  source.start(ctrl.signal)
   const groupCheckoutId = GroupCheckoutId.create()
   const stays = randomStays()
   let charged = 0
@@ -55,7 +55,7 @@ async function runScenario(
       break
     case "Processing":
       throw new Error("Unexpected Processing")
-    case "BalanceOustanding":
+    case "BalanceOutstanding":
       if (payBefore) throw new Error("Unexpected BalanceOutstanding")
   }
   if (!payBefore) {
@@ -65,7 +65,7 @@ async function runScenario(
       case "Ok":
         break
       case "Processing":
-      case "BalanceOustanding":
+      case "BalanceOutstanding":
         throw new Error("Checkout not complete")
     }
   }

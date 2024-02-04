@@ -115,7 +115,7 @@ export namespace Decide {
   type ConfirmResult =
     | { type: "Processing" }
     | { type: "Ok" }
-    | { type: "BalanceOustanding"; balance: number }
+    | { type: "BalanceOutstanding"; balance: number }
 
   export const confirm =
     (at: OffsetDateTime): DecisionResult<ConfirmResult> =>
@@ -126,7 +126,7 @@ export namespace Decide {
           return [{ type: "Ok" }, []]
         case "Ready":
           if (state.balance === 0) return [{ type: "Ok" }, [Events.Confirmed({ at })]]
-          return [{ type: "BalanceOustanding", balance: state.balance }, []]
+          return [{ type: "BalanceOutstanding", balance: state.balance }, []]
         case "MergeStays":
           return [{ type: "Processing" }, []]
       }

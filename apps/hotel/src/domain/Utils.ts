@@ -1,4 +1,4 @@
-import { Draft, produce, createDraft } from "immer"
+import { Draft, produce, createDraft, finishDraft, enablePatches } from "immer"
 
 export function sumBy<T>(arr: T[], f: (t: T) => number): number {
   return arr.reduce((acc, t) => acc + f(t), 0)
@@ -19,16 +19,16 @@ export function createFold<Event extends DomainEvent, State>(
   return (state: State, events: Event[]): State => {
     if (events.length === 0) return state
 
-    return produce(state, (draft) => {
-      for (const event of events) {
-        const handler = mapping[event.type as Event["type"]]
-        const next = handler(draft, event.data)
-        if (next !== undefined) {
-          draft = createDraft(next as any) as any
-        }
+    let draft: any = createDraft(state as any)
+    for (const event of events) {
+      const handler = mapping[event.type as Event["type"]]
+      const next = handler(draft, event.data)
+      if (next !== undefined) {
+        draft = createDraft(next as any) as any
       }
-      return draft
-    })
+    }
+
+    return finishDraft(draft)
   }
 }
 
