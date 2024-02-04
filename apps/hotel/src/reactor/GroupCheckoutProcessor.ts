@@ -7,7 +7,7 @@ export class Service {
   constructor(
     private readonly guestStays: GuestStay.Service,
     private readonly groupCheckouts: GroupCheckout.Service,
-    private readonly checkoutParalellism: number,
+    private readonly checkoutParallelism: number,
   ) {}
 
   private async attemptMerge(groupCheckoutId: GroupCheckoutId, stayId: GuestStayId) {
@@ -23,7 +23,7 @@ export class Service {
   private async executeMergeStayAttempts(groupCheckoutId: GroupCheckoutId, stayIds: GuestStayId[]) {
     const residuals: Readonly<[GuestStayId, number]>[] = []
     const failed: GuestStayId[] = []
-    const limit = pLimit(this.checkoutParalellism)
+    const limit = pLimit(this.checkoutParallelism)
     await Promise.all(
       stayIds.map((id) =>
         limit(() =>

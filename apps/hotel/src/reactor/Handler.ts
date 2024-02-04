@@ -13,13 +13,13 @@ export function createHandler(processor: GroupCheckoutProcessor.Service) {
   }
 }
 
-export function createSink(config: Config.Config) {
+export function createSink(config: Config.Config, checkoutParallelism = 10) {
   const stays = GuestStay.Service.create(config)
   const groupCheckouts = GroupCheckout.Service.create(config)
-  const processor = new GroupCheckoutProcessor.Service(stays, groupCheckouts, 10)
+  const processor = new GroupCheckoutProcessor.Service(stays, groupCheckouts, checkoutParallelism)
   return StreamsSink.create({
     handler: createHandler(processor),
     maxReadAhead: 3,
-    maxConcurrentStreams: 10
+    maxConcurrentStreams: 10,
   })
 }
