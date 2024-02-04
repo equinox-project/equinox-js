@@ -27,6 +27,7 @@ export function createFold<Event extends DomainEvent, State>(
           draft = createDraft(next as any) as any
         }
       }
+      return draft
     })
   }
 }
@@ -40,4 +41,3 @@ export function upcastDate(x: any): any {
 export function upcast<T>(event: DomainEvent): T {
   return { type: event.type, data: upcastDate(event.data) } as any
 }
-
