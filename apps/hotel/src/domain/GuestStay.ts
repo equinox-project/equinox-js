@@ -2,16 +2,8 @@ import { Codec, Decider, StreamId, StreamName } from "@equinox-js/core"
 import { ChargeId, GroupCheckoutId, GuestStayId, PaymentId } from "./Types.js"
 import { z } from "zod"
 import { OffsetDateTime } from "@js-joda/core"
-import { fields, variantModule, VariantOf } from "variant"
 import { reduce } from "ramda"
 import * as Config from "../config/equinox.js"
-
-const data =
-  <T>() =>
-  (data: T) => ({ data })
-const failwith = (msg: string): never => {
-  throw new Error(msg)
-}
 
 export namespace Stream {
   export const category = "GuestStay"
@@ -46,15 +38,12 @@ export namespace Events {
   export type TransferredToGroup = z.infer<typeof TransferredToGroup>
   export type CheckedOut = z.infer<typeof CheckedOut>
 
-  export const Event = variantModule({
-    CheckedIn: data<CheckedIn>(),
-    Charged: data<Charged>(),
-    Paid: data<Paid>(),
-    CheckedOut: data<CheckedOut>(),
-    TransferredToGroup: data<TransferredToGroup>(),
-  })
-
-  export type Event = VariantOf<typeof Event>
+  export type Event =
+    | { type: "CheckedIn"; data: CheckedIn }
+    | { type: "Charged"; data: Charged }
+    | { type: "Paid"; data: Paid }
+    | { type: "CheckedOut"; data: CheckedOut }
+    | { type: "TransferredToGroup"; data: TransferredToGroup }
 
   export const codec = Codec.upcast<Event>(
     Codec.json(),
@@ -69,54 +58,55 @@ export namespace Events {
 }
 
 export namespace Fold {
-  export const State = variantModule({
-    Active: data<{
-      balance: number
-      charges: ChargeId[]
-      payments: PaymentId[]
-      checkedInAt?: OffsetDateTime
-    }>(),
-    Closed: {},
-    TransferredToGroup: data<{
-      at: OffsetDateTime
-      residualBalance: number
-      groupId: GroupCheckoutId
-    }>(),
-  })
-  export type State = VariantOf<typeof State>
+  export type State =
+    | {
+        type: "Active"
+        balance: number
+        charges: ChargeId[]
+        payments: PaymentId[]
+        checkedInAt?: OffsetDateTime
+      }
+    | { type: "Closed" }
+    | {
+        type: "TransferredToGroup"
+        at: OffsetDateTime
+        residualBalance: number
+        groupId: GroupCheckoutId
+      }
 
-  export const initial = State.Active({ balance: 0, charges: [], payments: [] })
+  export const initial: State = { type: "Active", balance: 0, charges: [], payments: [] }
 
-  function evolve(state: State, event: Events.Event) {
+  function evolve(state: State, event: Events.Event): State {
     switch (state.type) {
       case "Closed":
-        return failwith("Invalid state transition")
+        throw new Error("Invalid state transition")
       case "TransferredToGroup":
-        return failwith("Invalid state transition")
+        throw new Error("Invalid state transition")
       case "Active":
         switch (event.type) {
           case "CheckedIn":
-            return State.Active({ ...state.data, checkedInAt: event.data.at })
+            return { ...state, checkedInAt: event.data.at }
           case "Charged":
-            return State.Active({
-              ...state.data,
-              balance: state.data.balance + event.data.amount,
-              charges: [...state.data.charges, event.data.chargeId],
-            })
+            return {
+              ...state,
+              balance: state.balance + event.data.amount,
+              charges: [...state.charges, event.data.chargeId],
+            }
           case "Paid":
-            return State.Active({
-              ...state.data,
-              balance: state.data.balance - event.data.amount,
-              payments: [...state.data.payments, event.data.paymentId],
-            })
+            return {
+              ...state,
+              balance: state.balance - event.data.amount,
+              payments: [...state.payments, event.data.paymentId],
+            }
           case "CheckedOut":
-            return State.Closed()
+            return { type: "Closed" }
           case "TransferredToGroup":
-            return State.TransferredToGroup({
+            return {
+              type: "TransferredToGroup",
               at: event.data.at,
-              residualBalance: state.data.balance,
+              residualBalance: state.balance,
               groupId: event.data.groupId,
-            })
+            }
         }
     }
   }
@@ -134,69 +124,64 @@ export namespace Decide {
   export const checkIn =
     (at: OffsetDateTime): Decision =>
     (state) => {
-      if (state.type !== "Active") return failwith("Invalid checkin")
-      if (state.data.checkedInAt) return []
-      return [Events.Event.CheckedIn({ at })]
+      if (state.type !== "Active") throw new Error("Invalid checkin")
+      if (state.checkedInAt) return []
+      return [{ type: "CheckedIn", data: { at } }]
     }
 
   export const charge =
     (at: OffsetDateTime, chargeId: ChargeId, amount: number): Decision =>
     (state) => {
-      if (state.type !== "Active") return failwith("Invalid charge")
-      if (state.data.charges.includes(chargeId)) return []
-      return [Events.Event.Charged({ chargeId, at, amount })]
+      if (state.type !== "Active") throw new Error("Invalid charge")
+      if (state.charges.includes(chargeId)) return []
+      return [{ type: "Charged", data: { chargeId, at, amount } }]
     }
 
   export const payment =
     (at: OffsetDateTime, paymentId: PaymentId, amount: number): Decision =>
     (state) => {
-      if (state.type !== "Active") return failwith("Invalid payment")
-      if (state.data.payments.includes(paymentId)) return []
-      return [Events.Event.Paid({ paymentId, at, amount })]
+      if (state.type !== "Active") throw new Error("Invalid payment")
+      if (state.payments.includes(paymentId)) return []
+      return [{ type: "Paid", data: { paymentId, at, amount } }]
     }
 
-  export const CheckoutResult = variantModule({
-    Ok: {},
-    AlreadyCheckedOut: {},
-    BalanceOutstanding: data<{ balance: number }>(),
-  })
-  type CheckoutResult = VariantOf<typeof CheckoutResult>
+  type CheckoutResult =
+    | { type: "Ok" }
+    | { type: "AlreadyCheckedOut" }
+    | { type: "BalanceOutstanding"; balance: number }
+
   export const checkOut =
     (at: OffsetDateTime): DecisionResult<CheckoutResult> =>
     (state) => {
       switch (state.type) {
         case "Closed":
-          return [CheckoutResult.Ok(), []]
+          return [{ type: "Ok" }, []]
         case "TransferredToGroup":
-          return [CheckoutResult.AlreadyCheckedOut(), []]
+          return [{ type: "AlreadyCheckedOut" }, []]
         case "Active":
-          return state.data.balance === 0
-            ? [CheckoutResult.Ok(), [Events.Event.CheckedOut({ at })]]
-            : [CheckoutResult.BalanceOutstanding({ balance: state.data.balance }), []]
+          return state.balance === 0
+            ? [{ type: "Ok" }, [{ type: "CheckedOut", data: { at } }]]
+            : [{ type: "BalanceOutstanding", balance: state.balance }, []]
       }
     }
 
-  export const GroupCheckoutResult = variantModule({
-    Ok: fields<{ residualBalance: number }>(),
-    AlreadyCheckedOut: {},
-  })
-  type GroupCheckoutResult = VariantOf<typeof GroupCheckoutResult>
+  type GroupCheckoutResult = { type: "Ok"; residualBalance: number } | { type: "AlreadyCheckedOut" }
 
   export const groupCheckout =
     (at: OffsetDateTime, groupId: GroupCheckoutId): DecisionResult<GroupCheckoutResult> =>
     (state) => {
       switch (state.type) {
         case "Closed":
-          return [GroupCheckoutResult.AlreadyCheckedOut(), []]
+          return [{ type: "AlreadyCheckedOut" }, []]
         case "TransferredToGroup":
-          if (state.data.groupId === groupId) {
-            return [GroupCheckoutResult.Ok({ residualBalance: state.data.residualBalance }), []]
+          if (state.groupId === groupId) {
+            return [{ type: "Ok", residualBalance: state.residualBalance }, []]
           }
-          return [CheckoutResult.AlreadyCheckedOut(), []]
+          return [{ type: "AlreadyCheckedOut" }, []]
         case "Active":
           return [
-            GroupCheckoutResult.Ok({ residualBalance: state.data.balance }),
-            [Events.Event.TransferredToGroup({ at, groupId, residualBalance: state.data.balance })],
+            { type: "Ok", residualBalance: state.balance },
+            [{ type: "TransferredToGroup", data: { at, groupId, residualBalance: state.balance } }],
           ]
       }
     }

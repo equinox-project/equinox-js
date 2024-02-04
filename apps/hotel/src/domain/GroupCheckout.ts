@@ -1,8 +1,7 @@
 import { Codec, Decider, StreamId, StreamName } from "@equinox-js/core"
-import { GroupCheckoutId, GuestStayId, PaymentId, data } from "./Types.js"
+import { GroupCheckoutId, GuestStayId, PaymentId } from "./Types.js"
 import { z } from "zod"
 import { OffsetDateTime } from "@js-joda/core"
-import { VariantOf, fields, variantModule } from "variant"
 import { sumBy } from "./Utils.js"
 import { reduce } from "ramda"
 import * as Config from "../config/equinox.js"
@@ -46,14 +45,12 @@ export namespace Events {
   export type Paid = z.infer<typeof Paid>
   export type Confirmed = z.infer<typeof Confirmed>
 
-  export const Event = variantModule({
-    StaysSelected: data<StaysSelected>(),
-    StaysMerged: data<StaysMerged>(),
-    MergesFailed: data<MergesFailed>(),
-    Paid: data<Paid>(),
-    Confirmed: data<Confirmed>(),
-  })
-  export type Event = VariantOf<typeof Event>
+  export type Event =
+    | { type: "StaysSelected"; data: StaysSelected }
+    | { type: "StaysMerged"; data: StaysMerged }
+    | { type: "MergesFailed"; data: MergesFailed }
+    | { type: "Paid"; data: Paid }
+    | { type: "Confirmed"; data: Confirmed }
 
   export const codec = Codec.upcast<Event>(
     Codec.json(),
@@ -119,17 +116,15 @@ export namespace Fold {
 }
 
 export namespace Flow {
-  export const State = variantModule({
-    MergeStays: fields<{ stays: GuestStayId[] }>(),
-    Ready: fields<{ balance: number }>(),
-    Finished: {},
-  })
-  export type State = VariantOf<typeof State>
+  export type State =
+    | { type: "MergeStays"; stays: GuestStayId[] }
+    | { type: "Ready"; balance: number }
+    | { type: "Finished" }
 
   export const nextAction = (state: Fold.State): State => {
-    if (state.completed) return State.Finished()
-    if (state.pending.length > 0) return State.MergeStays({ stays: state.pending })
-    return State.Ready({ balance: state.balance })
+    if (state.completed) return { type: "Finished" }
+    if (state.pending.length > 0) return { type: "MergeStays", stays: state.pending }
+    return { type: "Ready", balance: state.balance }
   }
 
   export const decide =
@@ -153,15 +148,13 @@ export namespace Decide {
       for (const x of state.checkedOut) registered.add(x.stay)
       stays = stays.filter((x) => !registered.has(x))
       if (stays.length === 0) return []
-      return [Events.Event.StaysSelected({ stays, at })]
+      return [{ type: "StaysSelected", data: { stays, at } }]
     }
 
-  const ConfirmResult = variantModule({
-    Processing: {},
-    Ok: {},
-    BalanceOustanding: fields<{ balance: number }>(),
-  })
-  type ConfirmResult = VariantOf<typeof ConfirmResult>
+  type ConfirmResult =
+    | { type: "Processing" }
+    | { type: "Ok" }
+    | { type: "BalanceOustanding"; balance: number }
 
   export const confirm =
     (at: OffsetDateTime): DecisionResult<ConfirmResult> =>
@@ -169,12 +162,12 @@ export namespace Decide {
       const action = Flow.nextAction(state)
       switch (action.type) {
         case "Finished":
-          return [ConfirmResult.Ok(), []]
+          return [{ type: "Ok" }, []]
         case "Ready":
-          if (state.balance === 0) return [ConfirmResult.Ok(), [Events.Event.Confirmed({ at })]]
-          return [ConfirmResult.BalanceOustanding({ balance: state.balance }), []]
+          if (state.balance === 0) return [{ type: "Ok" }, [{ type: "Confirmed", data: { at } }]]
+          return [{ type: "BalanceOustanding", balance: state.balance }, []]
         case "MergeStays":
-          return [ConfirmResult.Processing(), []]
+          return [{ type: "Processing" }, []]
       }
     }
 
@@ -182,7 +175,7 @@ export namespace Decide {
     (paymentId: PaymentId, at: OffsetDateTime, amount: number): Decision =>
     (state) => {
       if (state.payments.includes(paymentId)) return []
-      return [Events.Event.Paid({ paymentId, at, amount })]
+      return [{ type: "Paid", data: { paymentId, at, amount } }]
     }
 }
 

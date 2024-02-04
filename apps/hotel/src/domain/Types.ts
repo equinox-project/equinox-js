@@ -11,7 +11,3 @@ export const ChargeId = Uuid.create<"ChargeId">()
 
 export type PaymentId = Uuid.Uuid<"PaymentId">
 export const PaymentId = Uuid.create<"PaymentId">()
-
-export const data =
-  <T>() =>
-  (data: T) => ({ data })

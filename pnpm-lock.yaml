@@ -205,9 +205,6 @@ importers:
       ramda:
         specifier: ^0.28.0
         version: 0.28.0
-      variant:
-        specifier: ^2.1.0
-        version: 2.1.0
       zod:
         specifier: ^3.20.2
         version: 3.20.2
@@ -14307,10 +14304,6 @@ packages:
 
   /value-equal@1.0.1:
     resolution: {integrity: sha512-NOJ6JZCAWr0zlxZt+xqCHNTEKOsrks2HQd4MqhP1qy4z1SkbEP467eNx6TgDKXMvUOb+OENfJCZwM+16n7fRfw==}
-    dev: false
-
-  /variant@2.1.0:
-    resolution: {integrity: sha512-kNpWOQGWoc9GjR9rPsBslR/ThbiX3kSic8rHOtAKkwf/Mn17jm59fpB5HpLSMw9zdI9CLYvmvcXu5tcsBqNibQ==}
     dev: false
 
   /vary@1.1.2:

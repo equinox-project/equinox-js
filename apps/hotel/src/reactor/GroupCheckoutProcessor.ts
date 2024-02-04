@@ -1,4 +1,3 @@
-import { match } from "variant"
 import { GroupCheckout, GuestStay } from "../domain/index.js"
 import { GroupCheckoutId, GuestStayId } from "../domain/Types.js"
 import { trace } from "@opentelemetry/api"
@@ -13,10 +12,12 @@ export class Service {
 
   private async attemptMerge(groupCheckoutId: GroupCheckoutId, stayId: GuestStayId) {
     const result = await this.guestStays.groupCheckout(stayId, groupCheckoutId)
-    return match(result, {
-      Ok: ({ residualBalance }) => [stayId, residualBalance] as const,
-      AlreadyCheckedOut: () => stayId,
-    })
+    switch (result.type) {
+      case "AlreadyCheckedOut":
+        return stayId
+      case "Ok":
+        return [stayId, result.residualBalance] as const
+    }
   }
 
   private async executeMergeStayAttempts(groupCheckoutId: GroupCheckoutId, stayIds: GuestStayId[]) {
@@ -39,14 +40,15 @@ export class Service {
     const [residuals, failed] = await this.executeMergeStayAttempts(groupCheckoutId, stayIds)
     const events: GroupCheckout.Events.Event[] = []
     if (residuals.length > 0) {
-      events.push(
-        GroupCheckout.Events.Event.StaysMerged({
+      events.push({
+        type: "StaysMerged",
+        data: {
           residuals: residuals.map(([stay, residual]) => ({ stay, residual })),
-        }),
-      )
+        },
+      })
     }
     if (failed.length > 0) {
-      events.push(GroupCheckout.Events.Event.MergesFailed({ stays: failed }))
+      events.push({ type: "MergesFailed", data: { stays: failed } })
     }
     const span = trace.getActiveSpan()
     span?.setAttributes({
