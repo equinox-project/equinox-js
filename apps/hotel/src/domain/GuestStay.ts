@@ -2,8 +2,8 @@ import { Codec, Decider, StreamId, StreamName } from "@equinox-js/core"
 import { ChargeId, GroupCheckoutId, GuestStayId, PaymentId } from "./Types.js"
 import { z } from "zod"
 import { OffsetDateTime } from "@js-joda/core"
-import { reduce } from "ramda"
 import * as Config from "../config/equinox.js"
+import { createFold } from "./Utils.js"
 
 export namespace Stream {
   export const category = "GuestStay"
@@ -76,42 +76,30 @@ export namespace Fold {
 
   export const initial: State = { type: "Active", balance: 0, charges: [], payments: [] }
 
-  function evolve(state: State, event: Events.Event): State {
-    switch (state.type) {
-      case "Closed":
-        throw new Error("Invalid state transition")
-      case "TransferredToGroup":
-        throw new Error("Invalid state transition")
-      case "Active":
-        switch (event.type) {
-          case "CheckedIn":
-            return { ...state, checkedInAt: event.data.at }
-          case "Charged":
-            return {
-              ...state,
-              balance: state.balance + event.data.amount,
-              charges: [...state.charges, event.data.chargeId],
-            }
-          case "Paid":
-            return {
-              ...state,
-              balance: state.balance - event.data.amount,
-              payments: [...state.payments, event.data.paymentId],
-            }
-          case "CheckedOut":
-            return { type: "Closed" }
-          case "TransferredToGroup":
-            return {
-              type: "TransferredToGroup",
-              at: event.data.at,
-              residualBalance: state.balance,
-              groupId: event.data.groupId,
-            }
-        }
-    }
-  }
-
-  export const fold = reduce(evolve)
+  export const fold = createFold<Events.Event, State>({
+    CheckedIn(state, { at }) {
+      if (state.type !== "Active") throw new Error("Invalid state transition")
+      state.checkedInAt = at
+    },
+    Charged(state, { chargeId, amount }) {
+      if (state.type !== "Active") throw new Error("Invalid state transition")
+      state.balance += amount
+      state.charges.push(chargeId)
+    },
+    Paid(state, { paymentId, amount }) {
+      if (state.type !== "Active") throw new Error("Invalid state transition")
+      state.balance -= amount
+      state.payments.push(paymentId)
+    },
+    CheckedOut(state) {
+      if (state.type !== "Active") throw new Error("Invalid state transition")
+      return { type: "Closed" }
+    },
+    TransferredToGroup(state, { at, groupId, residualBalance }) {
+      if (state.type !== "Active") throw new Error("Invalid state transition")
+      return { type: "TransferredToGroup", at, residualBalance, groupId }
+    },
+  })
 }
 
 export namespace Decide {

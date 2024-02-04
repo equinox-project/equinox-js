@@ -2,8 +2,7 @@ import { Codec, Decider, StreamId, StreamName } from "@equinox-js/core"
 import { GroupCheckoutId, GuestStayId, PaymentId } from "./Types.js"
 import { z } from "zod"
 import { OffsetDateTime } from "@js-joda/core"
-import { sumBy } from "./Utils.js"
-import { reduce } from "ramda"
+import { createFold, sumBy } from "./Utils.js"
 import * as Config from "../config/equinox.js"
 
 export namespace Stream {
@@ -82,37 +81,27 @@ export namespace Fold {
     completed: false,
   }
 
-  function removePending(xs: GuestStayId[], state: State) {
-    return { ...state, pending: state.pending.filter((id) => !xs.includes(id)) }
-  }
-
-  export function evolve(state: State, event: Events.Event): State {
-    switch (event.type) {
-      case "StaysSelected":
-        return { ...state, pending: state.pending.concat(event.data.stays) }
-      case "StaysMerged":
-        return {
-          ...removePending(
-            event.data.residuals.map((x) => x.stay),
-            state,
-          ),
-          checkedOut: state.checkedOut.concat(event.data.residuals),
-          balance: state.balance + sumBy(event.data.residuals, (x) => x.residual),
-        }
-      case "MergesFailed":
-        return { ...state, failed: state.failed.concat(event.data.stays) }
-      case "Paid":
-        return {
-          ...state,
-          balance: state.balance - event.data.amount,
-          payments: state.payments.concat([event.data.paymentId]),
-        }
-      case "Confirmed":
-        return { ...state, completed: true }
-    }
-  }
-
-  export const fold = reduce(evolve)
+  export const fold = createFold<Events.Event, State>({
+    StaysSelected(state, { stays }) {
+      state.pending.push(...stays)
+    },
+    StaysMerged(state, { residuals }) {
+      const stayIds = new Set(residuals.map((x) => x.stay))
+      state.pending = state.pending.filter((x) => !stayIds.has(x))
+      state.checkedOut.push(...residuals)
+      state.balance += sumBy(residuals, (x) => x.residual)
+    },
+    MergesFailed(state, { stays }) {
+      state.failed.push(...stays)
+    },
+    Paid(state, { paymentId, amount }) {
+      state.balance -= amount
+      state.payments.push(paymentId)
+    },
+    Confirmed(state) {
+      state.completed = true
+    },
+  })
 }
 
 export namespace Flow {

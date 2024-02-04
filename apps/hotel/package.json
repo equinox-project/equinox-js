@@ -34,6 +34,7 @@
     "express": "^4.18.2",
     "express-async-errors": "^3.1.1",
     "get-port": "^7.0.0",
+    "immer": "^10.0.3",
     "opentelemetry-exporter-console-pretty": "^1.0.1",
     "p-limit": "^4.0.0",
     "pg": "^8.0.0",
