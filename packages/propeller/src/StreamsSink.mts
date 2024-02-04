@@ -337,8 +337,12 @@ class ConcurrentDispatcher {
       // the span can be mutated during the computation, so we make a copy
       const events = span.slice()
 
-      // NOTE: this depends on the computation never throwing, otherwise we leak the semaphore
-      // In theory, a throw would result in an unhandledRejection crashing the process
+      // NOTE: We explcitly do not catch errors here because we want to crash
+      // the process if the handler throws. As such, it is up to the end-user
+      // to avoid throwing and instead handle exceptions in the handler itself.
+      // CAUTION: If the end-user has set up an unhandledRejection handler, it
+      // will keep the process alive and the dispatcher will have lost track of
+      // the semaphore, potentially causing it to stop processing.
       this.computation(stream, events).then((result) => {
         const nextIndex = StreamResult.toIndex(events, result ?? StreamResult.AllProcessed)
         this.batches.markStreamProgress(stream, nextIndex)
