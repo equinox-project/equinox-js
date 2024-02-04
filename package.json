@@ -14,6 +14,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "devDependencies": {
+    "@databases/pg-migrations": "^5.0.2",
     "@equinox-js/dynamo-store-cli": "workspace:*",
     "@equinox-js/explorer": "workspace:*",
     "@vitest/coverage-v8": "^1.0.4",

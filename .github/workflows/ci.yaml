@@ -60,25 +60,25 @@ jobs:
           PGPORT: '5432'
           PGUSER: postgres
           PGPASSWORD: postgres
-          MDB_VERSION: 1.3.0
         run: |
-          mkdir -p /tmp/mdb
-          curl -sL -o /tmp/message_db.tar.gz https://github.com/message-db/message-db/archive/refs/tags/v$MDB_VERSION.tar.gz
-          tar -xf /tmp/message_db.tar.gz --directory /tmp/mdb
-          (cd /tmp/mdb/message-db-$MDB_VERSION/database && ./install.sh)
+          createdb message_store
+          createdb equinox_example
+
+          npx pg-migrations apply \
+          --database postgresql://postgres@localhost:5432/message_store \
+          --directory ./packages/message-db/message-db/migrations
 
       - name: Set up example
         working-directory: ./apps/example
         env:
-          DBURL_ADMIN: postgresql://postgres:@localhost:5432/equinox_example
+          DBURL_ADMIN: postgresql://postgres@localhost:5432/equinox_example
         run: |
-          pnpm create-db
           pnpm migrate
 
       - name: Test
         env:
-          DBURL: postgresql://postgres:@localhost:5432/equinox_example
-          DBURL_RO: postgresql://postgres:@localhost:5432/equinox_example
+          DBURL: postgresql://equinox_example:@localhost:5432/equinox_example
+          DBURL_RO: postgresql://equinox_example:@localhost:5432/equinox_example
         run: pnpm dlx turbo test
 
       - name: Lint
