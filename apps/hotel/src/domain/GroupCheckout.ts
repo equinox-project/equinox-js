@@ -17,7 +17,7 @@ export namespace Events {
   export const OffsetDateTimeSchema = z.string().transform((s) => OffsetDateTime.parse(s))
   export const CheckoutResidual = z.object({
     stay: z.string().transform(GuestStayId.parse),
-    residual: z.number().int().gte(0),
+    residual: z.number(),
   })
   export const StaysSelected = z.object({
     stays: z.array(z.string().transform(GuestStayId.parse)),
@@ -32,7 +32,7 @@ export namespace Events {
   export const Paid = z.object({
     at: OffsetDateTimeSchema,
     paymentId: z.string().transform(PaymentId.parse),
-    amount: z.number().int().gte(0),
+    amount: z.number(),
   })
   export const Confirmed = z.object({
     at: OffsetDateTimeSchema,

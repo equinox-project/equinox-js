@@ -18,17 +18,17 @@ export namespace Events {
   const Charged = z.object({
     chargeId: z.string().transform(ChargeId.parse),
     at: OffsetDateTimeSchema,
-    amount: z.number().int().gte(0),
+    amount: z.number(),
   })
   const Paid = z.object({
     paymentId: z.string().transform(PaymentId.parse),
     at: OffsetDateTimeSchema,
-    amount: z.number().int().gte(0),
+    amount: z.number(),
   })
   const TransferredToGroup = z.object({
     groupId: z.string().transform(GroupCheckoutId.parse),
     at: OffsetDateTimeSchema,
-    residualBalance: z.number().int().gte(0),
+    residualBalance: z.number(),
   })
   const CheckedOut = z.object({ at: OffsetDateTimeSchema })
 
