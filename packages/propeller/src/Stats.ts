@@ -1,5 +1,6 @@
 import { trace } from "@opentelemetry/api"
 import { Batch } from "./Types.js"
+import EventEmitter from "events"
 
 const tracer = trace.getTracer("@equinox-js/propeller")
 
@@ -9,6 +10,7 @@ type Stat = {
   eventsRead: number
   isAtTail: boolean
   batchLastPosition: number
+  completedPosition: number
 }
 
 namespace Stat {
@@ -18,6 +20,7 @@ namespace Stat {
     eventsRead: 0,
     isAtTail: false,
     batchLastPosition: -1,
+    completedPosition: -1,
   })
 
   export const reset = (stat: Stat) => {
@@ -27,7 +30,7 @@ namespace Stat {
     return stat
   }
 }
-export class Stats {
+export class Stats extends EventEmitter {
   stats = new Map<string, Stat>()
 
   private getStat(key: string): Stat {
@@ -46,6 +49,18 @@ export class Stats {
     stat.pagesRead++
     stat.eventsRead += batch.items.length
     if (batch.items.length === 0) stat.pagesEmpty++
+    this.emit("ingested", {
+      trancheId,
+      checkpoint: batch.checkpoint,
+      isTail: batch.isTail,
+      events: batch.items.length,
+    })
+  }
+
+  recordCompletion(trancheId: string, checkpoint: bigint) {
+    const stat = this.getStat(trancheId)
+    stat.completedPosition = Number(checkpoint)
+    this.emit("completed", { trancheId, checkpoint })
   }
 
   dump() {
@@ -59,6 +74,7 @@ export class Stats {
             "metrics.eqx.events_read": stat.eventsRead,
             "metrics.eqx.at_tail": stat.isAtTail,
             "metrics.eqx.batch_checkpoint": stat.batchLastPosition,
+            "metrics.eqx.processed_checkpoint": stat.completedPosition,
           },
         })
         .end()

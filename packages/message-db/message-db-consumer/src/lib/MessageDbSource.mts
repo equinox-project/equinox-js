@@ -56,6 +56,8 @@ namespace Impl {
 
 export class MessageDbSource {
   private inner: TailingFeedSource
+  stats: TailingFeedSource["stats"]
+
   constructor(
     client: MessageDbCategoryReader,
     batchSize: number,
@@ -79,6 +81,7 @@ export class MessageDbSource {
       sink,
       crawl,
     })
+    this.stats = this.inner.stats
   }
 
   async start(signal: AbortSignal) {

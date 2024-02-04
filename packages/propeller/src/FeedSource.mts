@@ -2,6 +2,7 @@ import { Batch, Sink } from "./Types.js"
 import { ICheckpoints } from "./Checkpoints.js"
 import { Stats } from "./Stats.js"
 import { Internal } from "@equinox-js/core"
+import EventEmitter from "events"
 
 export class CheckpointWriter {
   constructor(
@@ -79,7 +80,10 @@ export class TailingFeedSource {
               items: batch.items,
               checkpoint: batch.checkpoint,
               isTail: batch.isTail,
-              onComplete: () => onBatchComplete(batch.checkpoint),
+              onComplete: () => {
+                this.stats.recordCompletion(trancheId, batch.checkpoint)
+                onBatchComplete(batch.checkpoint)
+              },
             },
             signal,
           )

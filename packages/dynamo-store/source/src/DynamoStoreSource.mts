@@ -291,6 +291,8 @@ export class DynamoStoreSource {
   private inner: TailingFeedSource
   private client: DynamoStoreSourceClient
 
+  stats: TailingFeedSource['stats']
+
   constructor(
     index: AppendsIndex.Reader,
     epochs: AppendsEpoch.Reader.Service,
@@ -322,6 +324,7 @@ export class DynamoStoreSource {
             Impl.readTailPositionForTranche(index, epochs, AppendsPartitionId.parse(tranche))
         : undefined,
     })
+    this.stats = this.inner.stats
   }
 
   async start(signal: AbortSignal) {
