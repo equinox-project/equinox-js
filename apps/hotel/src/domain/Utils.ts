@@ -30,3 +30,14 @@ export function createFold<Event extends DomainEvent, State>(
     })
   }
 }
+
+export function upcastDate(x: any): any {
+  if (!x) return
+  if (x.at) x.at = new Date(x.at)
+  return x
+}
+
+export function upcast<T>(event: DomainEvent): T {
+  return { type: event.type, data: upcastDate(event.data) } as any
+}
+

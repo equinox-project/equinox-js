@@ -1,8 +1,7 @@
 import { Codec, Decider, StreamId, StreamName } from "@equinox-js/core"
 import { GroupCheckoutId, GuestStayId, PaymentId } from "./Types.js"
-import { z } from "zod"
 import { OffsetDateTime } from "@js-joda/core"
-import { createFold, sumBy } from "./Utils.js"
+import { createFold, sumBy, upcast } from "./Utils.js"
 import * as Config from "../config/equinox.js"
 
 export namespace Stream {
@@ -13,36 +12,12 @@ export namespace Stream {
 }
 
 export namespace Events {
-  export const OffsetDateTimeSchema = z.string().transform((s) => OffsetDateTime.parse(s))
-  export const CheckoutResidual = z.object({
-    stay: z.string().transform(GuestStayId.parse),
-    residual: z.number(),
-  })
-  export const StaysSelected = z.object({
-    stays: z.array(z.string().transform(GuestStayId.parse)),
-    at: OffsetDateTimeSchema,
-  })
-  export const StaysMerged = z.object({
-    residuals: z.array(CheckoutResidual),
-  })
-  export const MergesFailed = z.object({
-    stays: z.array(z.string().transform(GuestStayId.parse)),
-  })
-  export const Paid = z.object({
-    at: OffsetDateTimeSchema,
-    paymentId: z.string().transform(PaymentId.parse),
-    amount: z.number(),
-  })
-  export const Confirmed = z.object({
-    at: OffsetDateTimeSchema,
-  })
-
-  export type CheckoutResidual = z.infer<typeof CheckoutResidual>
-  export type StaysSelected = z.infer<typeof StaysSelected>
-  export type StaysMerged = z.infer<typeof StaysMerged>
-  export type MergesFailed = z.infer<typeof MergesFailed>
-  export type Paid = z.infer<typeof Paid>
-  export type Confirmed = z.infer<typeof Confirmed>
+  export type CheckoutResidual = { stay: GuestStayId; residual: number }
+  type StaysSelected = { stays: GuestStayId[]; at: OffsetDateTime }
+  type StaysMerged = { residuals: CheckoutResidual[] }
+  type MergesFailed = { stays: GuestStayId[] }
+  type Paid = { paymentId: PaymentId; at: OffsetDateTime; amount: number }
+  type Confirmed = { at: OffsetDateTime }
 
   export type Event =
     | { type: "StaysSelected"; data: StaysSelected }
@@ -51,16 +26,13 @@ export namespace Events {
     | { type: "Paid"; data: Paid }
     | { type: "Confirmed"; data: Confirmed }
 
-  export const codec = Codec.upcast<Event>(
-    Codec.json(),
-    Codec.Upcast.body({
-      StaysSelected: StaysSelected.parse,
-      StaysMerged: StaysMerged.parse,
-      MergesFailed: MergesFailed.parse,
-      Paid: Paid.parse,
-      Confirmed: Confirmed.parse,
-    }),
-  )
+  export const StaysSelected = (data: StaysSelected): Event => ({ type: "StaysSelected", data })
+  export const StaysMerged = (data: StaysMerged): Event => ({ type: "StaysMerged", data })
+  export const MergesFailed = (data: MergesFailed): Event => ({ type: "MergesFailed", data })
+  export const Paid = (data: Paid): Event => ({ type: "Paid", data })
+  export const Confirmed = (data: Confirmed): Event => ({ type: "Confirmed", data })
+
+  export const codec = Codec.upcast<Event>(Codec.json(), upcast)
 }
 
 export namespace Fold {
@@ -137,7 +109,7 @@ export namespace Decide {
       for (const x of state.checkedOut) registered.add(x.stay)
       stays = stays.filter((x) => !registered.has(x))
       if (stays.length === 0) return []
-      return [{ type: "StaysSelected", data: { stays, at } }]
+      return [Events.StaysSelected({ stays, at })]
     }
 
   type ConfirmResult =
@@ -153,7 +125,7 @@ export namespace Decide {
         case "Finished":
           return [{ type: "Ok" }, []]
         case "Ready":
-          if (state.balance === 0) return [{ type: "Ok" }, [{ type: "Confirmed", data: { at } }]]
+          if (state.balance === 0) return [{ type: "Ok" }, [Events.Confirmed({ at })]]
           return [{ type: "BalanceOustanding", balance: state.balance }, []]
         case "MergeStays":
           return [{ type: "Processing" }, []]
@@ -164,7 +136,7 @@ export namespace Decide {
     (paymentId: PaymentId, at: OffsetDateTime, amount: number): Decision =>
     (state) => {
       if (state.payments.includes(paymentId)) return []
-      return [{ type: "Paid", data: { paymentId, at, amount } }]
+      return [Events.Paid({ paymentId, at, amount })]
     }
 }
 

@@ -208,13 +208,10 @@ importers:
       ramda:
         specifier: ^0.28.0
         version: 0.28.0
-      zod:
-        specifier: ^3.20.2
-        version: 3.20.2
     devDependencies:
       '@databases/pg-migrations':
         specifier: ^5.0.2
-        version: 5.0.2(typescript@5.3.3)
+        version: 5.0.2
       '@types/express':
         specifier: ^4.17.17
         version: 4.17.17
@@ -229,10 +226,10 @@ importers:
         version: 0.28.21
       tsup:
         specifier: ^8.0.1
-        version: 8.0.1(postcss@8.4.31)(ts-node@10.9.1)(typescript@5.3.3)
+        version: 8.0.1
       vitest:
         specifier: ^1.0.4
-        version: 1.0.4(@types/node@20.10.5)(supports-color@9.4.0)
+        version: 1.0.4(@types/node@20.10.5)
 
   docs:
     dependencies:
@@ -3356,6 +3353,15 @@ packages:
       semver: 7.5.4
     dev: true
 
+  /@databases/pg-config@3.2.0:
+    resolution: {integrity: sha512-hoPAK/F8gLcLgEJ8mLSnNvRlKqShwx5+GglDHIIfQhKF+Zz6M6QceiOefckS4WSjA0x2HClPvpercnXp9i24ag==}
+    dependencies:
+      cosmiconfig: 8.3.6
+      funtypes: 4.2.0
+    transitivePeerDependencies:
+      - typescript
+    dev: true
+
   /@databases/pg-config@3.2.0(typescript@5.3.3):
     resolution: {integrity: sha512-hoPAK/F8gLcLgEJ8mLSnNvRlKqShwx5+GglDHIIfQhKF+Zz6M6QceiOefckS4WSjA0x2HClPvpercnXp9i24ag==}
     dependencies:
@@ -3377,6 +3383,25 @@ packages:
     resolution: {integrity: sha512-Yz3exbptZwOn4ZD/MSwY6z++XVyOFsMh5DERvSw3awRwJFnfdaqdeiIxxX0MVjM6KPihF0xxp8lPO7vTc5ydpw==}
     dev: true
 
+  /@databases/pg-migrations@5.0.2:
+    resolution: {integrity: sha512-l3mRxMTmmY7MGBhEJgjzVKxChwNqNLPtiLBOO6V6L4INFXO3Vuiundj3WAZl6qlYmE8NwPvQLr+e9aMWq0rnnA==}
+    hasBin: true
+    dependencies:
+      '@databases/migrations-base': 3.0.1
+      '@databases/pg': 5.5.0
+      '@databases/pg-config': 3.2.0
+      assert-never: 1.2.1
+      chalk: 4.1.2
+      interrogator: 2.0.0
+      is-interactive: 1.0.0
+      parameter-reducers: 2.1.0
+      semver: 7.5.4
+      sucrase: 3.34.0
+    transitivePeerDependencies:
+      - pg-native
+      - typescript
+    dev: true
+
   /@databases/pg-migrations@5.0.2(typescript@5.3.3):
     resolution: {integrity: sha512-l3mRxMTmmY7MGBhEJgjzVKxChwNqNLPtiLBOO6V6L4INFXO3Vuiundj3WAZl6qlYmE8NwPvQLr+e9aMWq0rnnA==}
     hasBin: true
@@ -3391,6 +3416,27 @@ packages:
       parameter-reducers: 2.1.0
       semver: 7.5.4
       sucrase: 3.34.0
+    transitivePeerDependencies:
+      - pg-native
+      - typescript
+    dev: true
+
+  /@databases/pg@5.5.0:
+    resolution: {integrity: sha512-WIojK9AYIlNi5YRfc5YUOow3PQ82ClmwT9HG3nEsKLUERYieoVmHMYDQLS0ry6FjgJx+2yFs7LCw4kZpWu1TBw==}
+    dependencies:
+      '@babel/code-frame': 7.18.6
+      '@databases/escape-identifier': 1.0.3
+      '@databases/pg-config': 3.2.0
+      '@databases/pg-connection-string': 1.0.0
+      '@databases/pg-data-type-id': 3.0.0
+      '@databases/pg-errors': 1.0.0
+      '@databases/push-to-async-iterable': 3.0.0
+      '@databases/shared': 3.1.0
+      '@databases/split-sql-query': 1.0.4(@databases/sql@3.3.0)
+      '@databases/sql': 3.3.0
+      assert-never: 1.2.1
+      pg: 8.11.3
+      pg-cursor: 2.10.3(pg@8.11.3)
     transitivePeerDependencies:
       - pg-native
       - typescript
@@ -8015,6 +8061,21 @@ packages:
       yaml: 1.10.2
     dev: false
 
+  /cosmiconfig@8.3.6:
+    resolution: {integrity: sha512-kcZ6+W5QzcJ3P1Mt+83OUv/oHFqZHIx8DuxG6eZ5RGMERoLqp4BuGjhHLYGK+Kf5XVkQvqBSmAy/nGWN3qDgEA==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      typescript: '>=4.9.5'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+    dependencies:
+      import-fresh: 3.3.0
+      js-yaml: 4.1.0
+      parse-json: 5.2.0
+      path-type: 4.0.0
+    dev: true
+
   /cosmiconfig@8.3.6(typescript@5.3.3):
     resolution: {integrity: sha512-kcZ6+W5QzcJ3P1Mt+83OUv/oHFqZHIx8DuxG6eZ5RGMERoLqp4BuGjhHLYGK+Kf5XVkQvqBSmAy/nGWN3qDgEA==}
     engines: {node: '>=14'}
@@ -8504,6 +8565,17 @@ packages:
     dependencies:
       ms: 2.0.0
     dev: false
+
+  /debug@4.3.4:
+    resolution: {integrity: sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ==}
+    engines: {node: '>=6.0'}
+    peerDependencies:
+      supports-color: '*'
+    peerDependenciesMeta:
+      supports-color:
+        optional: true
+    dependencies:
+      ms: 2.1.2
 
   /debug@4.3.4(supports-color@9.4.0):
     resolution: {integrity: sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ==}
@@ -11761,6 +11833,22 @@ packages:
       yaml: 2.3.2
     dev: true
 
+  /postcss-load-config@4.0.2:
+    resolution: {integrity: sha512-bSVhyJGL00wMVoPUzAVAnbEoWyqRxkjv64tUl427SKnPrENtq6hJwUojroMz2VB+Q1edmi4IfrAPpami5VVgMQ==}
+    engines: {node: '>= 14'}
+    peerDependencies:
+      postcss: '>=8.0.9'
+      ts-node: '>=9.0.0'
+    peerDependenciesMeta:
+      postcss:
+        optional: true
+      ts-node:
+        optional: true
+    dependencies:
+      lilconfig: 3.0.0
+      yaml: 2.3.4
+    dev: true
+
   /postcss-load-config@4.0.2(postcss@8.4.31)(ts-node@10.9.1):
     resolution: {integrity: sha512-bSVhyJGL00wMVoPUzAVAnbEoWyqRxkjv64tUl427SKnPrENtq6hJwUojroMz2VB+Q1edmi4IfrAPpami5VVgMQ==}
     engines: {node: '>= 14'}
@@ -12741,7 +12829,7 @@ packages:
     resolution: {integrity: sha512-3TLx5TGyAY6AOqLBoXmHkNql0HIf2RGbuMgCDT2WO/uGVAPJs6h7Kl+bN6TIZGd9bWhWPwnDnTHGtW8Iu77sdw==}
     engines: {node: '>=8.6.0'}
     dependencies:
-      debug: 4.3.4(supports-color@9.4.0)
+      debug: 4.3.4
       module-details-from-path: 1.0.3
       resolve: 1.22.1
     transitivePeerDependencies:
@@ -13728,6 +13816,44 @@ packages:
   /tslib@2.6.2:
     resolution: {integrity: sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==}
 
+  /tsup@8.0.1:
+    resolution: {integrity: sha512-hvW7gUSG96j53ZTSlT4j/KL0q1Q2l6TqGBFc6/mu/L46IoNWqLLUzLRLP1R8Q7xrJTmkDxxDoojV5uCVs1sVOg==}
+    engines: {node: '>=18'}
+    hasBin: true
+    peerDependencies:
+      '@microsoft/api-extractor': ^7.36.0
+      '@swc/core': ^1
+      postcss: ^8.4.12
+      typescript: '>=4.5.0'
+    peerDependenciesMeta:
+      '@microsoft/api-extractor':
+        optional: true
+      '@swc/core':
+        optional: true
+      postcss:
+        optional: true
+      typescript:
+        optional: true
+    dependencies:
+      bundle-require: 4.0.2(esbuild@0.19.9)
+      cac: 6.7.14
+      chokidar: 3.5.3
+      debug: 4.3.4
+      esbuild: 0.19.9
+      execa: 5.1.1
+      globby: 11.1.0
+      joycon: 3.1.1
+      postcss-load-config: 4.0.2
+      resolve-from: 5.0.0
+      rollup: 4.9.1
+      source-map: 0.8.0-beta.0
+      sucrase: 3.34.0
+      tree-kill: 1.2.2
+    transitivePeerDependencies:
+      - supports-color
+      - ts-node
+    dev: true
+
   /tsup@8.0.1(postcss@8.4.31)(ts-node@10.9.1)(typescript@5.3.3):
     resolution: {integrity: sha512-hvW7gUSG96j53ZTSlT4j/KL0q1Q2l6TqGBFc6/mu/L46IoNWqLLUzLRLP1R8Q7xrJTmkDxxDoojV5uCVs1sVOg==}
     engines: {node: '>=18'}
@@ -14209,6 +14335,27 @@ packages:
       vfile-message: 2.0.4
     dev: false
 
+  /vite-node@1.0.4(@types/node@20.10.5):
+    resolution: {integrity: sha512-9xQQtHdsz5Qn8hqbV7UKqkm8YkJhzT/zr41Dmt5N7AlD8hJXw/Z7y0QiD5I8lnTthV9Rvcvi0QW7PI0Fq83ZPg==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+    hasBin: true
+    dependencies:
+      cac: 6.7.14
+      debug: 4.3.4
+      pathe: 1.1.1
+      picocolors: 1.0.0
+      vite: 5.0.10(@types/node@20.10.5)
+    transitivePeerDependencies:
+      - '@types/node'
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+    dev: true
+
   /vite-node@1.0.4(@types/node@20.10.5)(supports-color@9.4.0):
     resolution: {integrity: sha512-9xQQtHdsz5Qn8hqbV7UKqkm8YkJhzT/zr41Dmt5N7AlD8hJXw/Z7y0QiD5I8lnTthV9Rvcvi0QW7PI0Fq83ZPg==}
     engines: {node: ^18.0.0 || >=20.0.0}
@@ -14300,6 +14447,63 @@ packages:
       rollup: 4.6.0
     optionalDependencies:
       fsevents: 2.3.3
+    dev: true
+
+  /vitest@1.0.4(@types/node@20.10.5):
+    resolution: {integrity: sha512-s1GQHp/UOeWEo4+aXDOeFBJwFzL6mjycbQwwKWX2QcYfh/7tIerS59hWQ20mxzupTJluA2SdwiBuWwQHH67ckg==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+    hasBin: true
+    peerDependencies:
+      '@edge-runtime/vm': '*'
+      '@types/node': ^18.0.0 || >=20.0.0
+      '@vitest/browser': ^1.0.0
+      '@vitest/ui': ^1.0.0
+      happy-dom: '*'
+      jsdom: '*'
+    peerDependenciesMeta:
+      '@edge-runtime/vm':
+        optional: true
+      '@types/node':
+        optional: true
+      '@vitest/browser':
+        optional: true
+      '@vitest/ui':
+        optional: true
+      happy-dom:
+        optional: true
+      jsdom:
+        optional: true
+    dependencies:
+      '@types/node': 20.10.5
+      '@vitest/expect': 1.0.4
+      '@vitest/runner': 1.0.4
+      '@vitest/snapshot': 1.0.4
+      '@vitest/spy': 1.0.4
+      '@vitest/utils': 1.0.4
+      acorn-walk: 8.3.1
+      cac: 6.7.14
+      chai: 4.3.10
+      debug: 4.3.4
+      execa: 8.0.1
+      local-pkg: 0.5.0
+      magic-string: 0.30.5
+      pathe: 1.1.1
+      picocolors: 1.0.0
+      std-env: 3.6.0
+      strip-literal: 1.3.0
+      tinybench: 2.5.1
+      tinypool: 0.8.1
+      vite: 5.0.10(@types/node@20.10.5)
+      vite-node: 1.0.4(@types/node@20.10.5)
+      why-is-node-running: 2.2.2
+    transitivePeerDependencies:
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
     dev: true
 
   /vitest@1.0.4(@types/node@20.10.5)(supports-color@9.4.0):

@@ -1,9 +1,8 @@
 import { Codec, Decider, StreamId, StreamName } from "@equinox-js/core"
 import { ChargeId, GroupCheckoutId, GuestStayId, PaymentId } from "./Types.js"
-import { z } from "zod"
 import { OffsetDateTime } from "@js-joda/core"
 import * as Config from "../config/equinox.js"
-import { createFold } from "./Utils.js"
+import { createFold, upcast } from "./Utils.js"
 
 export namespace Stream {
   export const category = "GuestStay"
@@ -13,30 +12,15 @@ export namespace Stream {
 }
 
 export namespace Events {
-  const OffsetDateTimeSchema = z.string().transform((s) => OffsetDateTime.parse(s))
-  const CheckedIn = z.object({ at: OffsetDateTimeSchema })
-  const Charged = z.object({
-    chargeId: z.string().transform(ChargeId.parse),
-    at: OffsetDateTimeSchema,
-    amount: z.number(),
-  })
-  const Paid = z.object({
-    paymentId: z.string().transform(PaymentId.parse),
-    at: OffsetDateTimeSchema,
-    amount: z.number(),
-  })
-  const TransferredToGroup = z.object({
-    groupId: z.string().transform(GroupCheckoutId.parse),
-    at: OffsetDateTimeSchema,
-    residualBalance: z.number(),
-  })
-  const CheckedOut = z.object({ at: OffsetDateTimeSchema })
-
-  export type CheckedIn = z.infer<typeof CheckedIn>
-  export type Charged = z.infer<typeof Charged>
-  export type Paid = z.infer<typeof Paid>
-  export type TransferredToGroup = z.infer<typeof TransferredToGroup>
-  export type CheckedOut = z.infer<typeof CheckedOut>
+  export type CheckedIn = { at: OffsetDateTime }
+  export type Charged = { chargeId: ChargeId; at: OffsetDateTime; amount: number }
+  export type Paid = { paymentId: PaymentId; at: OffsetDateTime; amount: number }
+  export type TransferredToGroup = {
+    groupId: GroupCheckoutId
+    at: OffsetDateTime
+    residualBalance: number
+  }
+  export type CheckedOut = { at: OffsetDateTime }
 
   export type Event =
     | { type: "CheckedIn"; data: CheckedIn }
@@ -45,16 +29,16 @@ export namespace Events {
     | { type: "CheckedOut"; data: CheckedOut }
     | { type: "TransferredToGroup"; data: TransferredToGroup }
 
-  export const codec = Codec.upcast<Event>(
-    Codec.json(),
-    Codec.Upcast.body({
-      CheckedIn: CheckedIn.parse,
-      Charged: Charged.parse,
-      Paid: Paid.parse,
-      CheckedOut: CheckedOut.parse,
-      TransferredToGroup: TransferredToGroup.parse,
-    }),
-  )
+  export const CheckedIn = (data: CheckedIn): Event => ({ type: "CheckedIn", data })
+  export const Charged = (data: Charged): Event => ({ type: "Charged", data })
+  export const Paid = (data: Paid): Event => ({ type: "Paid", data })
+  export const CheckedOut = (data: CheckedOut): Event => ({ type: "CheckedOut", data })
+  export const TransferredToGroup = (data: TransferredToGroup): Event => ({
+    type: "TransferredToGroup",
+    data,
+  })
+
+  export const codec = Codec.upcast<Event>(Codec.json(), upcast)
 }
 
 export namespace Fold {
@@ -114,7 +98,7 @@ export namespace Decide {
     (state) => {
       if (state.type !== "Active") throw new Error("Invalid checkin")
       if (state.checkedInAt) return []
-      return [{ type: "CheckedIn", data: { at } }]
+      return [Events.CheckedIn({ at })]
     }
 
   export const charge =
@@ -122,7 +106,7 @@ export namespace Decide {
     (state) => {
       if (state.type !== "Active") throw new Error("Invalid charge")
       if (state.charges.includes(chargeId)) return []
-      return [{ type: "Charged", data: { chargeId, at, amount } }]
+      return [Events.Charged({ chargeId, at, amount })]
     }
 
   export const payment =
@@ -130,7 +114,7 @@ export namespace Decide {
     (state) => {
       if (state.type !== "Active") throw new Error("Invalid payment")
       if (state.payments.includes(paymentId)) return []
-      return [{ type: "Paid", data: { paymentId, at, amount } }]
+      return [Events.Paid({ paymentId, at, amount })]
     }
 
   type CheckoutResult =
@@ -148,7 +132,7 @@ export namespace Decide {
           return [{ type: "AlreadyCheckedOut" }, []]
         case "Active":
           return state.balance === 0
-            ? [{ type: "Ok" }, [{ type: "CheckedOut", data: { at } }]]
+            ? [{ type: "Ok" }, [Events.CheckedOut({ at })]]
             : [{ type: "BalanceOutstanding", balance: state.balance }, []]
       }
     }
@@ -169,7 +153,7 @@ export namespace Decide {
         case "Active":
           return [
             { type: "Ok", residualBalance: state.balance },
-            [{ type: "TransferredToGroup", data: { at, groupId, residualBalance: state.balance } }],
+            [Events.TransferredToGroup({ at, groupId, residualBalance: state.balance })],
           ]
       }
     }
