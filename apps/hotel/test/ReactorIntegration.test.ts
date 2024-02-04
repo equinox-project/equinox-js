@@ -1,4 +1,4 @@
-import { describe, test, expect } from "vitest"
+import { describe, test } from "vitest"
 import { Config } from "../src/config/equinox.js"
 import { GroupCheckout, GuestStay } from "../src/domain/index.js"
 import { createSink } from "../src/reactor/Handler.js"
@@ -7,6 +7,8 @@ import { randomUUID } from "crypto"
 import { GroupCheckoutId, PaymentId } from "../src/domain/Types.js"
 import { randomStays } from "./Utils.js"
 import EventEmitter from "events"
+import { TailingFeedSource } from "@equinox-js/propeller"
+import { setTimeout } from "timers/promises"
 
 function waitForEvent(emitter: EventEmitter, event: string, pred: (...args: any[]) => boolean) {
   return new Promise((resolve) => {
@@ -20,7 +22,11 @@ function waitForEvent(emitter: EventEmitter, event: string, pred: (...args: any[
   })
 }
 
-async function runScenario(config: Config, payBefore: boolean) {
+async function runScenario(
+  config: Config,
+  payBefore: boolean,
+  wait: (stats: TailingFeedSource["stats"]) => Promise<void>,
+) {
   const staysService = GuestStay.Service.create(config)
   const checkoutService = GroupCheckout.Service.create(config)
   const sink = createSink(config)
@@ -42,13 +48,7 @@ async function runScenario(config: Config, payBefore: boolean) {
   if (payBefore) await checkoutService.pay(groupCheckoutId, PaymentId.create(), charged)
   const stayIds = stays.map((s) => s.stayId)
   await checkoutService.merge(groupCheckoutId, stayIds)
-  const {
-    rows: [{ checkpoint }],
-  } = await leaderPool().query(
-    `select max(global_position) as checkpoint from messages where category(stream_name) = $1`,
-    [GroupCheckout.Stream.category],
-  )
-  await waitForEvent(source.stats, "completed", (x) => x.checkpoint >= checkpoint)
+  await wait(source.stats)
   const result = await checkoutService.confirm(groupCheckoutId)
   switch (result.type) {
     case "Ok":
@@ -72,14 +72,26 @@ async function runScenario(config: Config, payBefore: boolean) {
   ctrl.abort()
 }
 
+// TODO: implement a MemoryStoreSource
 describe.skip("Memory")
-describe("Dynamo", () => {
+// TODO: implement in a CI friendly way
+describe.skip("Dynamo", () => {
   const config = createConfig("dynamo")
-  test("Pay before", () => runScenario(config, true))
-  test("Pay after", () => runScenario(config, false))
+  const wait = () => setTimeout(10000)
+  test("Pay before", () => runScenario(config, true, wait))
+  test("Pay after", () => runScenario(config, false, wait))
 })
 describe("MessageDB", () => {
   const config = createConfig("message-db")
-  test("Pay before", () => runScenario(config, true))
-  test("Pay after", () => runScenario(config, false))
+  const wait = async (stats: TailingFeedSource["stats"]) => {
+    const {
+      rows: [{ checkpoint }],
+    } = await leaderPool().query(
+      `select max(global_position) as checkpoint from messages where category(stream_name) = $1`,
+      [GroupCheckout.Stream.category],
+    )
+    await waitForEvent(stats, "completed", (x) => x.checkpoint >= checkpoint)
+  }
+  test("Pay before", () => runScenario(config, true, wait))
+  test("Pay after", () => runScenario(config, false, wait))
 })
