@@ -146,10 +146,8 @@ export namespace Decide {
         case "Closed":
           return [{ type: "AlreadyCheckedOut" }, []]
         case "TransferredToGroup":
-          if (state.groupId === groupId) {
-            return [{ type: "Ok", residualBalance: state.residualBalance }, []]
-          }
-          return [{ type: "AlreadyCheckedOut" }, []]
+          if (state.groupId !== groupId) return [{ type: "AlreadyCheckedOut" }, []]
+          return [{ type: "Ok", residualBalance: state.residualBalance }, []]
         case "Active":
           return [
             { type: "Ok", residualBalance: state.balance },
