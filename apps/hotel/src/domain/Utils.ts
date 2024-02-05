@@ -1,4 +1,4 @@
-import { Draft, produce, createDraft, finishDraft, enablePatches } from "immer"
+import { Draft, createDraft, enableMapSet, finishDraft } from "immer"
 
 export function sumBy<T>(arr: T[], f: (t: T) => number): number {
   return arr.reduce((acc, t) => acc + f(t), 0)
@@ -13,6 +13,7 @@ type ReducerMapping<Event extends DomainEvent, State> = {
   ) => State | void
 }
 
+enableMapSet()
 export function createFold<Event extends DomainEvent, State>(
   mapping: ReducerMapping<Event, State>,
 ) {

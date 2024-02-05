@@ -37,16 +37,16 @@ export namespace Events {
 
 export namespace Fold {
   export type State = {
-    pending: GuestStayId[]
-    checkedOut: Events.CheckoutResidual[]
+    pending: Set<GuestStayId>
+    checkedOut: Map<GuestStayId, number>
     failed: GuestStayId[]
     balance: number
     payments: PaymentId[]
     completed: boolean
   }
   export const initial: State = {
-    pending: [],
-    checkedOut: [],
+    pending: new Set(),
+    checkedOut: new Map(),
     failed: [],
     balance: 0,
     payments: [],
@@ -55,12 +55,11 @@ export namespace Fold {
 
   export const fold = createFold<Events.Event, State>({
     StaysSelected(state, { stays }) {
-      state.pending.push(...stays)
+      for (const id of stays) state.pending.add(id)
     },
     StaysMerged(state, { residuals }) {
-      const stayIds = new Set(residuals.map((x) => x.stay))
-      state.pending = state.pending.filter((x) => !stayIds.has(x))
-      state.checkedOut.push(...residuals)
+      for (const { stay } of residuals) state.pending.delete(stay)
+      for (const x of residuals) state.checkedOut.set(x.stay, x.residual)
       state.balance += sumBy(residuals, (x) => x.residual)
     },
     MergesFailed(state, { stays }) {
@@ -84,7 +83,7 @@ export namespace Flow {
 
   export const nextAction = (state: Fold.State): State => {
     if (state.completed) return { type: "Finished" }
-    if (state.pending.length > 0) return { type: "MergeStays", stays: state.pending }
+    if (state.pending.size > 0) return { type: "MergeStays", stays: Array.from(state.pending) }
     return { type: "Ready", balance: state.balance }
   }
 
@@ -106,7 +105,7 @@ export namespace Decide {
       const registered = new Set<GuestStayId>()
       for (const id of state.pending) registered.add(id)
       for (const id of state.failed) registered.add(id)
-      for (const x of state.checkedOut) registered.add(x.stay)
+      for (const id of state.checkedOut.keys()) registered.add(id)
       stays = stays.filter((x) => !registered.has(x))
       if (stays.length === 0) return []
       return [Events.StaysSelected({ stays, at })]
@@ -173,7 +172,7 @@ export class Service {
   readResult(id: GroupCheckoutId) {
     const decider = this.resolve(id)
     return decider.query((s) => ({
-      ok: s.checkedOut.length,
+      ok: s.checkedOut.size,
       failed: s.failed.length,
     }))
   }

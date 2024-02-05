@@ -63,7 +63,7 @@ export namespace Dynamo {
   import Category = DynamoDB.DynamoStoreCategory
   import Context = DynamoDB.DynamoStoreContext
   type Config = { context: Context; cache: ICache }
-type RollingStateFold<E, S> = Fold<E, S> & {
+  type RollingStateFold<E, S> = Fold<E, S> & {
     toSnapshot: (s: S) => E
   }
   type SnapshottedFold<E, S> = RollingStateFold<E, S> & {
