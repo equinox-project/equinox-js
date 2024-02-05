@@ -1,4 +1,4 @@
-import { describe, test } from "vitest"
+import { vi, describe, test } from "vitest"
 import { Config } from "../src/config/equinox.js"
 import { GroupCheckout, GuestStay } from "../src/domain/index.js"
 import { createSink } from "../src/reactor/Handler.js"
@@ -7,8 +7,7 @@ import { randomUUID } from "crypto"
 import { GroupCheckoutId, PaymentId } from "../src/domain/Types.js"
 import { randomStays } from "./Utils.js"
 import EventEmitter from "events"
-import { TailingFeedSource } from "@equinox-js/propeller"
-import { setTimeout } from "timers/promises"
+import { Stats } from "@equinox-js/propeller"
 
 function waitForEvent(emitter: EventEmitter, event: string, pred: (...args: any[]) => boolean) {
   return new Promise((resolve) => {
@@ -25,7 +24,7 @@ function waitForEvent(emitter: EventEmitter, event: string, pred: (...args: any[
 async function runScenario(
   config: Config,
   payBefore: boolean,
-  wait: (stats: TailingFeedSource["stats"]) => Promise<void>,
+  wait: (stats: Stats, id: GroupCheckoutId) => Promise<void>,
 ) {
   const staysService = GuestStay.Service.create(config)
   const checkoutService = GroupCheckout.Service.create(config)
@@ -34,7 +33,7 @@ async function runScenario(
     sink,
     categories: [GroupCheckout.Stream.category],
     groupName: randomUUID().replace(/-/g, ""),
-    tailSleepIntervalMs: 10,
+    tailSleepIntervalMs: 100,
   })
   const ctrl = new AbortController()
   source.start(ctrl.signal)
@@ -48,8 +47,9 @@ async function runScenario(
   if (payBefore) await checkoutService.pay(groupCheckoutId, PaymentId.create(), charged)
   const stayIds = stays.map((s) => s.stayId)
   await checkoutService.merge(groupCheckoutId, stayIds)
-  await wait(source.stats)
+  await wait(source.stats, groupCheckoutId)
   const result = await checkoutService.confirm(groupCheckoutId)
+
   switch (result.type) {
     case "Ok":
       break
@@ -77,13 +77,16 @@ describe.skip("Memory")
 // TODO: implement in a CI friendly way
 describe.skip("Dynamo", () => {
   const config = createConfig("dynamo")
-  const wait = () => setTimeout(10000)
+  const wait = async (stats: Stats, id: GroupCheckoutId) => {
+    const expectedStream = GroupCheckout.Stream.name(id)
+    await waitForEvent(stats, "completed", (x) => x.streams.has(expectedStream))
+  }
   test("Pay before", () => runScenario(config, true, wait))
   test("Pay after", () => runScenario(config, false, wait))
 })
 describe("MessageDB", () => {
   const config = createConfig("message-db")
-  const wait = async (stats: TailingFeedSource["stats"]) => {
+  const wait = async (stats: Stats) => {
     const {
       rows: [{ checkpoint }],
     } = await leaderPool().query(

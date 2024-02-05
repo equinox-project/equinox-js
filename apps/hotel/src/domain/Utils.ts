@@ -42,3 +42,4 @@ export function upcastDate(x: any): any {
 export function upcast<T>(event: DomainEvent): T {
   return { type: event.type, data: upcastDate(event.data) } as any
 }
+

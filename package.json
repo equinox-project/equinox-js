@@ -18,6 +18,7 @@
     "@equinox-js/dynamo-store-cli": "workspace:*",
     "@equinox-js/explorer": "workspace:*",
     "@vitest/coverage-v8": "^1.0.4",
+    "esbuild": "^0.20.0",
     "prettier": "latest",
     "ts-node": "^10.9.1",
     "turbo": "latest",

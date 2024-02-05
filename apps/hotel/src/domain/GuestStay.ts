@@ -139,7 +139,7 @@ export namespace Decide {
 
   type GroupCheckoutResult = { type: "Ok"; residualBalance: number } | { type: "AlreadyCheckedOut" }
 
-  export const groupCheckout =
+  export const transferToGroup =
     (at: OffsetDateTime, groupId: GroupCheckoutId): DecisionResult<GroupCheckoutResult> =>
     (state) => {
       switch (state.type) {
@@ -162,6 +162,11 @@ export namespace Decide {
 export class Service {
   constructor(private readonly resolve: (id: GuestStayId) => Decider<Events.Event, Fold.State>) {}
 
+  checkIn(id: GuestStayId, at = OffsetDateTime.now()) {
+    const decider = this.resolve(id)
+    return decider.transact(Decide.checkIn(at))
+  }
+
   charge(id: GuestStayId, chargeId: ChargeId, amount: number, at = OffsetDateTime.now()) {
     const decider = this.resolve(id)
     return decider.transact(Decide.charge(at, chargeId, amount))
@@ -177,10 +182,10 @@ export class Service {
     return decider.transactResult(Decide.checkOut(at))
   }
 
-  // driven exclusively by GroupCheckout
-  groupCheckout(id: GuestStayId, groupId: GroupCheckoutId, at = OffsetDateTime.now()) {
+  // driven exclusively by the `GroupCheckoutProcessor`
+  transferToGroup(id: GuestStayId, groupId: GroupCheckoutId, at = OffsetDateTime.now()) {
     const decider = this.resolve(id)
-    return decider.transactResult(Decide.groupCheckout(at, groupId))
+    return decider.transactResult(Decide.transferToGroup(at, groupId))
   }
 
   // prettier-ignore

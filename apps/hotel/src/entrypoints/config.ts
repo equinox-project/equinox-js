@@ -57,19 +57,24 @@ function createDynamoClient() {
 
 export const dynamoDB = lazy(() => createDynamoClient())
 
-function createDynamoConfig(): Config {
+function createDynamoContext(tableName: string, archiveTableName?: string) {
   const ddb = dynamoDB()
-
-  const tableName = process.env.TABLE_NAME || "events"
-  const archiveTableName = process.env.ARCHIVE_TABLE_NAME
   const client = new DynamoStoreClient(ddb)
-  const context = new DynamoStoreContext({
+
+  return new DynamoStoreContext({
     client,
     tableName,
     archiveTableName,
     tip: TipOptions.create({}),
     query: QueryOptions.create({}),
   })
+}
+
+function createDynamoConfig(): Config {
+  const tableName = process.env.TABLE_NAME || "events"
+  const archiveTableName = process.env.ARCHIVE_TABLE_NAME
+  const context = createDynamoContext(tableName, archiveTableName)
+
   return { store: Store.Dynamo, context, cache: new MemoryCache() }
 }
 
@@ -116,9 +121,10 @@ export function createSource(config: Config, opts: SourceOptions) {
     }
     case Store.Dynamo: {
       const checkpoints = DynamoCheckpoints.create(config.context, config.cache, 100)
+      const context = createDynamoContext(process.env.INDEX_TABLE_NAME || "events_index")
       return DynamoStoreSource.create({
         mode: loadMode(config.context),
-        context: config.context,
+        context,
         batchSizeCutoff: 500,
         sink: opts.sink,
         checkpoints,

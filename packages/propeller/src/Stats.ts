@@ -57,10 +57,17 @@ export class Stats extends EventEmitter {
     })
   }
 
-  recordCompletion(trancheId: string, checkpoint: bigint) {
+  recordCompletion(trancheId: string, batch: Batch) {
     const stat = this.getStat(trancheId)
-    stat.completedPosition = Number(checkpoint)
-    this.emit("completed", { trancheId, checkpoint })
+    stat.completedPosition = Number(batch.checkpoint)
+    if (this.listenerCount("completed") === 0) return
+    const streams = new Set(batch.items.map((item) => item[0]))
+    this.emit("completed", {
+      trancheId,
+      checkpoint: batch.checkpoint,
+      isTail: batch.isTail,
+      streams,
+    })
   }
 
   dump() {

@@ -54,7 +54,7 @@ test("checkout with balance", () => {
 
 test("transfer", () => {
   const groupId = GroupCheckoutId.create()
-  expect(given([], Decide.groupCheckout(now, groupId))).toEqual([
+  expect(given([], Decide.transferToGroup(now, groupId))).toEqual([
     { type: "Ok", residualBalance: 0 },
     [Events.TransferredToGroup({ at: now, groupId, residualBalance: 0 })],
   ])
@@ -64,7 +64,7 @@ test("transfer with balance", () => {
   const groupId = GroupCheckoutId.create()
   const chargeId = ChargeId.create()
   const charged = Events.Charged({ chargeId, at: now, amount: 100 })
-  expect(given([charged], Decide.groupCheckout(now, groupId))).toEqual([
+  expect(given([charged], Decide.transferToGroup(now, groupId))).toEqual([
     { type: "Ok", residualBalance: 100 },
     [Events.TransferredToGroup({ at: now, groupId, residualBalance: 100 })],
   ])
@@ -73,7 +73,7 @@ test("transfer with balance", () => {
 test("transfer after checkout", () => {
   const groupId = GroupCheckoutId.create()
   const checkout = Events.CheckedOut({ at: now })
-  expect(given([checkout], Decide.groupCheckout(now, groupId))).toEqual([
+  expect(given([checkout], Decide.transferToGroup(now, groupId))).toEqual([
     { type: "AlreadyCheckedOut" },
     [],
   ])
@@ -83,7 +83,7 @@ test("transfer after transfer", () => {
   const groupId = GroupCheckoutId.create()
   const groupId2 = GroupCheckoutId.create()
   const transfer = Events.TransferredToGroup({ at: now, groupId, residualBalance: 100 })
-  expect(given([transfer], Decide.groupCheckout(now, groupId2))).toEqual([
+  expect(given([transfer], Decide.transferToGroup(now, groupId2))).toEqual([
     { type: "AlreadyCheckedOut" },
     [],
   ])
@@ -92,7 +92,7 @@ test("transfer after transfer", () => {
 test("transfer to same group", () => {
   const groupId = GroupCheckoutId.create()
   const transfer = Events.TransferredToGroup({ at: now, groupId, residualBalance: 100 })
-  expect(given([transfer], Decide.groupCheckout(now, groupId))).toEqual([
+  expect(given([transfer], Decide.transferToGroup(now, groupId))).toEqual([
     { type: "Ok", residualBalance: 100 },
     [],
   ])

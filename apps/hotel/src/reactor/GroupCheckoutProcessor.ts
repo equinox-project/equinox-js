@@ -11,7 +11,7 @@ export class Service {
   ) {}
 
   private async attemptMerge(groupCheckoutId: GroupCheckoutId, stayId: GuestStayId) {
-    const result = await this.guestStays.groupCheckout(stayId, groupCheckoutId)
+    const result = await this.guestStays.transferToGroup(stayId, groupCheckoutId)
     switch (result.type) {
       case "AlreadyCheckedOut":
         return stayId
