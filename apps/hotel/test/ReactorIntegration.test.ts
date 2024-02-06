@@ -2,24 +2,10 @@ import { describe, test } from "vitest"
 import { Config } from "../src/config/equinox.js"
 import { GroupCheckout, GuestStay } from "../src/domain/index.js"
 import { createSink } from "../src/reactor/Handler.js"
-import { createConfig, createSource, leaderPool } from "../src/entrypoints/config.js"
+import { createConfig, createSource } from "../src/entrypoints/config.js"
 import { randomUUID } from "crypto"
 import { GroupCheckoutId, PaymentId } from "../src/domain/Types.js"
 import { randomStays } from "./Utils.js"
-import EventEmitter from "events"
-import { Stats } from "@equinox-js/propeller"
-
-function waitForEvent(emitter: EventEmitter, event: string, pred: (...args: any[]) => boolean) {
-  return new Promise((resolve) => {
-    const onEvent = (...args: any[]) => {
-      if (pred(...args)) {
-        emitter.off(event, onEvent)
-        resolve(true)
-      }
-    }
-    emitter.on(event, onEvent)
-  })
-}
 
 async function runScenario(config: Config, payBefore: boolean) {
   const staysService = GuestStay.Service.create(config)

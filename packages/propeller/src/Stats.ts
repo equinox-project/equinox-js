@@ -32,6 +32,7 @@ namespace Stat {
     return stat
   }
 }
+
 export class Stats extends EventEmitter {
   stats = new Map<string, Stat>()
 
@@ -45,7 +46,6 @@ export class Stats extends EventEmitter {
 
   recordBatch(trancheId: string, batch: Batch) {
     const stat = this.getStat(trancheId)
-
     stat.isAtTail = batch.isTail
     stat.batchLastPosition = Number(batch.checkpoint)
     stat.pagesRead++
@@ -60,7 +60,8 @@ export class Stats extends EventEmitter {
       })
     } else {
       stat.pagesEmpty++
-      if (stat.pendingBatches === 0) this.emit("tail")
+      // we've received an empty page with no pending batches indicating we're at the tail
+      if (stat.pendingBatches === 0) this.emit("tail", { trancheId })
     }
   }
 
@@ -104,20 +105,42 @@ export class Stats extends EventEmitter {
     })
   }
 
-  private waitForEvent<T>(event: string, f?: (x: any) => boolean) {
-    if (!f) return new Promise<void>((resolve) => this.once(event, resolve))
-    return new Promise<T>((resolve) => {
-      const onEvent = (x: any) => {
-        if (!f(x)) return
-        this.off(event, onEvent)
-        resolve(x)
+  /**
+   * Waits for all tranches to receive at least one batch
+   * and then for that tranche to reach the tail.
+   */
+  waitForTail() {
+    return new Promise<void>(async (resolve) => {
+      const tranches = new Set(this.stats.keys())
+      const completed = new Set<string>()
+      const atTail = new Set<string>()
+      const checkCompletion = () => {
+        if (tranches.size === atTail.size) {
+          this.off("completed", onCompleted)
+          this.off("tail", onTail)
+          this.off("ingested", onIngested)
+          resolve()
+        }
       }
-      this.on(event, onEvent)
+      // Sometimes this method is called before we have any known tranches
+      // in that case we'll add the new tranche in as they arrive
+      const onIngested = (e: { trancheId: string }) => {
+        tranches.add(e.trancheId)
+        checkCompletion()
+      }
+      const onCompleted = (e: { trancheId: string }) => {
+        completed.add(e.trancheId)
+        checkCompletion()
+      }
+      const onTail = (e: { trancheId: string }) => {
+        if (completed.has(e.trancheId)) {
+          atTail.add(e.trancheId)
+          checkCompletion()
+        }
+      }
+      this.on("ingested", onIngested)
+      this.on("completed", onCompleted)
+      this.on("tail", onTail)
     })
-  }
-
-  async waitForTail(): Promise<void> {
-    await this.waitForEvent("completed", (e) => e.pendingBatches === 0)
-    await this.waitForEvent("tail")
   }
 }
