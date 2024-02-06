@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsup src/entrypoints/*.ts --format esm",
+    "build": "tsup src/entrypoints/*.ts --clean --format cjs --sourcemap",
     "lint": "tsc -p . --noEmit",
     "test": "vitest run",
     "explorer": "NODE_PATH=./node_modules eqx-explorer -cs $MDB_RO_CONN_STR -c ./src/explorer-config.ts",
@@ -25,21 +25,15 @@
     "@equinox-js/propeller": "workspace:*",
     "@js-joda/core": "^5.6.1",
     "@opentelemetry/api": "^1.4.0",
-    "@opentelemetry/instrumentation-express": "^0.33.0",
     "@opentelemetry/instrumentation-http": "^0.41.0",
     "@opentelemetry/instrumentation-pg": "^0.36.0",
     "@opentelemetry/sdk-node": "^0.41.0",
     "@opentelemetry/sdk-trace-base": "^1.9.0",
     "@opentelemetry/sdk-trace-node": "^1.9.0",
-    "commander": "^11.0.0",
-    "express": "^4.18.2",
-    "express-async-errors": "^3.1.1",
-    "get-port": "^7.0.0",
     "immer": "^10.0.3",
     "opentelemetry-exporter-console-pretty": "^1.0.1",
-    "p-limit": "^4.0.0",
     "pg": "^8.0.0",
-    "ramda": "^0.28.0"
+    "variant": "^2.1.0"
   },
   "devDependencies": {
     "@databases/pg-migrations": "^5.0.2",
@@ -50,6 +44,7 @@
     "aws-cdk": "2.95.0",
     "aws-cdk-lib": "2.95.0",
     "constructs": "^10.0.0",
+    "p-limit": "^4.0.0",
     "ts-node": "^10.9.1",
     "tsup": "^8.0.1",
     "vitest": "^1.0.4"

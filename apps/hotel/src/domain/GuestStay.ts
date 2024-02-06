@@ -2,7 +2,8 @@ import { Codec, Decider, StreamId, StreamName } from "@equinox-js/core"
 import { ChargeId, GroupCheckoutId, GuestStayId, PaymentId } from "./Types.js"
 import { OffsetDateTime } from "@js-joda/core"
 import * as Config from "../config/equinox.js"
-import { createFold, upcast } from "./Utils.js"
+import { createFold, data, upcast } from "./Utils.js"
+import { VariantOf, variantModule } from "variant"
 
 export namespace Stream {
   export const category = "GuestStay"
@@ -12,31 +13,20 @@ export namespace Stream {
 }
 
 export namespace Events {
-  export type CheckedIn = { at: OffsetDateTime }
-  export type Charged = { chargeId: ChargeId; at: OffsetDateTime; amount: number }
-  export type Paid = { paymentId: PaymentId; at: OffsetDateTime; amount: number }
-  export type TransferredToGroup = {
-    groupId: GroupCheckoutId
-    at: OffsetDateTime
-    residualBalance: number
-  }
-  export type CheckedOut = { at: OffsetDateTime }
-
-  export type Event =
-    | { type: "CheckedIn"; data: CheckedIn }
-    | { type: "Charged"; data: Charged }
-    | { type: "Paid"; data: Paid }
-    | { type: "CheckedOut"; data: CheckedOut }
-    | { type: "TransferredToGroup"; data: TransferredToGroup }
-
-  export const CheckedIn = (data: CheckedIn): Event => ({ type: "CheckedIn", data })
-  export const Charged = (data: Charged): Event => ({ type: "Charged", data })
-  export const Paid = (data: Paid): Event => ({ type: "Paid", data })
-  export const CheckedOut = (data: CheckedOut): Event => ({ type: "CheckedOut", data })
-  export const TransferredToGroup = (data: TransferredToGroup): Event => ({
-    type: "TransferredToGroup",
-    data,
+  const Event = variantModule({
+    CheckedIn: data<{ at: OffsetDateTime }>(),
+    Charged: data<{ chargeId: ChargeId; at: OffsetDateTime; amount: number }>(),
+    Paid: data<{ paymentId: PaymentId; at: OffsetDateTime; amount: number }>(),
+    CheckedOut: data<{ at: OffsetDateTime }>(),
+    TransferredToGroup: data<{
+      groupId: GroupCheckoutId
+      at: OffsetDateTime
+      residualBalance: number
+    }>(),
   })
+  export const { CheckedIn, Charged, Paid, CheckedOut, TransferredToGroup } = Event
+
+  export type Event = VariantOf<typeof Event>
 
   export const codec = Codec.upcast<Event>(Codec.json(), upcast)
 }

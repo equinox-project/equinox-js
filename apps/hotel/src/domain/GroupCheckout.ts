@@ -1,8 +1,9 @@
 import { Codec, Decider, StreamId, StreamName } from "@equinox-js/core"
 import { GroupCheckoutId, GuestStayId, PaymentId } from "./Types.js"
 import { OffsetDateTime } from "@js-joda/core"
-import { createFold, sumBy, upcast } from "./Utils.js"
+import { createFold, data, sumBy, upcast } from "./Utils.js"
 import * as Config from "../config/equinox.js"
+import { VariantOf, variantModule } from "variant"
 
 export namespace Stream {
   export const category = "GroupCheckout"
@@ -13,24 +14,15 @@ export namespace Stream {
 
 export namespace Events {
   export type CheckoutResidual = { stay: GuestStayId; residual: number }
-  type StaysSelected = { stays: GuestStayId[]; at: OffsetDateTime }
-  type StaysMerged = { residuals: CheckoutResidual[] }
-  type MergesFailed = { stays: GuestStayId[] }
-  type Paid = { paymentId: PaymentId; at: OffsetDateTime; amount: number }
-  type Confirmed = { at: OffsetDateTime }
-
-  export type Event =
-    | { type: "StaysSelected"; data: StaysSelected }
-    | { type: "StaysMerged"; data: StaysMerged }
-    | { type: "MergesFailed"; data: MergesFailed }
-    | { type: "Paid"; data: Paid }
-    | { type: "Confirmed"; data: Confirmed }
-
-  export const StaysSelected = (data: StaysSelected): Event => ({ type: "StaysSelected", data })
-  export const StaysMerged = (data: StaysMerged): Event => ({ type: "StaysMerged", data })
-  export const MergesFailed = (data: MergesFailed): Event => ({ type: "MergesFailed", data })
-  export const Paid = (data: Paid): Event => ({ type: "Paid", data })
-  export const Confirmed = (data: Confirmed): Event => ({ type: "Confirmed", data })
+  const Event = variantModule({
+    StaysSelected: data<{ stays: GuestStayId[]; at: OffsetDateTime }>(),
+    StaysMerged: data<{ residuals: CheckoutResidual[] }>(),
+    MergesFailed: data<{ stays: GuestStayId[] }>(),
+    Paid: data<{ paymentId: PaymentId; at: OffsetDateTime; amount: number }>(),
+    Confirmed: data<{ at: OffsetDateTime }>(),
+  })
+  export const { StaysSelected, StaysMerged, MergesFailed, Paid, Confirmed } = Event
+  export type Event = VariantOf<typeof Event>
 
   export const codec = Codec.upcast<Event>(Codec.json(), upcast)
 }

@@ -18,6 +18,4 @@ const ctrl = new AbortController()
 process.on("SIGINT", () => ctrl.abort())
 process.on("SIGTERM", () => ctrl.abort())
 
-ctrl.signal.addEventListener("abort", () => endPools(), { once: true })
-
-source.start(ctrl.signal)
+source.start(ctrl.signal).finally(() => endPools())

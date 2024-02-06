@@ -43,3 +43,8 @@ export function upcast<T>(event: DomainEvent): T {
   return { type: event.type, data: upcastDate(event.data) } as any
 }
 
+
+export const data =
+  <T>() =>
+  (data: T) => ({ data })
+

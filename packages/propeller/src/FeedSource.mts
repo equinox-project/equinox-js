@@ -2,7 +2,6 @@ import { Batch, Sink } from "./Types.js"
 import { ICheckpoints } from "./Checkpoints.js"
 import { Stats } from "./Stats.js"
 import { Internal } from "@equinox-js/core"
-import EventEmitter from "events"
 
 export class CheckpointWriter {
   constructor(
