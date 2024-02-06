@@ -8,6 +8,7 @@ type Stat = {
   pagesRead: number
   pagesEmpty: number
   eventsRead: number
+  pendingBatches: number
   isAtTail: boolean
   batchLastPosition: number
   completedPosition: number
@@ -18,6 +19,7 @@ namespace Stat {
     pagesRead: 0,
     pagesEmpty: 0,
     eventsRead: 0,
+    pendingBatches: 0,
     isAtTail: false,
     batchLastPosition: -1,
     completedPosition: -1,
@@ -48,25 +50,29 @@ export class Stats extends EventEmitter {
     stat.batchLastPosition = Number(batch.checkpoint)
     stat.pagesRead++
     stat.eventsRead += batch.items.length
-    if (batch.items.length === 0) stat.pagesEmpty++
-    this.emit("ingested", {
-      trancheId,
-      checkpoint: batch.checkpoint,
-      isTail: batch.isTail,
-      events: batch.items.length,
-    })
+    if (batch.items.length > 0) {
+      stat.pendingBatches++
+      this.emit("ingested", {
+        trancheId,
+        checkpoint: batch.checkpoint,
+        isTail: batch.isTail,
+        events: batch.items.length,
+      })
+    } else {
+      stat.pagesEmpty++
+      if (stat.pendingBatches === 0) this.emit("tail")
+    }
   }
 
   recordCompletion(trancheId: string, batch: Batch) {
     const stat = this.getStat(trancheId)
     stat.completedPosition = Number(batch.checkpoint)
-    if (this.listenerCount("completed") === 0) return
-    const streams = new Set(batch.items.map((item) => item[0]))
+    stat.pendingBatches--
     this.emit("completed", {
       trancheId,
       checkpoint: batch.checkpoint,
       isTail: batch.isTail,
-      streams,
+      pendingBatches: stat.pendingBatches,
     })
   }
 
@@ -96,5 +102,22 @@ export class Stats extends EventEmitter {
     signal.addEventListener("abort", () => {
       clearInterval(interval)
     })
+  }
+
+  private waitForEvent<T>(event: string, f?: (x: any) => boolean) {
+    if (!f) return new Promise<void>((resolve) => this.once(event, resolve))
+    return new Promise<T>((resolve) => {
+      const onEvent = (x: any) => {
+        if (!f(x)) return
+        this.off(event, onEvent)
+        resolve(x)
+      }
+      this.on(event, onEvent)
+    })
+  }
+
+  async waitForTail(): Promise<void> {
+    await this.waitForEvent("completed", (e) => e.pendingBatches === 0)
+    await this.waitForEvent("tail")
   }
 }

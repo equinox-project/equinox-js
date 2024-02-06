@@ -1,4 +1,4 @@
-import { vi, describe, test } from "vitest"
+import { describe, test } from "vitest"
 import { Config } from "../src/config/equinox.js"
 import { GroupCheckout, GuestStay } from "../src/domain/index.js"
 import { createSink } from "../src/reactor/Handler.js"
@@ -21,11 +21,7 @@ function waitForEvent(emitter: EventEmitter, event: string, pred: (...args: any[
   })
 }
 
-async function runScenario(
-  config: Config,
-  payBefore: boolean,
-  wait: (stats: Stats, id: GroupCheckoutId) => Promise<void>,
-) {
+async function runScenario(config: Config, payBefore: boolean) {
   const staysService = GuestStay.Service.create(config)
   const checkoutService = GroupCheckout.Service.create(config)
   const sink = createSink(config)
@@ -46,8 +42,9 @@ async function runScenario(
   }
   if (payBefore) await checkoutService.pay(groupCheckoutId, PaymentId.create(), charged)
   const stayIds = stays.map((s) => s.stayId)
+
   await checkoutService.merge(groupCheckoutId, stayIds)
-  await wait(source.stats, groupCheckoutId)
+  await source.stats.waitForTail()
   const result = await checkoutService.confirm(groupCheckoutId)
 
   switch (result.type) {
@@ -77,24 +74,11 @@ describe.skip("Memory")
 // TODO: implement in a CI friendly way
 describe.skip("Dynamo", () => {
   const config = createConfig("dynamo")
-  const wait = async (stats: Stats, id: GroupCheckoutId) => {
-    const expectedStream = GroupCheckout.Stream.name(id)
-    await waitForEvent(stats, "completed", (x) => x.streams.has(expectedStream))
-  }
-  test("Pay before", () => runScenario(config, true, wait))
-  test("Pay after", () => runScenario(config, false, wait))
+  test("Pay before", () => runScenario(config, true))
+  test("Pay after", () => runScenario(config, false))
 })
 describe("MessageDB", () => {
   const config = createConfig("message-db")
-  const wait = async (stats: Stats) => {
-    const {
-      rows: [{ checkpoint }],
-    } = await leaderPool().query(
-      `select max(global_position) as checkpoint from messages where category(stream_name) = $1`,
-      [GroupCheckout.Stream.category],
-    )
-    await waitForEvent(stats, "completed", (x) => x.checkpoint >= checkpoint)
-  }
-  test("Pay before", () => runScenario(config, true, wait))
-  test("Pay after", () => runScenario(config, false, wait))
+  test("Pay before", () => runScenario(config, true))
+  test("Pay after", () => runScenario(config, false))
 })
