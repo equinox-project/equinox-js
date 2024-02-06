@@ -9,7 +9,6 @@ export namespace Stream {
   export const streamId = StreamId.gen(GroupCheckoutId.toString)
   export const decodeId = StreamId.dec(GroupCheckoutId.parse)
   export const tryMatch = StreamName.tryMatch(category, decodeId)
-  export const name = (id: GroupCheckoutId) => StreamName.create(category, streamId(id))
 }
 
 export namespace Events {
