@@ -2,41 +2,49 @@
 sidebar_position: 4
 ---
 
-# StreamsSink Architecture
+# StreamsSink
 
-## AsyncQueue
+The `StreamsSink` is at the heart of `@equinox-js/propeller`'s reaction handling
+paradigm. It is designed to process streams of events concurrently while
+managing event order, and concurrency limits.
 
-The `StreamsSink` uses an `AsyncQueue` that provides a Node-friendly way to
-handle a queue of items without blocking waits.
+## Key facts
 
-It is backed by a basic FIFO Queue, implemented using a linked list. When an
-item is added to the AsyncQueue, it first checks if there are any pending
-retrieval requests. If there are, it fulfills the oldest request. If not, it
-queues the item. The dequeueing operation retrieves an item from the queue. If
-the queue is empty, it waits asynchronously until an item is available or until
-an abort signal is triggered, which would stop the wait and reject the promise
+- Receives batches of events from the underlying store source
+- Fetching of new batches is done concurrently with the handling of the current
+  ones
+- Merges events from different batches into a single list per stream
+- Checkpointing happens out of bound on an interval
+- When a batch is completed its checkpoint is queued for writing
+- Ensures that for a given stream only one handler is active at any given time
 
-## Receiving batches
+## Notifying propeller of partial processing
 
-For every event within a batch, the StreamsSink checks if its associated Stream
-is already in the processing queue. If it is, the event is combined with it,
-ensuring it's processed alongside previously queued events.
+The handler you pass to `StreamsSink` may optionally return a `StreamResult`.
+This result can indicate how far the stream in question has been processed.
 
-The streams associated with the batch are stored in a `Set` so we can know when
-a batch has finished processing and notify the submitter.
+### `StreamResult.AllProcessed` (default)
 
-The StreamsSink limits the number of in-flight batches to a configured number.
-After a batch is submitted we check the number of in-flight batches and, if it
-has reached the threshold, delays the introduction of the next batch until a
-previous batch completes. 
+Indicates all events supplied were processed. Write position will move beyond
+the last event supplied.
 
-## Worker loops
+### `StreamResult.NoneProcessed`
 
-A set number of worker loops are started based on the configured concurrency
-limit, which then pick up and process streams from the AsyncQueue. Once a stream
-is processed some bookkeeping is required.
+Indicates no events were processed. On the next call your handler will be
+supplied the same events in addition to any that arrived in the interim.
 
-1. The stream is removed from each batch's `Set` of streams
-2. If the stream removed was the final one, we declare it complete by calling
-   its associated `onComplete` handler. and call its associated `onComplete`
-   handler
+### `StreamResult.PartiallyProcessed(count)`
+
+Indicates that a subset of the events were processed. Write position will
+advance to `count` fewer events
+
+### `StreamResult.OverrideNextIndex(index)`
+
+Indicates that the stream is processed up to the supplied version. Typically
+used when the handler reads the supplied stream from the store. In this case
+eventual consistency from read replicas, or in general from cloud native
+document stores, means it might not see all the events. Additionally, in case of
+replay, it might see events beyond the supplied span. In these cases
+`OverrideNextIndex` can be used to let propeller know that the handler should
+not be called again until the event indicated by the `index` appears. Propeller
+will throw away events before the index.
