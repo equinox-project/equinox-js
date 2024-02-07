@@ -17,6 +17,7 @@ export class IndexerLambda extends Construct {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: require.resolve("@equinox-js/dynamo-store-indexer-lambda"),
       handler: "handler",
+      reservedConcurrentExecutions: 1,
       environment: {
         TABLE_NAME: options.eventsTable.tableName,
         INDEX_TABLE_NAME: options.indexTable.tableName,

@@ -1,6 +1,7 @@
 import { trace } from "@opentelemetry/api"
 import { Batch } from "./Types.js"
 import EventEmitter from "events"
+import { setTimeout } from "timers/promises"
 
 const tracer = trace.getTracer("@equinox-js/propeller")
 
@@ -108,24 +109,34 @@ export class Stats extends EventEmitter {
   /**
    * Waits for all tranches to receive at least one batch
    * and then for that tranche to reach the tail.
+   * @param [propagationDelay=0] - The expected time it takes for the appended events to be propagated to the source
    */
-  waitForTail() {
+  waitForTail(propagationDelay = 0) {
     return new Promise<void>(async (resolve) => {
+      const now = Date.now()
       const tranches = new Set(this.stats.keys())
       const completed = new Set<string>()
       const atTail = new Set<string>()
       const checkCompletion = () => {
         if (tranches.size === atTail.size) {
-          this.off("completed", onCompleted)
-          this.off("tail", onTail)
-          this.off("ingested", onIngested)
-          resolve()
+          const currentTime = Date.now()
+          const remainingMs = propagationDelay - (currentTime - now)
+          if (remainingMs > 0) {
+            setTimeout(remainingMs).then(checkCompletion)
+          } else {
+            this.off("completed", onCompleted)
+            this.off("tail", onTail)
+            this.off("ingested", onIngested)
+            resolve()
+          }
         }
       }
       // Sometimes this method is called before we have any known tranches
       // in that case we'll add the new tranche in as they arrive
       const onIngested = (e: { trancheId: string }) => {
         tranches.add(e.trancheId)
+        completed.delete(e.trancheId)
+        atTail.delete(e.trancheId)
         checkCompletion()
       }
       const onCompleted = (e: { trancheId: string }) => {

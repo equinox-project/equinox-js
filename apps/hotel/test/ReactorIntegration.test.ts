@@ -7,7 +7,7 @@ import { randomUUID } from "crypto"
 import { GroupCheckoutId, PaymentId } from "../src/domain/Types.js"
 import { randomStays } from "./Utils.js"
 
-async function runScenario(config: Config, payBefore: boolean) {
+async function runScenario(config: Config, payBefore: boolean, propagationDelay = 0) {
   const staysService = GuestStay.Service.create(config)
   const checkoutService = GroupCheckout.Service.create(config)
   const sink = createSink(config)
@@ -18,7 +18,7 @@ async function runScenario(config: Config, payBefore: boolean) {
     tailSleepIntervalMs: 100,
   })
   const ctrl = new AbortController()
-  source.start(ctrl.signal)
+  const srcP = source.start(ctrl.signal)
   const groupCheckoutId = GroupCheckoutId.create()
   const stays = randomStays()
   let charged = 0
@@ -30,7 +30,7 @@ async function runScenario(config: Config, payBefore: boolean) {
   const stayIds = stays.map((s) => s.stayId)
 
   await checkoutService.merge(groupCheckoutId, stayIds)
-  await source.stats.waitForTail()
+  await source.stats.waitForTail(propagationDelay)
   const result = await checkoutService.confirm(groupCheckoutId)
 
   switch (result.type) {
@@ -53,6 +53,7 @@ async function runScenario(config: Config, payBefore: boolean) {
     }
   }
   ctrl.abort()
+  await srcP
 }
 
 // TODO: implement a MemoryStoreSource
@@ -60,8 +61,9 @@ describe.skip("Memory")
 // TODO: implement in a CI friendly way
 describe.skip("Dynamo", () => {
   const config = createConfig("dynamo")
-  test("Pay before", () => runScenario(config, true))
-  test("Pay after", () => runScenario(config, false))
+  const propagationDelay = 600
+  test("Pay before", () => runScenario(config, true, propagationDelay))
+  test("Pay after", () => runScenario(config, false, propagationDelay))
 })
 describe("MessageDB", () => {
   const config = createConfig("message-db")
