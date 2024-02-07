@@ -12,6 +12,9 @@ importers:
         specifier: ^5.3.3
         version: 5.3.3
     devDependencies:
+      '@databases/pg-migrations':
+        specifier: ^5.0.2
+        version: 5.0.2(typescript@5.3.3)
       '@equinox-js/dynamo-store-cli':
         specifier: workspace:*
         version: link:packages/dynamo-store/cli
@@ -21,15 +24,18 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^1.0.4
         version: 1.0.4(vitest@1.0.4)
+      esbuild:
+        specifier: ^0.20.0
+        version: 0.20.0
       prettier:
         specifier: latest
-        version: 3.2.4
+        version: 3.2.5
       ts-node:
         specifier: ^10.9.1
         version: 10.9.1(@types/node@20.10.5)(typescript@5.3.3)
       turbo:
         specifier: latest
-        version: 1.11.3
+        version: 1.12.2
       vitest:
         specifier: ^1.0.4
         version: 1.0.4(@types/node@20.10.5)(supports-color@9.4.0)
@@ -128,6 +134,109 @@ importers:
         specifier: ^1.0.4
         version: 1.0.4(@types/node@20.10.5)(supports-color@9.4.0)
 
+  apps/hotel:
+    dependencies:
+      '@aws-sdk/client-dynamodb':
+        specifier: ^3.410.0
+        version: 3.410.0
+      '@equinox-js/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@equinox-js/dynamo-store':
+        specifier: workspace:*
+        version: link:../../packages/dynamo-store/dynamo-store
+      '@equinox-js/dynamo-store-cdk':
+        specifier: workspace:*
+        version: link:../../packages/dynamo-store/cdk
+      '@equinox-js/dynamo-store-source':
+        specifier: workspace:*
+        version: link:../../packages/dynamo-store/source
+      '@equinox-js/memory-store':
+        specifier: workspace:*
+        version: link:../../packages/memory-store
+      '@equinox-js/message-db':
+        specifier: workspace:*
+        version: link:../../packages/message-db/message-db
+      '@equinox-js/message-db-source':
+        specifier: workspace:*
+        version: link:../../packages/message-db/message-db-consumer
+      '@equinox-js/projection-pg':
+        specifier: workspace:*
+        version: link:../../packages/projection-pg
+      '@equinox-js/propeller':
+        specifier: workspace:*
+        version: link:../../packages/propeller
+      '@js-joda/core':
+        specifier: ^5.6.1
+        version: 5.6.1
+      '@opentelemetry/api':
+        specifier: ^1.4.0
+        version: 1.4.1
+      '@opentelemetry/instrumentation-http':
+        specifier: ^0.41.0
+        version: 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/instrumentation-pg':
+        specifier: ^0.36.0
+        version: 0.36.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-node':
+        specifier: ^0.41.0
+        version: 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-base':
+        specifier: ^1.9.0
+        version: 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-node':
+        specifier: ^1.9.0
+        version: 1.15.0(@opentelemetry/api@1.4.1)
+      immer:
+        specifier: ^10.0.3
+        version: 10.0.3
+      opentelemetry-exporter-console-pretty:
+        specifier: ^1.0.1
+        version: 1.0.1(@opentelemetry/api@1.4.1)
+      pg:
+        specifier: ^8.0.0
+        version: 8.11.3
+      variant:
+        specifier: ^2.1.0
+        version: 2.1.0
+    devDependencies:
+      '@databases/pg-migrations':
+        specifier: ^5.0.2
+        version: 5.0.2(typescript@5.3.3)
+      '@types/express':
+        specifier: ^4.17.17
+        version: 4.17.17
+      '@types/node':
+        specifier: ^20.10.5
+        version: 20.10.5
+      '@types/pg':
+        specifier: ^8.0.0
+        version: 8.10.9
+      '@types/ramda':
+        specifier: ^0.28.21
+        version: 0.28.21
+      aws-cdk:
+        specifier: 2.95.0
+        version: 2.95.0
+      aws-cdk-lib:
+        specifier: 2.95.0
+        version: 2.95.0(constructs@10.2.70)
+      constructs:
+        specifier: ^10.0.0
+        version: 10.2.70
+      p-limit:
+        specifier: ^4.0.0
+        version: 4.0.0
+      ts-node:
+        specifier: ^10.9.1
+        version: 10.9.1(@types/node@20.10.5)(typescript@5.3.3)
+      tsup:
+        specifier: ^8.0.1
+        version: 8.0.1(postcss@8.4.31)(ts-node@10.9.1)(typescript@5.3.3)
+      vitest:
+        specifier: ^1.0.4
+        version: 1.0.4(@types/node@20.10.5)(supports-color@9.4.0)
+
   docs:
     dependencies:
       '@algolia/client-search':
@@ -135,10 +244,10 @@ importers:
         version: 4.15.0
       '@docusaurus/core':
         specifier: 2.3.1
-        version: 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+        version: 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
       '@docusaurus/preset-classic':
         specifier: 2.3.1
-        version: 2.3.1(@algolia/client-search@4.15.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+        version: 2.3.1(@algolia/client-search@4.15.0)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
       '@mdx-js/react':
         specifier: ^1.6.22
         version: 1.6.22(react@17.0.2)
@@ -157,7 +266,7 @@ importers:
     devDependencies:
       '@docusaurus/module-type-aliases':
         specifier: 2.3.1
-        version: 2.3.1(react-dom@17.0.2)(react@17.0.2)
+        version: 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
       '@equinox-js/core':
         specifier: workspace:*
         version: link:../packages/core
@@ -1907,7 +2016,7 @@ packages:
     dependencies:
       '@babel/types': 7.23.6
       '@jridgewell/gen-mapping': 0.3.3
-      '@jridgewell/trace-mapping': 0.3.19
+      '@jridgewell/trace-mapping': 0.3.20
       jsesc: 2.5.2
     dev: false
 
@@ -3380,7 +3489,7 @@ packages:
       - '@algolia/client-search'
     dev: false
 
-  /@docusaurus/core@2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
+  /@docusaurus/core@2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
     resolution: {integrity: sha512-0Jd4jtizqnRAr7svWaBbbrCCN8mzBNd2xFLoT/IM7bGfFie5y58oz97KzXliwiLY3zWjqMXjQcuP1a5VgCv2JA==}
     engines: {node: '>=16.14'}
     hasBin: true
@@ -3400,11 +3509,11 @@ packages:
       '@babel/traverse': 7.21.2
       '@docusaurus/cssnano-preset': 2.3.1
       '@docusaurus/logger': 2.3.1
-      '@docusaurus/mdx-loader': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/mdx-loader': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
       '@docusaurus/react-loadable': 5.5.2(react@17.0.2)
-      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)
+      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
       '@docusaurus/utils-common': 2.3.1(@docusaurus/types@2.3.1)
-      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)
+      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
       '@slorber/static-site-generator-webpack-plugin': 4.0.7
       '@svgr/webpack': 6.5.1
       autoprefixer: 10.4.14(postcss@8.4.31)
@@ -3420,7 +3529,7 @@ packages:
       copy-webpack-plugin: 11.0.0(webpack@5.76.1)
       core-js: 3.29.0
       css-loader: 6.7.3(webpack@5.76.1)
-      css-minimizer-webpack-plugin: 4.2.2(clean-css@5.3.2)(webpack@5.76.1)
+      css-minimizer-webpack-plugin: 4.2.2(clean-css@5.3.2)(esbuild@0.20.0)(webpack@5.76.1)
       cssnano: 5.1.15(postcss@8.4.31)
       del: 6.1.1
       detect-port: 1.5.1
@@ -3451,12 +3560,12 @@ packages:
       semver: 7.5.4
       serve-handler: 6.1.5
       shelljs: 0.8.5
-      terser-webpack-plugin: 5.3.7(webpack@5.76.1)
+      terser-webpack-plugin: 5.3.7(esbuild@0.20.0)(webpack@5.76.1)
       tslib: 2.4.1
       update-notifier: 5.1.0
       url-loader: 4.1.1(file-loader@6.2.0)(webpack@5.76.1)
       wait-on: 6.0.1
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
       webpack-bundle-analyzer: 4.8.0
       webpack-dev-server: 4.11.1(webpack@5.76.1)
       webpack-merge: 5.8.0
@@ -3498,7 +3607,7 @@ packages:
       tslib: 2.6.2
     dev: false
 
-  /@docusaurus/mdx-loader@2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2):
+  /@docusaurus/mdx-loader@2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2):
     resolution: {integrity: sha512-Gzga7OsxQRpt3392K9lv/bW4jGppdLFJh3luKRknCKSAaZrmVkOQv2gvCn8LAOSZ3uRg5No7AgYs/vpL8K94lA==}
     engines: {node: '>=16.14'}
     peerDependencies:
@@ -3508,7 +3617,7 @@ packages:
       '@babel/parser': 7.23.6
       '@babel/traverse': 7.21.2
       '@docusaurus/logger': 2.3.1
-      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)
+      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
       '@mdx-js/mdx': 1.6.22
       escape-html: 1.0.3
       file-loader: 6.2.0(webpack@5.76.1)
@@ -3523,7 +3632,7 @@ packages:
       unified: 9.2.2
       unist-util-visit: 2.0.3
       url-loader: 4.1.1(file-loader@6.2.0)(webpack@5.76.1)
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
     transitivePeerDependencies:
       - '@docusaurus/types'
       - '@swc/core'
@@ -3533,14 +3642,14 @@ packages:
       - webpack-cli
     dev: false
 
-  /@docusaurus/module-type-aliases@2.3.1(react-dom@17.0.2)(react@17.0.2):
+  /@docusaurus/module-type-aliases@2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2):
     resolution: {integrity: sha512-6KkxfAVOJqIUynTRb/tphYCl+co3cP0PlHiMDbi+SzmYxMdgIrwYqH9yAnGSDoN6Jk2ZE/JY/Azs/8LPgKP48A==}
     peerDependencies:
       react: '*'
       react-dom: '*'
     dependencies:
       '@docusaurus/react-loadable': 5.5.2(react@17.0.2)
-      '@docusaurus/types': 2.3.1(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/types': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
       '@types/history': 4.7.11
       '@types/react': 18.2.16
       '@types/react-router-config': 5.0.6
@@ -3555,20 +3664,20 @@ packages:
       - uglify-js
       - webpack-cli
 
-  /@docusaurus/plugin-content-blog@2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
+  /@docusaurus/plugin-content-blog@2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
     resolution: {integrity: sha512-f5LjqX+9WkiLyGiQ41x/KGSJ/9bOjSD8lsVhPvYeUYHCtYpuiDKfhZE07O4EqpHkBx4NQdtQDbp+aptgHSTuiw==}
     engines: {node: '>=16.14'}
     peerDependencies:
       react: ^16.8.4 || ^17.0.0
       react-dom: ^16.8.4 || ^17.0.0
     dependencies:
-      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
       '@docusaurus/logger': 2.3.1
-      '@docusaurus/mdx-loader': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)
-      '@docusaurus/types': 2.3.1(react-dom@17.0.2)(react@17.0.2)
-      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)
+      '@docusaurus/mdx-loader': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/types': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
       '@docusaurus/utils-common': 2.3.1(@docusaurus/types@2.3.1)
-      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)
+      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
       cheerio: 1.0.0-rc.12
       feed: 4.2.2
       fs-extra: 10.1.0
@@ -3579,7 +3688,7 @@ packages:
       tslib: 2.6.2
       unist-util-visit: 2.0.3
       utility-types: 3.10.0
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
     transitivePeerDependencies:
       - '@parcel/css'
       - '@swc/core'
@@ -3598,20 +3707,20 @@ packages:
       - webpack-cli
     dev: false
 
-  /@docusaurus/plugin-content-docs@2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
+  /@docusaurus/plugin-content-docs@2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
     resolution: {integrity: sha512-DxztTOBEruv7qFxqUtbsqXeNcHqcVEIEe+NQoI1oi2DBmKBhW/o0MIal8lt+9gvmpx3oYtlwmLOOGepxZgJGkw==}
     engines: {node: '>=16.14'}
     peerDependencies:
       react: ^16.8.4 || ^17.0.0
       react-dom: ^16.8.4 || ^17.0.0
     dependencies:
-      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
       '@docusaurus/logger': 2.3.1
-      '@docusaurus/mdx-loader': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)
-      '@docusaurus/module-type-aliases': 2.3.1(react-dom@17.0.2)(react@17.0.2)
-      '@docusaurus/types': 2.3.1(react-dom@17.0.2)(react@17.0.2)
-      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)
-      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)
+      '@docusaurus/mdx-loader': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/module-type-aliases': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/types': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
+      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
       '@types/react-router-config': 5.0.6
       combine-promises: 1.1.0
       fs-extra: 10.1.0
@@ -3622,7 +3731,7 @@ packages:
       react-dom: 17.0.2(react@17.0.2)
       tslib: 2.6.2
       utility-types: 3.10.0
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
     transitivePeerDependencies:
       - '@parcel/css'
       - '@swc/core'
@@ -3641,23 +3750,23 @@ packages:
       - webpack-cli
     dev: false
 
-  /@docusaurus/plugin-content-pages@2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
+  /@docusaurus/plugin-content-pages@2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
     resolution: {integrity: sha512-E80UL6hvKm5VVw8Ka8YaVDtO6kWWDVUK4fffGvkpQ/AJQDOg99LwOXKujPoICC22nUFTsZ2Hp70XvpezCsFQaA==}
     engines: {node: '>=16.14'}
     peerDependencies:
       react: ^16.8.4 || ^17.0.0
       react-dom: ^16.8.4 || ^17.0.0
     dependencies:
-      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/mdx-loader': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)
-      '@docusaurus/types': 2.3.1(react-dom@17.0.2)(react@17.0.2)
-      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)
-      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)
+      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/mdx-loader': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/types': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
+      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
       fs-extra: 10.1.0
       react: 17.0.2
       react-dom: 17.0.2(react@17.0.2)
       tslib: 2.6.2
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
     transitivePeerDependencies:
       - '@parcel/css'
       - '@swc/core'
@@ -3676,16 +3785,16 @@ packages:
       - webpack-cli
     dev: false
 
-  /@docusaurus/plugin-debug@2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
+  /@docusaurus/plugin-debug@2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
     resolution: {integrity: sha512-Ujpml1Ppg4geB/2hyu2diWnO49az9U2bxM9Shen7b6qVcyFisNJTkVG2ocvLC7wM1efTJcUhBO6zAku2vKJGMw==}
     engines: {node: '>=16.14'}
     peerDependencies:
       react: ^16.8.4 || ^17.0.0
       react-dom: ^16.8.4 || ^17.0.0
     dependencies:
-      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/types': 2.3.1(react-dom@17.0.2)(react@17.0.2)
-      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)
+      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/types': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
       fs-extra: 10.1.0
       react: 17.0.2
       react-dom: 17.0.2(react@17.0.2)
@@ -3711,16 +3820,16 @@ packages:
       - webpack-cli
     dev: false
 
-  /@docusaurus/plugin-google-analytics@2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
+  /@docusaurus/plugin-google-analytics@2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
     resolution: {integrity: sha512-OHip0GQxKOFU8n7gkt3TM4HOYTXPCFDjqKbMClDD3KaDnyTuMp/Zvd9HSr770lLEscgPWIvzhJByRAClqsUWiQ==}
     engines: {node: '>=16.14'}
     peerDependencies:
       react: ^16.8.4 || ^17.0.0
       react-dom: ^16.8.4 || ^17.0.0
     dependencies:
-      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/types': 2.3.1(react-dom@17.0.2)(react@17.0.2)
-      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)
+      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/types': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
       react: 17.0.2
       react-dom: 17.0.2(react@17.0.2)
       tslib: 2.6.2
@@ -3742,16 +3851,16 @@ packages:
       - webpack-cli
     dev: false
 
-  /@docusaurus/plugin-google-gtag@2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
+  /@docusaurus/plugin-google-gtag@2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
     resolution: {integrity: sha512-uXtDhfu4+Hm+oqWUySr3DNI5cWC/rmP6XJyAk83Heor3dFjZqDwCbkX8yWPywkRiWev3Dk/rVF8lEn0vIGVocA==}
     engines: {node: '>=16.14'}
     peerDependencies:
       react: ^16.8.4 || ^17.0.0
       react-dom: ^16.8.4 || ^17.0.0
     dependencies:
-      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/types': 2.3.1(react-dom@17.0.2)(react@17.0.2)
-      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)
+      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/types': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
       react: 17.0.2
       react-dom: 17.0.2(react@17.0.2)
       tslib: 2.6.2
@@ -3773,16 +3882,16 @@ packages:
       - webpack-cli
     dev: false
 
-  /@docusaurus/plugin-google-tag-manager@2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
+  /@docusaurus/plugin-google-tag-manager@2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
     resolution: {integrity: sha512-Ww2BPEYSqg8q8tJdLYPFFM3FMDBCVhEM4UUqKzJaiRMx3NEoly3qqDRAoRDGdIhlC//Rf0iJV9cWAoq2m6k3sw==}
     engines: {node: '>=16.14'}
     peerDependencies:
       react: ^16.8.4 || ^17.0.0
       react-dom: ^16.8.4 || ^17.0.0
     dependencies:
-      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/types': 2.3.1(react-dom@17.0.2)(react@17.0.2)
-      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)
+      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/types': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
       react: 17.0.2
       react-dom: 17.0.2(react@17.0.2)
       tslib: 2.6.2
@@ -3804,19 +3913,19 @@ packages:
       - webpack-cli
     dev: false
 
-  /@docusaurus/plugin-sitemap@2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
+  /@docusaurus/plugin-sitemap@2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
     resolution: {integrity: sha512-8Yxile/v6QGYV9vgFiYL+8d2N4z4Er3pSHsrD08c5XI8bUXxTppMwjarDUTH/TRTfgAWotRbhJ6WZLyajLpozA==}
     engines: {node: '>=16.14'}
     peerDependencies:
       react: ^16.8.4 || ^17.0.0
       react-dom: ^16.8.4 || ^17.0.0
     dependencies:
-      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
       '@docusaurus/logger': 2.3.1
-      '@docusaurus/types': 2.3.1(react-dom@17.0.2)(react@17.0.2)
-      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)
+      '@docusaurus/types': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
       '@docusaurus/utils-common': 2.3.1(@docusaurus/types@2.3.1)
-      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)
+      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
       fs-extra: 10.1.0
       react: 17.0.2
       react-dom: 17.0.2(react@17.0.2)
@@ -3840,26 +3949,26 @@ packages:
       - webpack-cli
     dev: false
 
-  /@docusaurus/preset-classic@2.3.1(@algolia/client-search@4.15.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
+  /@docusaurus/preset-classic@2.3.1(@algolia/client-search@4.15.0)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
     resolution: {integrity: sha512-OQ5W0AHyfdUk0IldwJ3BlnZ1EqoJuu2L2BMhqLbqwNWdkmzmSUvlFLH1Pe7CZSQgB2YUUC/DnmjbPKk/qQD0lQ==}
     engines: {node: '>=16.14'}
     peerDependencies:
       react: ^16.8.4 || ^17.0.0
       react-dom: ^16.8.4 || ^17.0.0
     dependencies:
-      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/plugin-content-blog': 2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/plugin-content-docs': 2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/plugin-content-pages': 2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/plugin-debug': 2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/plugin-google-analytics': 2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/plugin-google-gtag': 2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/plugin-google-tag-manager': 2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/plugin-sitemap': 2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/theme-classic': 2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/theme-common': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/theme-search-algolia': 2.3.1(@algolia/client-search@4.15.0)(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/types': 2.3.1(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/plugin-content-blog': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/plugin-content-docs': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/plugin-content-pages': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/plugin-debug': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/plugin-google-analytics': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/plugin-google-gtag': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/plugin-google-tag-manager': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/plugin-sitemap': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/theme-classic': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/theme-common': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/theme-search-algolia': 2.3.1(@algolia/client-search@4.15.0)(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/types': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
       react: 17.0.2
       react-dom: 17.0.2(react@17.0.2)
     transitivePeerDependencies:
@@ -3892,25 +4001,25 @@ packages:
       prop-types: 15.8.1
       react: 17.0.2
 
-  /@docusaurus/theme-classic@2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
+  /@docusaurus/theme-classic@2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
     resolution: {integrity: sha512-SelSIDvyttb7ZYHj8vEUhqykhAqfOPKk+uP0z85jH72IMC58e7O8DIlcAeBv+CWsLbNIl9/Hcg71X0jazuxJug==}
     engines: {node: '>=16.14'}
     peerDependencies:
       react: ^16.8.4 || ^17.0.0
       react-dom: ^16.8.4 || ^17.0.0
     dependencies:
-      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/mdx-loader': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)
-      '@docusaurus/module-type-aliases': 2.3.1(react-dom@17.0.2)(react@17.0.2)
-      '@docusaurus/plugin-content-blog': 2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/plugin-content-docs': 2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/plugin-content-pages': 2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/theme-common': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/mdx-loader': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/module-type-aliases': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/plugin-content-blog': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/plugin-content-docs': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/plugin-content-pages': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/theme-common': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
       '@docusaurus/theme-translations': 2.3.1
-      '@docusaurus/types': 2.3.1(react-dom@17.0.2)(react@17.0.2)
-      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)
+      '@docusaurus/types': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
       '@docusaurus/utils-common': 2.3.1(@docusaurus/types@2.3.1)
-      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)
+      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
       '@mdx-js/react': 1.6.22(react@17.0.2)
       clsx: 1.2.1
       copy-text-to-clipboard: 3.0.1
@@ -3944,19 +4053,19 @@ packages:
       - webpack-cli
     dev: false
 
-  /@docusaurus/theme-common@2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
+  /@docusaurus/theme-common@2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
     resolution: {integrity: sha512-RYmYl2OR2biO+yhmW1aS5FyEvnrItPINa+0U2dMxcHpah8reSCjQ9eJGRmAgkZFchV1+aIQzXOI1K7LCW38O0g==}
     engines: {node: '>=16.14'}
     peerDependencies:
       react: ^16.8.4 || ^17.0.0
       react-dom: ^16.8.4 || ^17.0.0
     dependencies:
-      '@docusaurus/mdx-loader': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)
-      '@docusaurus/module-type-aliases': 2.3.1(react-dom@17.0.2)(react@17.0.2)
-      '@docusaurus/plugin-content-blog': 2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/plugin-content-docs': 2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/plugin-content-pages': 2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)
+      '@docusaurus/mdx-loader': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/module-type-aliases': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/plugin-content-blog': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/plugin-content-docs': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/plugin-content-pages': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
       '@types/history': 4.7.11
       '@types/react': 18.2.21
       '@types/react-router-config': 5.0.6
@@ -3987,7 +4096,7 @@ packages:
       - webpack-cli
     dev: false
 
-  /@docusaurus/theme-search-algolia@2.3.1(@algolia/client-search@4.15.0)(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
+  /@docusaurus/theme-search-algolia@2.3.1(@algolia/client-search@4.15.0)(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3):
     resolution: {integrity: sha512-JdHaRqRuH1X++g5fEMLnq7OtULSGQdrs9AbhcWRQ428ZB8/HOiaN6mj3hzHvcD3DFgu7koIVtWPQnvnN7iwzHA==}
     engines: {node: '>=16.14'}
     peerDependencies:
@@ -3995,13 +4104,13 @@ packages:
       react-dom: ^16.8.4 || ^17.0.0
     dependencies:
       '@docsearch/react': 3.3.3(@algolia/client-search@4.15.0)(react-dom@17.0.2)(react@17.0.2)
-      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/core': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
       '@docusaurus/logger': 2.3.1
-      '@docusaurus/plugin-content-docs': 2.3.1(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
-      '@docusaurus/theme-common': 2.3.1(@docusaurus/types@2.3.1)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/plugin-content-docs': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
+      '@docusaurus/theme-common': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)(typescript@5.3.3)
       '@docusaurus/theme-translations': 2.3.1
-      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)
-      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)
+      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
+      '@docusaurus/utils-validation': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
       algoliasearch: 4.15.0
       algoliasearch-helper: 3.12.0(algoliasearch@4.15.0)
       clsx: 1.2.1
@@ -4041,7 +4150,7 @@ packages:
       tslib: 2.6.2
     dev: false
 
-  /@docusaurus/types@2.3.1(react-dom@17.0.2)(react@17.0.2):
+  /@docusaurus/types@2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2):
     resolution: {integrity: sha512-PREbIRhTaNNY042qmfSE372Jb7djZt+oVTZkoqHJ8eff8vOIc2zqqDqBVc5BhOfpZGPTrE078yy/torUEZy08A==}
     peerDependencies:
       react: ^16.8.4 || ^17.0.0
@@ -4055,7 +4164,7 @@ packages:
       react-dom: 17.0.2(react@17.0.2)
       react-helmet-async: 1.3.0(react-dom@17.0.2)(react@17.0.2)
       utility-types: 3.10.0
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
       webpack-merge: 5.8.0
     transitivePeerDependencies:
       - '@swc/core'
@@ -4072,16 +4181,16 @@ packages:
       '@docusaurus/types':
         optional: true
     dependencies:
-      '@docusaurus/types': 2.3.1(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/types': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
       tslib: 2.6.2
     dev: false
 
-  /@docusaurus/utils-validation@2.3.1(@docusaurus/types@2.3.1):
+  /@docusaurus/utils-validation@2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0):
     resolution: {integrity: sha512-7n0208IG3k1HVTByMHlZoIDjjOFC8sbViHVXJx0r3Q+3Ezrx+VQ1RZ/zjNn6lT+QBCRCXlnlaoJ8ug4HIVgQ3w==}
     engines: {node: '>=16.14'}
     dependencies:
       '@docusaurus/logger': 2.3.1
-      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)
+      '@docusaurus/utils': 2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0)
       joi: 17.7.0
       js-yaml: 4.1.0
       tslib: 2.6.2
@@ -4094,7 +4203,7 @@ packages:
       - webpack-cli
     dev: false
 
-  /@docusaurus/utils@2.3.1(@docusaurus/types@2.3.1):
+  /@docusaurus/utils@2.3.1(@docusaurus/types@2.3.1)(esbuild@0.20.0):
     resolution: {integrity: sha512-9WcQROCV0MmrpOQDXDGhtGMd52DHpSFbKLfkyaYumzbTstrbA5pPOtiGtxK1nqUHkiIv8UwexS54p0Vod2I1lg==}
     engines: {node: '>=16.14'}
     peerDependencies:
@@ -4104,7 +4213,7 @@ packages:
         optional: true
     dependencies:
       '@docusaurus/logger': 2.3.1
-      '@docusaurus/types': 2.3.1(react-dom@17.0.2)(react@17.0.2)
+      '@docusaurus/types': 2.3.1(esbuild@0.20.0)(react-dom@17.0.2)(react@17.0.2)
       '@svgr/webpack': 6.5.1
       escape-string-regexp: 4.0.0
       file-loader: 6.2.0(webpack@5.76.1)
@@ -4119,7 +4228,7 @@ packages:
       shelljs: 0.8.5
       tslib: 2.6.2
       url-loader: 4.1.1(file-loader@6.2.0)(webpack@5.76.1)
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
     transitivePeerDependencies:
       - '@swc/core'
       - esbuild
@@ -4128,12 +4237,21 @@ packages:
       - webpack-cli
     dev: false
 
+  /@esbuild/aix-ppc64@0.20.0:
+    resolution: {integrity: sha512-fGFDEctNh0CcSwsiRPxiaqX0P5rq+AqE0SRhYGZ4PX46Lg1FNR6oCxJghf8YgY0WQEgQuh3lErUFE4KxLeRmmw==}
+    engines: {node: '>=12'}
+    cpu: [ppc64]
+    os: [aix]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/android-arm64@0.19.8:
     resolution: {integrity: sha512-B8JbS61bEunhfx8kasogFENgQfr/dIp+ggYXwTqdbMAgGDhRa3AaPpQMuQU0rNxDLECj6FhDzk1cF9WHMVwrtA==}
     engines: {node: '>=12'}
     cpu: [arm64]
     os: [android]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/android-arm64@0.19.9:
@@ -4145,12 +4263,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/android-arm64@0.20.0:
+    resolution: {integrity: sha512-aVpnM4lURNkp0D3qPoAzSG92VXStYmoVPOgXveAUoQBWRSuQzt51yvSju29J6AHPmwY1BjH49uR29oyfH1ra8Q==}
+    engines: {node: '>=12'}
+    cpu: [arm64]
+    os: [android]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/android-arm@0.19.8:
     resolution: {integrity: sha512-31E2lxlGM1KEfivQl8Yf5aYU/mflz9g06H6S15ITUFQueMFtFjESRMoDSkvMo8thYvLBax+VKTPlpnx+sPicOA==}
     engines: {node: '>=12'}
     cpu: [arm]
     os: [android]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/android-arm@0.19.9:
@@ -4162,12 +4289,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/android-arm@0.20.0:
+    resolution: {integrity: sha512-3bMAfInvByLHfJwYPJRlpTeaQA75n8C/QKpEaiS4HrFWFiJlNI0vzq/zCjBrhAYcPyVPG7Eo9dMrcQXuqmNk5g==}
+    engines: {node: '>=12'}
+    cpu: [arm]
+    os: [android]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/android-x64@0.19.8:
     resolution: {integrity: sha512-rdqqYfRIn4jWOp+lzQttYMa2Xar3OK9Yt2fhOhzFXqg0rVWEfSclJvZq5fZslnz6ypHvVf3CT7qyf0A5pM682A==}
     engines: {node: '>=12'}
     cpu: [x64]
     os: [android]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/android-x64@0.19.9:
@@ -4179,12 +4315,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/android-x64@0.20.0:
+    resolution: {integrity: sha512-uK7wAnlRvjkCPzh8jJ+QejFyrP8ObKuR5cBIsQZ+qbMunwR8sbd8krmMbxTLSrDhiPZaJYKQAU5Y3iMDcZPhyQ==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [android]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/darwin-arm64@0.19.8:
     resolution: {integrity: sha512-RQw9DemMbIq35Bprbboyf8SmOr4UXsRVxJ97LgB55VKKeJOOdvsIPy0nFyF2l8U+h4PtBx/1kRf0BelOYCiQcw==}
     engines: {node: '>=12'}
     cpu: [arm64]
     os: [darwin]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/darwin-arm64@0.19.9:
@@ -4196,12 +4341,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/darwin-arm64@0.20.0:
+    resolution: {integrity: sha512-AjEcivGAlPs3UAcJedMa9qYg9eSfU6FnGHJjT8s346HSKkrcWlYezGE8VaO2xKfvvlZkgAhyvl06OJOxiMgOYQ==}
+    engines: {node: '>=12'}
+    cpu: [arm64]
+    os: [darwin]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/darwin-x64@0.19.8:
     resolution: {integrity: sha512-3sur80OT9YdeZwIVgERAysAbwncom7b4bCI2XKLjMfPymTud7e/oY4y+ci1XVp5TfQp/bppn7xLw1n/oSQY3/Q==}
     engines: {node: '>=12'}
     cpu: [x64]
     os: [darwin]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/darwin-x64@0.19.9:
@@ -4213,12 +4367,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/darwin-x64@0.20.0:
+    resolution: {integrity: sha512-bsgTPoyYDnPv8ER0HqnJggXK6RyFy4PH4rtsId0V7Efa90u2+EifxytE9pZnsDgExgkARy24WUQGv9irVbTvIw==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [darwin]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/freebsd-arm64@0.19.8:
     resolution: {integrity: sha512-WAnPJSDattvS/XtPCTj1tPoTxERjcTpH6HsMr6ujTT+X6rylVe8ggxk8pVxzf5U1wh5sPODpawNicF5ta/9Tmw==}
     engines: {node: '>=12'}
     cpu: [arm64]
     os: [freebsd]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/freebsd-arm64@0.19.9:
@@ -4230,12 +4393,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/freebsd-arm64@0.20.0:
+    resolution: {integrity: sha512-kQ7jYdlKS335mpGbMW5tEe3IrQFIok9r84EM3PXB8qBFJPSc6dpWfrtsC/y1pyrz82xfUIn5ZrnSHQQsd6jebQ==}
+    engines: {node: '>=12'}
+    cpu: [arm64]
+    os: [freebsd]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/freebsd-x64@0.19.8:
     resolution: {integrity: sha512-ICvZyOplIjmmhjd6mxi+zxSdpPTKFfyPPQMQTK/w+8eNK6WV01AjIztJALDtwNNfFhfZLux0tZLC+U9nSyA5Zg==}
     engines: {node: '>=12'}
     cpu: [x64]
     os: [freebsd]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/freebsd-x64@0.19.9:
@@ -4247,12 +4419,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/freebsd-x64@0.20.0:
+    resolution: {integrity: sha512-uG8B0WSepMRsBNVXAQcHf9+Ko/Tr+XqmK7Ptel9HVmnykupXdS4J7ovSQUIi0tQGIndhbqWLaIL/qO/cWhXKyQ==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [freebsd]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/linux-arm64@0.19.8:
     resolution: {integrity: sha512-z1zMZivxDLHWnyGOctT9JP70h0beY54xDDDJt4VpTX+iwA77IFsE1vCXWmprajJGa+ZYSqkSbRQ4eyLCpCmiCQ==}
     engines: {node: '>=12'}
     cpu: [arm64]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/linux-arm64@0.19.9:
@@ -4264,12 +4445,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/linux-arm64@0.20.0:
+    resolution: {integrity: sha512-uTtyYAP5veqi2z9b6Gr0NUoNv9F/rOzI8tOD5jKcCvRUn7T60Bb+42NDBCWNhMjkQzI0qqwXkQGo1SY41G52nw==}
+    engines: {node: '>=12'}
+    cpu: [arm64]
+    os: [linux]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/linux-arm@0.19.8:
     resolution: {integrity: sha512-H4vmI5PYqSvosPaTJuEppU9oz1dq2A7Mr2vyg5TF9Ga+3+MGgBdGzcyBP7qK9MrwFQZlvNyJrvz6GuCaj3OukQ==}
     engines: {node: '>=12'}
     cpu: [arm]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/linux-arm@0.19.9:
@@ -4281,12 +4471,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/linux-arm@0.20.0:
+    resolution: {integrity: sha512-2ezuhdiZw8vuHf1HKSf4TIk80naTbP9At7sOqZmdVwvvMyuoDiZB49YZKLsLOfKIr77+I40dWpHVeY5JHpIEIg==}
+    engines: {node: '>=12'}
+    cpu: [arm]
+    os: [linux]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/linux-ia32@0.19.8:
     resolution: {integrity: sha512-1a8suQiFJmZz1khm/rDglOc8lavtzEMRo0v6WhPgxkrjcU0LkHj+TwBrALwoz/OtMExvsqbbMI0ChyelKabSvQ==}
     engines: {node: '>=12'}
     cpu: [ia32]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/linux-ia32@0.19.9:
@@ -4298,12 +4497,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/linux-ia32@0.20.0:
+    resolution: {integrity: sha512-c88wwtfs8tTffPaoJ+SQn3y+lKtgTzyjkD8NgsyCtCmtoIC8RDL7PrJU05an/e9VuAke6eJqGkoMhJK1RY6z4w==}
+    engines: {node: '>=12'}
+    cpu: [ia32]
+    os: [linux]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/linux-loong64@0.19.8:
     resolution: {integrity: sha512-fHZWS2JJxnXt1uYJsDv9+b60WCc2RlvVAy1F76qOLtXRO+H4mjt3Tr6MJ5l7Q78X8KgCFudnTuiQRBhULUyBKQ==}
     engines: {node: '>=12'}
     cpu: [loong64]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/linux-loong64@0.19.9:
@@ -4315,12 +4523,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/linux-loong64@0.20.0:
+    resolution: {integrity: sha512-lR2rr/128/6svngnVta6JN4gxSXle/yZEZL3o4XZ6esOqhyR4wsKyfu6qXAL04S4S5CgGfG+GYZnjFd4YiG3Aw==}
+    engines: {node: '>=12'}
+    cpu: [loong64]
+    os: [linux]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/linux-mips64el@0.19.8:
     resolution: {integrity: sha512-Wy/z0EL5qZYLX66dVnEg9riiwls5IYnziwuju2oUiuxVc+/edvqXa04qNtbrs0Ukatg5HEzqT94Zs7J207dN5Q==}
     engines: {node: '>=12'}
     cpu: [mips64el]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/linux-mips64el@0.19.9:
@@ -4332,12 +4549,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/linux-mips64el@0.20.0:
+    resolution: {integrity: sha512-9Sycc+1uUsDnJCelDf6ZNqgZQoK1mJvFtqf2MUz4ujTxGhvCWw+4chYfDLPepMEvVL9PDwn6HrXad5yOrNzIsQ==}
+    engines: {node: '>=12'}
+    cpu: [mips64el]
+    os: [linux]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/linux-ppc64@0.19.8:
     resolution: {integrity: sha512-ETaW6245wK23YIEufhMQ3HSeHO7NgsLx8gygBVldRHKhOlD1oNeNy/P67mIh1zPn2Hr2HLieQrt6tWrVwuqrxg==}
     engines: {node: '>=12'}
     cpu: [ppc64]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/linux-ppc64@0.19.9:
@@ -4349,12 +4575,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/linux-ppc64@0.20.0:
+    resolution: {integrity: sha512-CoWSaaAXOZd+CjbUTdXIJE/t7Oz+4g90A3VBCHLbfuc5yUQU/nFDLOzQsN0cdxgXd97lYW/psIIBdjzQIwTBGw==}
+    engines: {node: '>=12'}
+    cpu: [ppc64]
+    os: [linux]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/linux-riscv64@0.19.8:
     resolution: {integrity: sha512-T2DRQk55SgoleTP+DtPlMrxi/5r9AeFgkhkZ/B0ap99zmxtxdOixOMI570VjdRCs9pE4Wdkz7JYrsPvsl7eESg==}
     engines: {node: '>=12'}
     cpu: [riscv64]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/linux-riscv64@0.19.9:
@@ -4366,12 +4601,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/linux-riscv64@0.20.0:
+    resolution: {integrity: sha512-mlb1hg/eYRJUpv8h/x+4ShgoNLL8wgZ64SUr26KwglTYnwAWjkhR2GpoKftDbPOCnodA9t4Y/b68H4J9XmmPzA==}
+    engines: {node: '>=12'}
+    cpu: [riscv64]
+    os: [linux]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/linux-s390x@0.19.8:
     resolution: {integrity: sha512-NPxbdmmo3Bk7mbNeHmcCd7R7fptJaczPYBaELk6NcXxy7HLNyWwCyDJ/Xx+/YcNH7Im5dHdx9gZ5xIwyliQCbg==}
     engines: {node: '>=12'}
     cpu: [s390x]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/linux-s390x@0.19.9:
@@ -4383,12 +4627,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/linux-s390x@0.20.0:
+    resolution: {integrity: sha512-fgf9ubb53xSnOBqyvWEY6ukBNRl1mVX1srPNu06B6mNsNK20JfH6xV6jECzrQ69/VMiTLvHMicQR/PgTOgqJUQ==}
+    engines: {node: '>=12'}
+    cpu: [s390x]
+    os: [linux]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/linux-x64@0.19.8:
     resolution: {integrity: sha512-lytMAVOM3b1gPypL2TRmZ5rnXl7+6IIk8uB3eLsV1JwcizuolblXRrc5ShPrO9ls/b+RTp+E6gbsuLWHWi2zGg==}
     engines: {node: '>=12'}
     cpu: [x64]
     os: [linux]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/linux-x64@0.19.9:
@@ -4400,12 +4653,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/linux-x64@0.20.0:
+    resolution: {integrity: sha512-H9Eu6MGse++204XZcYsse1yFHmRXEWgadk2N58O/xd50P9EvFMLJTQLg+lB4E1cF2xhLZU5luSWtGTb0l9UeSg==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [linux]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/netbsd-x64@0.19.8:
     resolution: {integrity: sha512-hvWVo2VsXz/8NVt1UhLzxwAfo5sioj92uo0bCfLibB0xlOmimU/DeAEsQILlBQvkhrGjamP0/el5HU76HAitGw==}
     engines: {node: '>=12'}
     cpu: [x64]
     os: [netbsd]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/netbsd-x64@0.19.9:
@@ -4417,12 +4679,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/netbsd-x64@0.20.0:
+    resolution: {integrity: sha512-lCT675rTN1v8Fo+RGrE5KjSnfY0x9Og4RN7t7lVrN3vMSjy34/+3na0q7RIfWDAj0e0rCh0OL+P88lu3Rt21MQ==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [netbsd]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/openbsd-x64@0.19.8:
     resolution: {integrity: sha512-/7Y7u77rdvmGTxR83PgaSvSBJCC2L3Kb1M/+dmSIvRvQPXXCuC97QAwMugBNG0yGcbEGfFBH7ojPzAOxfGNkwQ==}
     engines: {node: '>=12'}
     cpu: [x64]
     os: [openbsd]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/openbsd-x64@0.19.9:
@@ -4434,12 +4705,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/openbsd-x64@0.20.0:
+    resolution: {integrity: sha512-HKoUGXz/TOVXKQ+67NhxyHv+aDSZf44QpWLa3I1lLvAwGq8x1k0T+e2HHSRvxWhfJrFxaaqre1+YyzQ99KixoA==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [openbsd]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/sunos-x64@0.19.8:
     resolution: {integrity: sha512-9Lc4s7Oi98GqFA4HzA/W2JHIYfnXbUYgekUP/Sm4BG9sfLjyv6GKKHKKVs83SMicBF2JwAX6A1PuOLMqpD001w==}
     engines: {node: '>=12'}
     cpu: [x64]
     os: [sunos]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/sunos-x64@0.19.9:
@@ -4451,12 +4731,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/sunos-x64@0.20.0:
+    resolution: {integrity: sha512-GDwAqgHQm1mVoPppGsoq4WJwT3vhnz/2N62CzhvApFD1eJyTroob30FPpOZabN+FgCjhG+AgcZyOPIkR8dfD7g==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [sunos]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/win32-arm64@0.19.8:
     resolution: {integrity: sha512-rq6WzBGjSzihI9deW3fC2Gqiak68+b7qo5/3kmB6Gvbh/NYPA0sJhrnp7wgV4bNwjqM+R2AApXGxMO7ZoGhIJg==}
     engines: {node: '>=12'}
     cpu: [arm64]
     os: [win32]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/win32-arm64@0.19.9:
@@ -4468,12 +4757,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/win32-arm64@0.20.0:
+    resolution: {integrity: sha512-0vYsP8aC4TvMlOQYozoksiaxjlvUcQrac+muDqj1Fxy6jh9l9CZJzj7zmh8JGfiV49cYLTorFLxg7593pGldwQ==}
+    engines: {node: '>=12'}
+    cpu: [arm64]
+    os: [win32]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/win32-ia32@0.19.8:
     resolution: {integrity: sha512-AIAbverbg5jMvJznYiGhrd3sumfwWs8572mIJL5NQjJa06P8KfCPWZQ0NwZbPQnbQi9OWSZhFVSUWjjIrn4hSw==}
     engines: {node: '>=12'}
     cpu: [ia32]
     os: [win32]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/win32-ia32@0.19.9:
@@ -4485,12 +4783,21 @@ packages:
     dev: true
     optional: true
 
+  /@esbuild/win32-ia32@0.20.0:
+    resolution: {integrity: sha512-p98u4rIgfh4gdpV00IqknBD5pC84LCub+4a3MO+zjqvU5MVXOc3hqR2UgT2jI2nh3h8s9EQxmOsVI3tyzv1iFg==}
+    engines: {node: '>=12'}
+    cpu: [ia32]
+    os: [win32]
+    requiresBuild: true
+    optional: true
+
   /@esbuild/win32-x64@0.19.8:
     resolution: {integrity: sha512-bfZ0cQ1uZs2PqpulNL5j/3w+GDhP36k1K5c38QdQg+Swy51jFZWWeIkteNsufkQxp986wnqRRsb/bHbY1WQ7TA==}
     engines: {node: '>=12'}
     cpu: [x64]
     os: [win32]
     requiresBuild: true
+    dev: false
     optional: true
 
   /@esbuild/win32-x64@0.19.9:
@@ -4500,6 +4807,14 @@ packages:
     os: [win32]
     requiresBuild: true
     dev: true
+    optional: true
+
+  /@esbuild/win32-x64@0.20.0:
+    resolution: {integrity: sha512-NgJnesu1RtWihtTtXGFMU5YSE6JyyHPMxCwBZK7a6/8d31GuSo9l0Ss7w1Jw5QnKUawG6UEehs883kcXf5fYwg==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [win32]
+    requiresBuild: true
     optional: true
 
   /@grpc/grpc-js@1.8.18:
@@ -4590,12 +4905,6 @@ packages:
   /@jridgewell/sourcemap-codec@1.4.15:
     resolution: {integrity: sha512-eF2rxCRulEKXHTRiDrDy6erMYWqNw4LPdQ8UQA4huuxaQsVeRPFl2oM8oDGxMFhJUWZf9McpLtJasDDZb/Bpeg==}
 
-  /@jridgewell/trace-mapping@0.3.19:
-    resolution: {integrity: sha512-kf37QtfW+Hwx/buWGMPcR60iF9ziHa6r/CZJIHbmcm4+0qrXiVdxegAH0F6yddEVQ7zdkjcGCgCzUu+BcbhQxw==}
-    dependencies:
-      '@jridgewell/resolve-uri': 3.1.1
-      '@jridgewell/sourcemap-codec': 1.4.15
-
   /@jridgewell/trace-mapping@0.3.20:
     resolution: {integrity: sha512-R8LcPeWZol2zR8mmH3JeKQ6QRCFb7XgUhV9ZlGhHLGyg4wpPiPZNQOOWhFZhxKw8u//yTbNGI42Bx/3paXEQ+Q==}
     dependencies:
@@ -4608,6 +4917,10 @@ packages:
       '@jridgewell/resolve-uri': 3.1.1
       '@jridgewell/sourcemap-codec': 1.4.15
     dev: true
+
+  /@js-joda/core@5.6.1:
+    resolution: {integrity: sha512-Xla/d7ZMMR6+zRd6lTio0wRZECfcfFJP7GGe9A9L4tDOlD5CX4YcZ4YZle9w58bBYzssojVapI84RraKWDQZRg==}
+    dev: false
 
   /@leichtgewicht/ip-codec@2.0.4:
     resolution: {integrity: sha512-Hcv+nVC0kZnQ3tD9GVu5xSMR4VVYOteQIr/hwFPVEvPdlXqgGEuRjiheChHgdM+JyqdgNcmzZOX/tnl0JOiI7A==}
@@ -4702,6 +5015,16 @@ packages:
       '@opentelemetry/api': 1.4.0
       tslib: 2.6.2
 
+  /@opentelemetry/context-async-hooks@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-sfxQOyAyV3WsKswGX0Yx3P+e7t3EtxpF/PC+6e4+rqs88oUfTaP3214iz4GQuuzV9yCG8DRWTZ96J6E/iD0qeA==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.0.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      tslib: 2.6.2
+    dev: false
+
   /@opentelemetry/context-async-hooks@1.9.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-Ur+TgRmJgAEvg6VQuhkqzsWsqoOtr+QSZ8r8Yf6WrvlZpAl/sdRU+yUXWjA7r8JFS9VbBq7IEp7oMStFuJT2ow==}
     engines: {node: '>=14'}
@@ -4719,6 +5042,17 @@ packages:
       '@opentelemetry/api': 1.4.0
       '@opentelemetry/semantic-conventions': 1.15.0
       tslib: 2.6.2
+
+  /@opentelemetry/core@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-GGTS6BytfaN8OgbCUOnxg/a9WVsVUj0484zXHZuBzvIXx7V4Tmkb0IHnnhS7Q0cBLNLgjNuvrCpQaP8fIvO4bg==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.0.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/semantic-conventions': 1.15.0
+      tslib: 2.6.2
+    dev: false
 
   /@opentelemetry/core@1.9.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-Koy1ApRUp5DB5KpOqhDk0JjO9x6QeEkmcePl8qQDsXZGF4MuHUBShXibd+J2tRNckTsvgEHi1uEuUckDgN+c/A==}
@@ -4743,6 +5077,20 @@ packages:
       tslib: 2.6.2
     dev: false
 
+  /@opentelemetry/exporter-jaeger@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-45TAQUqQiuGKkrm535qT0Vs4iJD8/irrHhsscUZPGogEHCu3GVhmc66vf1FleC+ASyv2ySUeXSmfIV3K3tqRHA==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.0.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/semantic-conventions': 1.15.0
+      jaeger-client: 3.19.0
+      tslib: 2.6.2
+    dev: false
+
   /@opentelemetry/exporter-trace-otlp-grpc@0.41.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-LYy4aP/vICUG9kyyEKu4HvG+FezINb9UNVK4XJhPXfp8dTyILA1dlNqgZlemZPMTgi3Vfz12VoESMQo8UYYyaA==}
     engines: {node: '>=14'}
@@ -4759,6 +5107,22 @@ packages:
       tslib: 2.6.2
     dev: false
 
+  /@opentelemetry/exporter-trace-otlp-grpc@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-LYy4aP/vICUG9kyyEKu4HvG+FezINb9UNVK4XJhPXfp8dTyILA1dlNqgZlemZPMTgi3Vfz12VoESMQo8UYYyaA==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.0.0
+    dependencies:
+      '@grpc/grpc-js': 1.8.18
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/otlp-grpc-exporter-base': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/otlp-transformer': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.1)
+      tslib: 2.6.2
+    dev: false
+
   /@opentelemetry/exporter-trace-otlp-http@0.41.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-xG/EJAphB8SFi635vUWJ7rNOwU2nTSIWz1zCu1G6tzQUcej5M1FYtTuUeoJ+HrjHUDOq0SgFbvzfFh6ReggWMQ==}
     engines: {node: '>=14'}
@@ -4771,6 +5135,21 @@ packages:
       '@opentelemetry/otlp-transformer': 0.41.0(@opentelemetry/api@1.4.0)
       '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.0)
       '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.0)
+      tslib: 2.6.2
+    dev: false
+
+  /@opentelemetry/exporter-trace-otlp-http@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-xG/EJAphB8SFi635vUWJ7rNOwU2nTSIWz1zCu1G6tzQUcej5M1FYtTuUeoJ+HrjHUDOq0SgFbvzfFh6ReggWMQ==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.0.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/otlp-exporter-base': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/otlp-transformer': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.1)
       tslib: 2.6.2
     dev: false
 
@@ -4790,6 +5169,22 @@ packages:
       tslib: 2.6.2
     dev: false
 
+  /@opentelemetry/exporter-trace-otlp-proto@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-rDx9uJGpBkvWwwmUk68F3ScowHoCrG5Q1IY0ED4Yx74nS9+KhgigN8IiSXlJyjzmw4IFxL1byNctbKlJ95090Q==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.0.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/otlp-exporter-base': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/otlp-proto-exporter-base': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/otlp-transformer': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.1)
+      tslib: 2.6.2
+    dev: false
+
   /@opentelemetry/exporter-zipkin@1.15.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-vBE8vingVgT9jD8M2WTzhsSnkN0XPR5zEZeoy0KZzt+0g2tRyvb7qWVGucadU+nIq4Z3vhUoN855ZuInE+YJgQ==}
     engines: {node: '>=14'}
@@ -4800,6 +5195,20 @@ packages:
       '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.0)
       '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.0)
       '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.0)
+      '@opentelemetry/semantic-conventions': 1.15.0
+      tslib: 2.6.2
+    dev: false
+
+  /@opentelemetry/exporter-zipkin@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-vBE8vingVgT9jD8M2WTzhsSnkN0XPR5zEZeoy0KZzt+0g2tRyvb7qWVGucadU+nIq4Z3vhUoN855ZuInE+YJgQ==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.0.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.1)
       '@opentelemetry/semantic-conventions': 1.15.0
       tslib: 2.6.2
     dev: false
@@ -4815,7 +5224,7 @@ packages:
       '@opentelemetry/instrumentation': 0.41.0(@opentelemetry/api@1.4.0)
       '@opentelemetry/semantic-conventions': 1.15.0
       '@types/express': 4.17.13
-      tslib: 2.4.1
+      tslib: 2.6.2
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -4831,7 +5240,23 @@ packages:
       '@opentelemetry/instrumentation': 0.41.0(@opentelemetry/api@1.4.0)
       '@opentelemetry/semantic-conventions': 1.15.0
       semver: 7.5.4
-      tslib: 2.4.1
+      tslib: 2.6.2
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@opentelemetry/instrumentation-http@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-O/YTVH4xE96rxRYoo14vayM9s0MUTtMASMAtYS3yvXMJETgc5aFnTrWezKQ6VJ2Lew5qfm1ZISzFURLSUM0qTw==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.3.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/instrumentation': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/semantic-conventions': 1.15.0
+      semver: 7.5.4
+      tslib: 2.6.2
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -4847,6 +5272,24 @@ packages:
       '@opentelemetry/instrumentation': 0.41.0(@opentelemetry/api@1.4.0)
       '@opentelemetry/semantic-conventions': 1.15.0
       '@opentelemetry/sql-common': 0.40.0(@opentelemetry/api@1.4.0)
+      '@types/pg': 8.6.1
+      '@types/pg-pool': 2.0.3
+      tslib: 2.4.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@opentelemetry/instrumentation-pg@0.36.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-S9RmzTILWTl7AVfdp/e8lWQTlpwrpoPbpxAfEJ1ENzTlPMmdw0jWPAQTgrTLQa6cpzhiypDHts3g2b6hc1zFYQ==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.3.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/instrumentation': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/semantic-conventions': 1.15.0
+      '@opentelemetry/sql-common': 0.40.0(@opentelemetry/api@1.4.1)
       '@types/pg': 8.6.1
       '@types/pg-pool': 2.0.3
       tslib: 2.4.1
@@ -4871,6 +5314,23 @@ packages:
       - supports-color
     dev: false
 
+  /@opentelemetry/instrumentation@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-Ut9SnZfi7MexOk+GHCMjEtYHogIb6v1dfbnq+oTbQj0lOQUSNLtlO6bXwUdtmPhbvrx6bC0AGr1L6g3rNimv9w==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.3.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@types/shimmer': 1.0.2
+      import-in-the-middle: 1.4.1
+      require-in-the-middle: 7.2.0
+      semver: 7.5.4
+      shimmer: 1.2.1
+      tslib: 2.6.2
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
   /@opentelemetry/otlp-exporter-base@0.41.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-fSHtZznIU6kvCLFQC77nOhHj059G1sc/wNl96YiPdro4A8t8ue//ET0yAtpRCQ9lynn4RNrpsw5iEFJszEbmLg==}
     engines: {node: '>=14'}
@@ -4879,6 +5339,17 @@ packages:
     dependencies:
       '@opentelemetry/api': 1.4.0
       '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.0)
+      tslib: 2.6.2
+    dev: false
+
+  /@opentelemetry/otlp-exporter-base@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-fSHtZznIU6kvCLFQC77nOhHj059G1sc/wNl96YiPdro4A8t8ue//ET0yAtpRCQ9lynn4RNrpsw5iEFJszEbmLg==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.0.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
       tslib: 2.6.2
     dev: false
 
@@ -4896,6 +5367,20 @@ packages:
       tslib: 2.6.2
     dev: false
 
+  /@opentelemetry/otlp-grpc-exporter-base@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-TdbZ46i2kKeGKE9SCZFiSt1iTLHS+DniEaWbVsIhEPOLZXl8TGzzi1FjR/Q3gG/vlblYZ/MdgXHgRIGVG5qIDw==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.0.0
+    dependencies:
+      '@grpc/grpc-js': 1.8.18
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/otlp-exporter-base': 0.41.0(@opentelemetry/api@1.4.1)
+      protobufjs: 7.2.4
+      tslib: 2.6.2
+    dev: false
+
   /@opentelemetry/otlp-proto-exporter-base@0.41.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-VY/7y8ne72PIzPxFN3uzHfrmxo9rCDWP08/fY3iodjizCxmCCRFM4Sb7VX0ZSrjakL1mLXFd0FSwe71AsAtM9A==}
     engines: {node: '>=14'}
@@ -4905,6 +5390,19 @@ packages:
       '@opentelemetry/api': 1.4.0
       '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.0)
       '@opentelemetry/otlp-exporter-base': 0.41.0(@opentelemetry/api@1.4.0)
+      protobufjs: 7.2.4
+      tslib: 2.6.2
+    dev: false
+
+  /@opentelemetry/otlp-proto-exporter-base@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-VY/7y8ne72PIzPxFN3uzHfrmxo9rCDWP08/fY3iodjizCxmCCRFM4Sb7VX0ZSrjakL1mLXFd0FSwe71AsAtM9A==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.0.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/otlp-exporter-base': 0.41.0(@opentelemetry/api@1.4.1)
       protobufjs: 7.2.4
       tslib: 2.6.2
     dev: false
@@ -4925,6 +5423,22 @@ packages:
       tslib: 2.6.2
     dev: false
 
+  /@opentelemetry/otlp-transformer@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-a5GqVSdVIhAoYcQrdWQAeMbrkz0iDwKC6BUsuqPuykh+T4QZzrF6cwneOXKbQI5Dl7ms6ha9dYHf4Ka0kc66ZQ==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.3.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/api-logs': 0.41.0
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-logs': 0.41.0(@opentelemetry/api-logs@0.41.0)(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-metrics': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.1)
+      tslib: 2.6.2
+    dev: false
+
   /@opentelemetry/propagator-b3@1.15.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-YafSIITpCmo76VdlJ/GvS5x+uuRWCU5BqCOV9CITi11Tk4aqTxMR3pXlMoPYQWstUUgacQf4dGcdvdS+1rkDWQ==}
     engines: {node: '>=14'}
@@ -4934,6 +5448,17 @@ packages:
       '@opentelemetry/api': 1.4.0
       '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.0)
       tslib: 2.6.2
+
+  /@opentelemetry/propagator-b3@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-YafSIITpCmo76VdlJ/GvS5x+uuRWCU5BqCOV9CITi11Tk4aqTxMR3pXlMoPYQWstUUgacQf4dGcdvdS+1rkDWQ==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.0.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      tslib: 2.6.2
+    dev: false
 
   /@opentelemetry/propagator-b3@1.9.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-5M/NvJj7ZHZXEU8lkAFhrSrWaHmCCkFLstNbL8p16qpTn1AOZowuSjMOYRoJJBmL5PUobkZ3W8Gjov1UgldPBg==}
@@ -4954,6 +5479,17 @@ packages:
       '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.0)
       tslib: 2.6.2
 
+  /@opentelemetry/propagator-jaeger@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-OU6WNxuqjxNZoRcIBCsmvTBktAPuBUj1bh+DI+oYAvzwP2NXLavSDJWjVMGTJQDgZuR7lFijmx9EfwyAO9x37Q==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.0.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      tslib: 2.6.2
+    dev: false
+
   /@opentelemetry/propagator-jaeger@1.9.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-oo8RyuyzEbbXdIfeEG9iA5vmTH4Kld+dZMIZICd5G5SmeNcNes3sLrparpunIGms41wIP2mWiIlcOelDCmGceg==}
     engines: {node: '>=14'}
@@ -4973,6 +5509,18 @@ packages:
       '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.0)
       '@opentelemetry/semantic-conventions': 1.15.0
       tslib: 2.6.2
+
+  /@opentelemetry/resources@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-Sb8A6ZXHXDlgHv32UNRE3y8McWE3vkb5dsSttYArYa5ZpwjiF5ge0vnnKUUnG7bY0AgF9VBIOORZE8gsrnD2WA==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.0.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/semantic-conventions': 1.15.0
+      tslib: 2.6.2
+    dev: false
 
   /@opentelemetry/resources@1.9.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-zCyien0p3XWarU6zv72c/JZ6QlG5QW/hc61Nh5TSR1K9ndnljzAGrH55x4nfyQdubfoh9QxLNh9FXH0fWK6vcg==}
@@ -4998,6 +5546,20 @@ packages:
       tslib: 2.6.2
     dev: false
 
+  /@opentelemetry/sdk-logs@0.41.0(@opentelemetry/api-logs@0.41.0)(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-+Qs8uHcd/tYKS1n6lfSPiQXMOuyPN0c3xKeyWjD5mExRvmA1H6SIYfZmB6KeQNXWODK4z4JtWo5g5Efe0gJ1Vg==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.4.0 <1.5.0'
+      '@opentelemetry/api-logs': '>=0.39.1'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/api-logs': 0.41.0
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.1)
+      tslib: 2.6.2
+    dev: false
+
   /@opentelemetry/sdk-metrics@1.15.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-fFUnAcPvlXO39nlIduGuaeCuiZyFtSLCn9gW/0djFRO5DFst4m4gcT6+llXvNWuUvtGB49s56NP10B9IZRN0Rw==}
     engines: {node: '>=14'}
@@ -5007,6 +5569,19 @@ packages:
       '@opentelemetry/api': 1.4.0
       '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.0)
       '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.0)
+      lodash.merge: 4.6.2
+      tslib: 2.6.2
+    dev: false
+
+  /@opentelemetry/sdk-metrics@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-fFUnAcPvlXO39nlIduGuaeCuiZyFtSLCn9gW/0djFRO5DFst4m4gcT6+llXvNWuUvtGB49s56NP10B9IZRN0Rw==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.3.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.1)
       lodash.merge: 4.6.2
       tslib: 2.6.2
     dev: false
@@ -5035,6 +5610,30 @@ packages:
       - supports-color
     dev: false
 
+  /@opentelemetry/sdk-node@0.41.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-NJt14iU2kGZR8vO8xF5dEsj+57hocUgmvWDv5VccM67B8khH29ZebzrczvRyC2bDnxRdMdpvc4Nmck/UxLpJuQ==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.3.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/exporter-jaeger': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/exporter-trace-otlp-grpc': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/exporter-trace-otlp-http': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/exporter-trace-otlp-proto': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/exporter-zipkin': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/instrumentation': 0.41.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-metrics': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-node': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/semantic-conventions': 1.15.0
+      tslib: 2.6.2
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
   /@opentelemetry/sdk-trace-base@1.15.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-udt1c9VHipbZwvCPIQR1VLg25Z4AMR/g0X8KmcInbFruGWQ/lptVPkz3yvWAsGSta5yHNQ3uoPwcyCygGnQ6Lg==}
     engines: {node: '>=14'}
@@ -5046,6 +5645,19 @@ packages:
       '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.0)
       '@opentelemetry/semantic-conventions': 1.15.0
       tslib: 2.6.2
+
+  /@opentelemetry/sdk-trace-base@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-udt1c9VHipbZwvCPIQR1VLg25Z4AMR/g0X8KmcInbFruGWQ/lptVPkz3yvWAsGSta5yHNQ3uoPwcyCygGnQ6Lg==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.0.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/resources': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/semantic-conventions': 1.15.0
+      tslib: 2.6.2
+    dev: false
 
   /@opentelemetry/sdk-trace-base@1.9.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-glNgtJjxAIrDku8DG5Xu3nBK25rT+hkyg7yuXh8RUurp/4BcsXjMyVqpyJvb2kg+lxAX73VJBhncRKGHn9t8QQ==}
@@ -5072,6 +5684,22 @@ packages:
       '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.0)
       semver: 7.5.4
       tslib: 2.6.2
+
+  /@opentelemetry/sdk-trace-node@1.15.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-TKBx9oThZUVKkoGpXhFT/XUgpjq28TWwc6j3JlsL+cJX77DKBnVC+2H+kdVVJHRzyfqDx4LEJJVCwQO3K+cbXA==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.0.0 <1.5.0'
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/context-async-hooks': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/propagator-b3': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/propagator-jaeger': 1.15.0(@opentelemetry/api@1.4.1)
+      '@opentelemetry/sdk-trace-base': 1.15.0(@opentelemetry/api@1.4.1)
+      semver: 7.5.4
+      tslib: 2.6.2
+    dev: false
 
   /@opentelemetry/sdk-trace-node@1.9.0(@opentelemetry/api@1.4.0):
     resolution: {integrity: sha512-VTpjiqGQ4s8f0/szgZmVrtNSSmXFNoHwC4PNVwXyNeEqQcqyAygHvobpUG6m7qCiBFh6ZtrCuLdhhqWE04Objw==}
@@ -5105,6 +5733,16 @@ packages:
     dependencies:
       '@opentelemetry/api': 1.4.0
       '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.0)
+    dev: false
+
+  /@opentelemetry/sql-common@0.40.0(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-vSqRJYUPJVjMFQpYkQS3ruexCPSZJ8esne3LazLwtCPaPRvzZ7WG3tX44RouAn7w4wMp8orKguBqtt+ng2UTnw==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.1.0
+    dependencies:
+      '@opentelemetry/api': 1.4.1
+      '@opentelemetry/core': 1.15.0(@opentelemetry/api@1.4.1)
     dev: false
 
   /@pkgjs/parseargs@0.11.0:
@@ -6196,9 +6834,6 @@ packages:
     dependencies:
       undici-types: 5.26.5
 
-  /@types/node@20.6.5:
-    resolution: {integrity: sha512-2qGq5LAOTh9izcc0+F+dToFigBWiK1phKPt7rNhOqJSr35y8rlIBjDwGtFSgAI6MGIhjwOVNSQZVdJsZJ2uR1w==}
-
   /@types/parse-json@4.0.0:
     resolution: {integrity: sha512-//oorEZjL6sbPcKUaCdIGlIUeH26mgzimjBB77G6XRgnDl/L5wOnpyBGRe/Mmf5CVW3PwEBE1NjiMZ/ssFh4wA==}
     dev: false
@@ -6216,7 +6851,7 @@ packages:
   /@types/pg@8.10.9:
     resolution: {integrity: sha512-UksbANNE/f8w0wOMxVKKIrLCbEMV+oM1uKejmwXr39olg4xqcfBDbXxObJAt6XxHbDa4XTKOlUEcEltXDX+XLQ==}
     dependencies:
-      '@types/node': 20.6.5
+      '@types/node': 20.10.5
       pg-protocol: 1.6.0
       pg-types: 4.0.1
 
@@ -6813,6 +7448,14 @@ packages:
       - table
       - yaml
 
+  /aws-cdk@2.95.0:
+    resolution: {integrity: sha512-3BBb9S6Wp5wC+zOZghuIC+Eu4pH0rOJAKUHTlaVUND1ePOxlEcxs2+Rww5jGTksi491q2WLwy8DiuymArhjA/w==}
+    engines: {node: '>= 14.15.0'}
+    hasBin: true
+    optionalDependencies:
+      fsevents: 2.3.2
+    dev: true
+
   /axios@0.25.0:
     resolution: {integrity: sha512-cD8FOb0tRH3uuEe6+evtAbgJtfxr7ly3fQjYcMcuPlgkwVS9xboaVIpcDV+cYQe+yGykgwZCs1pzjntcGa6l5g==}
     dependencies:
@@ -6833,7 +7476,7 @@ packages:
       loader-utils: 2.0.4
       make-dir: 3.1.0
       schema-utils: 2.7.1
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
     dev: false
 
   /babel-plugin-apply-mdx-type-prop@1.6.22(@babel/core@7.12.9):
@@ -7106,7 +7749,6 @@ packages:
       function-bind: 1.1.2
       get-intrinsic: 1.2.2
       set-function-length: 1.1.1
-    dev: true
 
   /callsites@3.1.0:
     resolution: {integrity: sha512-P8BjAsXvZS+VIDUI11hHCQEv74YT67YUi5JJFNWIqL235sBmjX4+qx9Muvls5ivyNENctx46xQLQ3aTuE7ssaQ==}
@@ -7514,7 +8156,7 @@ packages:
       normalize-path: 3.0.0
       schema-utils: 4.0.0
       serialize-javascript: 6.0.1
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
     dev: false
 
   /core-js-compat@3.29.0:
@@ -7631,10 +8273,10 @@ packages:
       postcss-modules-values: 4.0.0(postcss@8.4.31)
       postcss-value-parser: 4.2.0
       semver: 7.5.4
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
     dev: false
 
-  /css-minimizer-webpack-plugin@4.2.2(clean-css@5.3.2)(webpack@5.76.1):
+  /css-minimizer-webpack-plugin@4.2.2(clean-css@5.3.2)(esbuild@0.20.0)(webpack@5.76.1):
     resolution: {integrity: sha512-s3Of/4jKfw1Hj9CxEO1E5oXhQAxlayuHO2y/ML+C6I9sQ7FdzfEV6QgMLN3vI+qFsjJGIAFLKtQK7t8BOXAIyA==}
     engines: {node: '>= 14.15.0'}
     peerDependencies:
@@ -7661,12 +8303,13 @@ packages:
     dependencies:
       clean-css: 5.3.2
       cssnano: 5.1.15(postcss@8.4.31)
+      esbuild: 0.20.0
       jest-worker: 29.5.0
       postcss: 8.4.31
       schema-utils: 4.0.0
       serialize-javascript: 6.0.1
       source-map: 0.6.1
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
     dev: false
 
   /css-select@4.3.0:
@@ -8141,7 +8784,6 @@ packages:
       get-intrinsic: 1.2.2
       gopd: 1.0.1
       has-property-descriptors: 1.0.0
-    dev: true
 
   /define-lazy-prop@2.0.0:
     resolution: {integrity: sha512-Ds09qNh8yw3khSjiJjiUInaGX9xlqZDY7JVryGxdxV7NPeuqQfplOpQ66yJFZut3jLa5zOwkXw1g9EI2uKh4Og==}
@@ -8447,6 +9089,7 @@ packages:
       '@esbuild/win32-arm64': 0.19.8
       '@esbuild/win32-ia32': 0.19.8
       '@esbuild/win32-x64': 0.19.8
+    dev: false
 
   /esbuild@0.19.9:
     resolution: {integrity: sha512-U9CHtKSy+EpPsEBa+/A2gMs/h3ylBC0H0KSqIg7tpztHerLi6nrrcoUJAkNCEPumx8yJ+Byic4BVwHgRbN0TBg==}
@@ -8477,6 +9120,36 @@ packages:
       '@esbuild/win32-ia32': 0.19.9
       '@esbuild/win32-x64': 0.19.9
     dev: true
+
+  /esbuild@0.20.0:
+    resolution: {integrity: sha512-6iwE3Y2RVYCME1jLpBqq7LQWK3MW6vjV2bZy6gt/WrqkY+WE74Spyc0ThAOYpMtITvnjX09CrC6ym7A/m9mebA==}
+    engines: {node: '>=12'}
+    hasBin: true
+    requiresBuild: true
+    optionalDependencies:
+      '@esbuild/aix-ppc64': 0.20.0
+      '@esbuild/android-arm': 0.20.0
+      '@esbuild/android-arm64': 0.20.0
+      '@esbuild/android-x64': 0.20.0
+      '@esbuild/darwin-arm64': 0.20.0
+      '@esbuild/darwin-x64': 0.20.0
+      '@esbuild/freebsd-arm64': 0.20.0
+      '@esbuild/freebsd-x64': 0.20.0
+      '@esbuild/linux-arm': 0.20.0
+      '@esbuild/linux-arm64': 0.20.0
+      '@esbuild/linux-ia32': 0.20.0
+      '@esbuild/linux-loong64': 0.20.0
+      '@esbuild/linux-mips64el': 0.20.0
+      '@esbuild/linux-ppc64': 0.20.0
+      '@esbuild/linux-riscv64': 0.20.0
+      '@esbuild/linux-s390x': 0.20.0
+      '@esbuild/linux-x64': 0.20.0
+      '@esbuild/netbsd-x64': 0.20.0
+      '@esbuild/openbsd-x64': 0.20.0
+      '@esbuild/sunos-x64': 0.20.0
+      '@esbuild/win32-arm64': 0.20.0
+      '@esbuild/win32-ia32': 0.20.0
+      '@esbuild/win32-x64': 0.20.0
 
   /escalade@3.1.1:
     resolution: {integrity: sha512-k0er2gUkLf8O0zKJiAhmkTnJlTvINGv7ygDNPbeIsX/TJjGJZHuh9B2UxbsaEkmlEo9MfhrSzmhIlhRlI2GXnw==}
@@ -8765,7 +9438,7 @@ packages:
     dependencies:
       loader-utils: 2.0.4
       schema-utils: 3.1.1
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
     dev: false
 
   /filesize@8.0.7:
@@ -8890,7 +9563,7 @@ packages:
       semver: 7.5.4
       tapable: 1.1.3
       typescript: 5.3.3
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
     dev: false
 
   /forwarded@0.2.0:
@@ -8946,6 +9619,14 @@ packages:
   /fs.realpath@1.0.0:
     resolution: {integrity: sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==}
 
+  /fsevents@2.3.2:
+    resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
+    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
+    os: [darwin]
+    requiresBuild: true
+    dev: true
+    optional: true
+
   /fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -8958,7 +9639,6 @@ packages:
 
   /function-bind@1.1.2:
     resolution: {integrity: sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==}
-    dev: true
 
   /functions-have-names@1.2.3:
     resolution: {integrity: sha512-xckBUXyTIqT97tq2x2AMb+g163b5JFysYk0x4qxNFwbfQkmNZoiRHb6sPzI9/QV33WeuvVYBUIiD4NzNIyqaRQ==}
@@ -8997,7 +9677,6 @@ packages:
       has-proto: 1.0.1
       has-symbols: 1.0.3
       hasown: 2.0.0
-    dev: true
 
   /get-own-enumerable-property-symbols@3.0.2:
     resolution: {integrity: sha512-I0UBV/XOz1XkIJHEUDMZAbzCThU/H8DxmSfmdGcKPnVhu2VfFqr34jr9777IyaTYvxjedWhqVIilEDsCdP5G6g==}
@@ -9127,8 +9806,8 @@ packages:
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
     dependencies:
       dir-glob: 3.0.1
-      fast-glob: 3.3.1
-      ignore: 5.2.4
+      fast-glob: 3.3.2
+      ignore: 5.3.0
       merge2: 1.4.1
       slash: 4.0.0
     dev: false
@@ -9137,7 +9816,6 @@ packages:
     resolution: {integrity: sha512-d65bNlIadxvpb/A2abVdlqKqV563juRnZ1Wtk6s1sIR8uNsXR70xqIzVqxVf1eTqDunwT2MkczEeaezCKTZhwA==}
     dependencies:
       get-intrinsic: 1.2.2
-    dev: true
 
   /got@9.6.0:
     resolution: {integrity: sha512-R7eWptXuGYxwijs0eV+v3o6+XH1IqVK8dJOEecQfTmkncw9AV4dcw/Dhxi8MdlqPthxxpZyizMzyg8RTmEsG+Q==}
@@ -9197,7 +9875,7 @@ packages:
   /has-property-descriptors@1.0.0:
     resolution: {integrity: sha512-62DVLZGoiEBDHQyqG4w9xCuZ7eJEwNmJRWw2VY84Oedb7WFcA27fiEVe8oUQx9hAUJ4ekurquucTGwsyO1XGdQ==}
     dependencies:
-      get-intrinsic: 1.2.1
+      get-intrinsic: 1.2.2
 
   /has-proto@1.0.1:
     resolution: {integrity: sha512-7qE+iP+O+bgF9clE5+UoBFzE65mlBiVj3tKCrlNQ0Ogwm0BjpT/gK4SlLYDMybDh5I3TCTKnPPa0oMG7JDYrhg==}
@@ -9230,7 +9908,6 @@ packages:
     engines: {node: '>= 0.4'}
     dependencies:
       function-bind: 1.1.2
-    dev: true
 
   /hast-to-hyperscript@9.0.1:
     resolution: {integrity: sha512-zQgLKqF+O2F72S1aa4y2ivxzSlko3MAvxkwG8ehGmNiqd98BIN3JM1rAJPmplEyLmGLO2QZYJtIneOSZ2YbJuA==}
@@ -9378,7 +10055,7 @@ packages:
       lodash: 4.17.21
       pretty-error: 4.0.0
       tapable: 2.2.1
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
     dev: false
 
   /htmlparser2@6.1.0:
@@ -9500,6 +10177,7 @@ packages:
   /ignore@5.2.4:
     resolution: {integrity: sha512-MAb38BcSbH0eHNBxn7ql2NH/kX33OkB3lZ1BNdh7ENeRChHTYsTvWrMubiIAMNS2llXEEgZ1MUOBtXChP3kaFQ==}
     engines: {node: '>= 4'}
+    dev: true
 
   /ignore@5.3.0:
     resolution: {integrity: sha512-g7dmpshy+gD7mh88OC9NwSGTKoc3kyLAZQRU1mt53Aw/vnvfXnbC+F/7F7QoYVKbV+KNvJx8wArewKy1vXMtlg==}
@@ -9511,6 +10189,10 @@ packages:
     hasBin: true
     dependencies:
       queue: 6.0.2
+    dev: false
+
+  /immer@10.0.3:
+    resolution: {integrity: sha512-pwupu3eWfouuaowscykeckFmVTpqbzW+rXFCX8rQLkZzM9ftBmU/++Ra+o+L27mz03zJTlyV4UUr+fdKNffo4A==}
     dev: false
 
   /immer@9.0.19:
@@ -10486,7 +11168,7 @@ packages:
       webpack: ^5.0.0
     dependencies:
       schema-utils: 4.0.0
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
     dev: false
 
   /minimalistic-assert@1.0.1:
@@ -10711,7 +11393,7 @@ packages:
     resolution: {integrity: sha512-1mxKf0e58bvyjSCtKYY4sRe9itRk3PJpquJOjeIkz885CczcI4IvJJDLPS72oowuSh+pBxUFROpX+TU++hxhZQ==}
     engines: {node: '>= 0.4'}
     dependencies:
-      call-bind: 1.0.2
+      call-bind: 1.0.5
       define-properties: 1.2.0
       has-symbols: 1.0.3
       object-keys: 1.1.1
@@ -10772,6 +11454,15 @@ packages:
       '@opentelemetry/api': 1.x.x
     dependencies:
       '@opentelemetry/api': 1.4.0
+      chalk: 5.3.0
+    dev: false
+
+  /opentelemetry-exporter-console-pretty@1.0.1(@opentelemetry/api@1.4.1):
+    resolution: {integrity: sha512-OgoDeZ1al0/w8srWHn3+nvfVN2FqPmIEAi1rFq6eWPbOS6Nv2/ReCyx390xygY50ET5m80lvuzVU9uWNgjNtRQ==}
+    peerDependencies:
+      '@opentelemetry/api': 1.x.x
+    dependencies:
+      '@opentelemetry/api': 1.4.1
       chalk: 5.3.0
     dev: false
 
@@ -11031,7 +11722,6 @@ packages:
   /pg-cloudflare@1.1.1:
     resolution: {integrity: sha512-xWPagP/4B6BgFO+EKz3JONXv3YDgvkbVrGw2mTo3D6tVDQRh1e7cqVGvyR3BE+eQgAvx1XhW/iEASj4/jCWl3Q==}
     requiresBuild: true
-    dev: true
     optional: true
 
   /pg-connection-string@2.6.1:
@@ -11040,7 +11730,6 @@ packages:
 
   /pg-connection-string@2.6.2:
     resolution: {integrity: sha512-ch6OwaeaPYcova4kKZ15sbJ2hKb/VP48ZD2gE7i1J+L4MspCtBMAx8nMgz7bksc7IojCIIWuEhHibSMFH8m8oA==}
-    dev: true
 
   /pg-cursor@2.10.3(pg@8.11.3):
     resolution: {integrity: sha512-rDyBVoqPVnx/PTmnwQAYgusSeAKlTL++gmpf5klVK+mYMFEqsOc6VHHZnPKc/4lOvr4r6fiMuoxSFuBF1dx4FQ==}
@@ -11072,7 +11761,6 @@ packages:
       pg: '>=8.0'
     dependencies:
       pg: 8.11.3
-    dev: true
 
   /pg-protocol@1.5.0:
     resolution: {integrity: sha512-muRttij7H8TqRNu/DxrAJQITO4Ac7RmX3Klyr/9mJEOBeIpgnF8f9jAfRz5d3XwQZl5qBjF9gLsUtMPJE0vezQ==}
@@ -11120,7 +11808,6 @@ packages:
       pgpass: 1.0.5
     optionalDependencies:
       pg-cloudflare: 1.1.1
-    dev: true
 
   /pg@8.8.0:
     resolution: {integrity: sha512-UXYN0ziKj+AeNNP7VDMwrehpACThH7LUl/p8TDFpEUuSejCUIwGSfxpHsPvtM6/WXFy6SU4E5RG4IJV/TZAGjw==}
@@ -11333,7 +12020,7 @@ packages:
       klona: 2.0.6
       postcss: 8.4.31
       semver: 7.5.4
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
     dev: false
 
   /postcss-merge-idents@5.1.1(postcss@8.4.31):
@@ -11710,8 +12397,8 @@ packages:
     engines: {node: '>=4'}
     dev: false
 
-  /prettier@3.2.4:
-    resolution: {integrity: sha512-FWu1oLHKCrtpO1ypU6J0SbK2d9Ckwysq6bHj/uaCP26DxrPpppCLQRGVuqAxSTvhF00AcvDRyYrLNW7ocBhFFQ==}
+  /prettier@3.2.5:
+    resolution: {integrity: sha512-3/GWa9aOC0YeD7LUfvOG2NiDyhOWRvt1k+rcKhOuYnMY24iiCphgneUfJDyFXd6rZCAnuLBv6UeAULtrhT/F4A==}
     engines: {node: '>=14'}
     hasBin: true
     dev: true
@@ -11943,7 +12630,7 @@ packages:
       strip-ansi: 6.0.1
       text-table: 0.2.0
       typescript: 5.3.3
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
     transitivePeerDependencies:
       - eslint
       - supports-color
@@ -12018,7 +12705,7 @@ packages:
     dependencies:
       '@babel/runtime': 7.21.0
       react-loadable: /@docusaurus/react-loadable@5.5.2(react@17.0.2)
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
     dev: false
 
   /react-router-config@5.1.1(react-router@5.3.4)(react@17.0.2):
@@ -12625,7 +13312,6 @@ packages:
       get-intrinsic: 1.2.2
       gopd: 1.0.1
       has-property-descriptors: 1.0.0
-    dev: true
 
   /set-function-name@2.0.1:
     resolution: {integrity: sha512-tMNCiqYVkXIZgc2Hnoy2IvC/f8ezc5koaRFkCjrpWzGpCd3qbZXPzVy9MAZzK1ch/X0jvSkojys3oqJN0qCmdA==}
@@ -13067,7 +13753,7 @@ packages:
     resolution: {integrity: sha512-GNzQvQTOIP6RyTfE2Qxb8ZVlNmw0n88vp1szwWRimP02mnTsx3Wtn5qRdqY9w2XduFNUgvOwhNnQsjwCp+kqaQ==}
     engines: {node: '>=6'}
 
-  /terser-webpack-plugin@5.3.7(webpack@5.76.1):
+  /terser-webpack-plugin@5.3.7(esbuild@0.20.0)(webpack@5.76.1):
     resolution: {integrity: sha512-AfKwIktyP7Cu50xNjXF/6Qb5lBNzYaWpU6YfoX3uZicTx0zTy0stDDCsvjDapKsSDvOeWo5MEq4TmdBy2cNoHw==}
     engines: {node: '>= 10.13.0'}
     peerDependencies:
@@ -13083,12 +13769,13 @@ packages:
       uglify-js:
         optional: true
     dependencies:
-      '@jridgewell/trace-mapping': 0.3.19
+      '@jridgewell/trace-mapping': 0.3.20
+      esbuild: 0.20.0
       jest-worker: 27.5.1
       schema-utils: 3.1.1
       serialize-javascript: 6.0.1
       terser: 5.16.6
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
 
   /terser@5.16.6:
     resolution: {integrity: sha512-IBZ+ZQIA9sMaXmRZCUMDjNH0D5AQQfdn4WUjHL0+1lF4TP1IHRJbrhb6fNaXWikrYQTSkb7SLxkeXAiy1p7mbg==}
@@ -13350,64 +14037,64 @@ packages:
       - ts-node
     dev: true
 
-  /turbo-darwin-64@1.11.3:
-    resolution: {integrity: sha512-IsOOg2bVbIt3o/X8Ew9fbQp5t1hTHN3fGNQYrPQwMR2W1kIAC6RfbVD4A9OeibPGyEPUpwOH79hZ9ydFH5kifw==}
+  /turbo-darwin-64@1.12.2:
+    resolution: {integrity: sha512-Aq/ePQ5KNx6XGwlZWTVTqpQYfysm1vkwkI6kAYgrX5DjMWn+tUXrSgNx4YNte0F+V4DQ7PtuWX+jRG0h0ZNg0A==}
     cpu: [x64]
     os: [darwin]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-darwin-arm64@1.11.3:
-    resolution: {integrity: sha512-FsJL7k0SaPbJzI/KCnrf/fi3PgCDCjTliMc/kEFkuWVA6Httc3Q4lxyLIIinz69q6JTx8wzh6yznUMzJRI3+dg==}
+  /turbo-darwin-arm64@1.12.2:
+    resolution: {integrity: sha512-wTr+dqkwJo/eXE+4SPTSeNBKyyfQJhI6I9sKVlCSBmtaNEqoGNgdVzgMUdqrg9AIFzLIiKO+zhfskNaSWpVFow==}
     cpu: [arm64]
     os: [darwin]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-linux-64@1.11.3:
-    resolution: {integrity: sha512-SvW7pvTVRGsqtSkII5w+wriZXvxqkluw5FO/MNAdFw0qmoov+PZ237+37/NgArqE3zVn1GX9P6nUx9VO+xcQAg==}
+  /turbo-linux-64@1.12.2:
+    resolution: {integrity: sha512-BggBKrLojGarDaa2zBo+kUR3fmjpd6bLA8Unm3Aa2oJw0UvEi3Brd+w9lNsPZHXXQYBUzNUY2gCdxf3RteWb0g==}
     cpu: [x64]
     os: [linux]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-linux-arm64@1.11.3:
-    resolution: {integrity: sha512-YhUfBi1deB3m+3M55X458J6B7RsIS7UtM3P1z13cUIhF+pOt65BgnaSnkHLwETidmhRh8Dl3GelaQGrB3RdCDw==}
+  /turbo-linux-arm64@1.12.2:
+    resolution: {integrity: sha512-v/apSRvVuwYjq1D9MJFsHv2EpGd1S4VoSdZvVfW6FaM06L8CFZa92urNR1svdGYN28YVKwK9Ikc9qudC6t/d5A==}
     cpu: [arm64]
     os: [linux]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-windows-64@1.11.3:
-    resolution: {integrity: sha512-s+vEnuM2TiZuAUUUpmBHDr6vnNbJgj+5JYfnYmVklYs16kXh+EppafYQOAkcRIMAh7GjV3pLq5/uGqc7seZeHA==}
+  /turbo-windows-64@1.12.2:
+    resolution: {integrity: sha512-3uDdwXcRGkgopYFdPDpxQiuQjfQ12Fxq0fhj+iGymav0eWA4W4wzYwSdlUp6rT22qOBIzaEsrIspRwx1DsMkNg==}
     cpu: [x64]
     os: [win32]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-windows-arm64@1.11.3:
-    resolution: {integrity: sha512-ZR5z5Zpc7cASwfdRAV5yNScCZBsgGSbcwiA/u3farCacbPiXsfoWUkz28iyrx21/TRW0bi6dbsB2v17swa8bjw==}
+  /turbo-windows-arm64@1.12.2:
+    resolution: {integrity: sha512-zNIHnwtQfJSjFi7movwhPQh2rfrcKZ7Xv609EN1yX0gEp9GxooCUi2yNnBQ8wTqFjioA2M5hZtGJQ0RrKaEm/Q==}
     cpu: [arm64]
     os: [win32]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo@1.11.3:
-    resolution: {integrity: sha512-RCJOUFcFMQNIGKSjC9YmA5yVP1qtDiBA0Lv9VIgrXraI5Da1liVvl3VJPsoDNIR9eFMyA/aagx1iyj6UWem5hA==}
+  /turbo@1.12.2:
+    resolution: {integrity: sha512-BcoQjBZ+LJCMdjzWhzQflOinUjek28rWXj07aaaAQ8T3Ehs0JFSjIsXOm4qIbo52G4xk3gFVcUtJhh/QRADl7g==}
     hasBin: true
     optionalDependencies:
-      turbo-darwin-64: 1.11.3
-      turbo-darwin-arm64: 1.11.3
-      turbo-linux-64: 1.11.3
-      turbo-linux-arm64: 1.11.3
-      turbo-windows-64: 1.11.3
-      turbo-windows-arm64: 1.11.3
+      turbo-darwin-64: 1.12.2
+      turbo-darwin-arm64: 1.12.2
+      turbo-linux-64: 1.12.2
+      turbo-linux-arm64: 1.12.2
+      turbo-windows-64: 1.12.2
+      turbo-windows-arm64: 1.12.2
     dev: true
 
   /type-detect@4.0.8:
@@ -13639,7 +14326,7 @@ packages:
       loader-utils: 2.0.4
       mime-types: 2.1.35
       schema-utils: 3.1.1
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
     dev: false
 
   /url-parse-lax@3.0.0:
@@ -13725,6 +14412,10 @@ packages:
 
   /value-equal@1.0.1:
     resolution: {integrity: sha512-NOJ6JZCAWr0zlxZt+xqCHNTEKOsrks2HQd4MqhP1qy4z1SkbEP467eNx6TgDKXMvUOb+OENfJCZwM+16n7fRfw==}
+    dev: false
+
+  /variant@2.1.0:
+    resolution: {integrity: sha512-kNpWOQGWoc9GjR9rPsBslR/ThbiX3kSic8rHOtAKkwf/Mn17jm59fpB5HpLSMw9zdI9CLYvmvcXu5tcsBqNibQ==}
     dev: false
 
   /vary@1.1.2:
@@ -13838,7 +14529,7 @@ packages:
         optional: true
     dependencies:
       '@types/node': 20.10.5
-      esbuild: 0.19.8
+      esbuild: 0.19.9
       postcss: 8.4.31
       rollup: 4.6.0
     optionalDependencies:
@@ -13978,7 +14669,7 @@ packages:
       mime-types: 2.1.35
       range-parser: 1.2.1
       schema-utils: 4.0.0
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
     dev: false
 
   /webpack-dev-server@4.11.1(webpack@5.76.1):
@@ -14019,7 +14710,7 @@ packages:
       serve-index: 1.9.1
       sockjs: 0.3.24
       spdy: 4.0.2
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
       webpack-dev-middleware: 5.3.3(webpack@5.76.1)
       ws: 8.13.0
     transitivePeerDependencies:
@@ -14040,7 +14731,7 @@ packages:
     resolution: {integrity: sha512-/DyMEOrDgLKKIG0fmvtz+4dUX/3Ghozwgm6iPp8KRhvn+eQf9+Q7GWxVNMk3+uCPWfdXYC4ExGBckIXdFEfH1w==}
     engines: {node: '>=10.13.0'}
 
-  /webpack@5.76.1:
+  /webpack@5.76.1(esbuild@0.20.0):
     resolution: {integrity: sha512-4+YIK4Abzv8172/SGqObnUjaIHjLEuUasz9EwQj/9xmPPkYJy2Mh03Q/lJfSD3YLzbxy5FeTq5Uw0323Oh6SJQ==}
     engines: {node: '>=10.13.0'}
     hasBin: true
@@ -14071,7 +14762,7 @@ packages:
       neo-async: 2.6.2
       schema-utils: 3.1.1
       tapable: 2.2.1
-      terser-webpack-plugin: 5.3.7(webpack@5.76.1)
+      terser-webpack-plugin: 5.3.7(esbuild@0.20.0)(webpack@5.76.1)
       watchpack: 2.4.0
       webpack-sources: 3.2.3
     transitivePeerDependencies:
@@ -14089,7 +14780,7 @@ packages:
       consola: 2.15.3
       pretty-time: 1.1.0
       std-env: 3.6.0
-      webpack: 5.76.1
+      webpack: 5.76.1(esbuild@0.20.0)
     dev: false
 
   /websocket-driver@0.7.4:

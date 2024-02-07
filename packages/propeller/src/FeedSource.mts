@@ -79,7 +79,10 @@ export class TailingFeedSource {
               items: batch.items,
               checkpoint: batch.checkpoint,
               isTail: batch.isTail,
-              onComplete: () => onBatchComplete(batch.checkpoint),
+              onComplete: () => {
+                this.stats.recordCompletion(trancheId, batch)
+                onBatchComplete(batch.checkpoint)
+              },
             },
             signal,
           )
