@@ -21,7 +21,7 @@
     "esbuild": "^0.20.0",
     "prettier": "latest",
     "ts-node": "^10.9.1",
-    "turbo": "latest",
+    "turbo": "^1.12.3",
     "vitest": "^1.0.4"
   },
   "engines": {
