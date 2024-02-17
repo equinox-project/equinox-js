@@ -4,6 +4,7 @@ import { describe, test, expect, afterEach, afterAll, vi, beforeAll } from "vite
 import { randomUUID } from "crypto"
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
 import { InMemorySpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base"
+import fs from "fs"
 import {
   AccessStrategy,
   LibSqlCategory,
@@ -66,6 +67,9 @@ namespace CartService {
   }
 }
 
+try {
+  fs.mkdirSync("./.data")
+} catch {}
 const libSqlClient = createClient({
   url: "file:./.data/message_store.db",
 })
@@ -195,7 +199,7 @@ describe("Round-trips against the store", () => {
     const skuId = randomUUID() as Cart.SkuId
 
     const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
-    debugger;
+    debugger
 
     await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(
       cartContext,
