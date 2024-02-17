@@ -69,7 +69,7 @@ function run<Event, State, Result, V = Result>(
 }
 
 function wrapInTrace<T>(name: string, fn: () => Promise<T>) {
-  const span = tracer.startSpan(name)
+  const span = tracer().startSpan(name)
   const attrs = new Map<string, any>()
   const otelCtx = trace.setSpan(context.active(), span).setValue(eqxAttrs, attrs)
   return context.with(otelCtx, () =>
