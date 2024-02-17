@@ -2,7 +2,7 @@ import { randomUUID } from "crypto"
 import type { Client, Transaction } from "@libsql/client"
 import { IEventData, ITimelineEvent } from "@equinox-js/core"
 
-type MdbWriteResult = { type: "Written"; position: bigint } | { type: "ConflictUnknown" }
+type LibSqlWriteResult = { type: "Written"; position: bigint } | { type: "ConflictUnknown" }
 export type Format = string
 
 export class LibSqlWriter {
@@ -24,7 +24,8 @@ export class LibSqlWriter {
     streamName: string,
     messages: IEventData<Format>[],
     expectedVersion: bigint | null,
-  ): Promise<MdbWriteResult> {
+    updateSnapshot?: (trx: Transaction) => Promise<void>,
+  ): Promise<LibSqlWriteResult> {
     const trx = await this.client.transaction("write")
     let position = await this.readStreamVersion(trx, streamName)
     if (expectedVersion != null && position !== expectedVersion) {
@@ -49,6 +50,7 @@ export class LibSqlWriter {
           ],
         })
       }
+      if (updateSnapshot != null) await updateSnapshot(trx)
       await trx.commit()
     } catch (err: any) {
       await trx.rollback()
@@ -92,6 +94,16 @@ export class LibSqlReader {
     })
     return result.rows.map(Parse.row)
   }
+
+  async readSnapshot(streamName: string) {
+    const result = await this.client.execute({
+      sql: "select * from snapshots where stream_name = ?",
+      args: [streamName],
+    })
+    if (result.rows.length === 0) return
+      console.log(result.rows[0])
+    return Parse.row(result.rows[0])
+  }
 }
 
 type DbRow = {
@@ -101,7 +113,6 @@ type DbRow = {
   data?: string
   meta?: string
   position: string
-  global_position: string
 }
 
 namespace Parse {

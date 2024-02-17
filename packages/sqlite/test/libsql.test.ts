@@ -13,7 +13,6 @@ import {
   initializeDatabase,
 } from "../src/index.js"
 import { createClient } from "@libsql/client"
-import { trace } from "@opentelemetry/api"
 
 const Category = LibSqlCategory
 
@@ -42,10 +41,7 @@ namespace CartService {
   }
 
   export function createWithSnapshotStrategy(context: LibSqlContext) {
-    const access = AccessStrategy.AdjacentSnapshots<E, S>(
-      Cart.Fold.snapshotEventType,
-      Cart.Fold.snapshot,
-    )
+    const access = AccessStrategy.Snapshot<E, S>(Cart.Fold.isOrigin, Cart.Fold.snapshot)
     const category = Category.create(context, Cart.Category, codec, fold, initial, noCache, access)
     return Cart.Service.create(category)
   }
@@ -58,10 +54,7 @@ namespace CartService {
   }
 
   export function createWithSnapshotStrategyAndCaching(context: LibSqlContext) {
-    const access = AccessStrategy.AdjacentSnapshots<E, S>(
-      Cart.Fold.snapshotEventType,
-      Cart.Fold.snapshot,
-    )
+    const access = AccessStrategy.Snapshot<E, S>(Cart.Fold.isOrigin, Cart.Fold.snapshot)
     const category = Category.create(context, Cart.Category, codec, fold, initial, caching, access)
     return Cart.Service.create(category)
   }
@@ -486,6 +479,68 @@ describe("AccessStrategy.LatestKnownEvent", () => {
       },
       { name: "Query", [Tags.load_method]: "Last", [Tags.loaded_count]: 1 },
     )
+  })
+})
+
+describe("AccessStrategy.Snapshot", () => {
+  test("Can roundtrip against LibSql, using Snapshotting to avoid queries", async () => {
+    const context = createContext(client, 10)
+    const [service1, service2] = [
+      CartService.createWithSnapshotStrategy(context),
+      CartService.createWithSnapshotStrategy(context),
+    ]
+
+    const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
+    const cartId = Cart.CartId.create()
+    const skuId = randomUUID()
+
+    // Trigger 10 events, then reload
+    await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 5)
+    await service2.read(cartId)
+    assertSpans(
+      { name: "Transact", [Tags.append_count]: 10 },
+      { name: "Query", [Tags.snapshot_version]: 9, [Tags.loaded_count]: 1 },
+    )
+    memoryExporter.reset()
+
+    // Add two more - the roundtrip should only incur a single read
+    await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 1)
+    assertSpans({ name: "Transact", [Tags.append_count]: 2, [Tags.snapshot_version]: 9 })
+    memoryExporter.reset()
+    // While we now have 12 events, we should be able to read them with a single call
+    await service2.read(cartId)
+    assertSpans({ name: "Query", [Tags.snapshot_version]: 11, [Tags.loaded_count]: 1 })
+  })
+
+  test("Can roundtrip against LibSql, correctly using Snapshotting and Cache to avoid redundant reads", async () => {
+    const queryMaxItems = 10
+    const context = createContext(client, queryMaxItems)
+    const [service1, service2] = [
+      CartService.createWithSnapshotStrategyAndCaching(context),
+      CartService.createWithSnapshotStrategyAndCaching(context),
+    ]
+
+    const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
+    const cartId = Cart.CartId.create()
+    const skuId = randomUUID()
+
+    // Trigger 10 events, then reload
+    await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 5)
+    await service2.read(cartId)
+    assertSpans(
+      { name: "Transact", [Tags.loaded_count]: 0, [Tags.append_count]: 10 },
+      { name: "Query", [Tags.loaded_from_version]: "10", [Tags.loaded_count]: 0, [Tags.cache_hit]: true },
+    )
+    memoryExporter.reset()
+
+    // Add two more - the roundtrip should only incur a single read
+    await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 1)
+    assertSpans({ name: "Transact", [Tags.loaded_count]: 0, [Tags.append_count]: 2, [Tags.cache_hit]: true })
+    memoryExporter.reset()
+
+    // While we now have 12 events, we should be able to read them with a single call
+    await service2.read(cartId)
+    assertSpans({ name: "Query", [Tags.loaded_count]: 0, [Tags.cache_hit]: true })
   })
 })
 

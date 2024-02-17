@@ -8,12 +8,12 @@ import type {
 } from "@equinox-js/core"
 import * as Equinox from "@equinox-js/core"
 import * as Token from "./Token.js"
-import * as Snapshot from "./Snapshot.js"
 import * as Read from "./Read.js"
 import { trace } from "@opentelemetry/api"
 import { Format, LibSqlReader, LibSqlWriter } from "./LibSqlClient.js"
 import { CachingCategory, ICachingStrategy, IReloadableCategory, Tags } from "@equinox-js/core"
-import { Client } from "@libsql/client"
+import { Client, Transaction } from "@libsql/client"
+import { randomUUID } from "crypto"
 
 const keepMap = Equinox.Internal.keepMap
 
@@ -91,6 +91,36 @@ export class LibSqlContext {
     return [Token.create(version), fold(initial, keepMap(events, decode))]
   }
 
+  async loadSnapshot<Event, State>(
+    streamName: string,
+    decode: Decode<Event>,
+    fold: (state: State, events: Event[]) => State,
+    initial: State,
+    isOrigin: (e: Event) => boolean,
+  ): Promise<[StreamToken, State]> {
+    const snapshot = await this.conn.read.readSnapshot(streamName)
+    // An end-user might add snapshotting to a category after the fact, in which case there might not be a snapshot
+    // in all other cases the snapshot is guaranteed to exist if there are any events in the stream
+    if (snapshot == null) {
+      return this.loadBatched(streamName, decode, fold, initial)
+    }
+    const decoded = decode(snapshot)
+    console.log("snapshot", snapshot)
+    console.log("decoded", decoded)
+    // The snapshot type may have changed, in which case we should ignore it and load a fresh state
+    if (!decoded || !isOrigin(decoded)) {
+      return this.loadBatched(streamName, decode, fold, initial)
+    }
+    const version = BigInt(snapshot.index)
+    const state = fold(initial, [decoded])
+    const span = trace.getActiveSpan()
+    span?.setAttributes({
+      [Tags.loaded_count]: 1,
+      [Tags.snapshot_version]: Number(version),
+    })
+    return [Token.create(version), state]
+  }
+
   async reload<Event, State>(
     streamName: Equinox.StreamName,
     token: StreamToken,
@@ -126,6 +156,7 @@ export class LibSqlContext {
     streamName: string,
     token: StreamToken,
     encodedEvents: IEventData<Format>[],
+    updateSnapshot?: (trx: Transaction) => Promise<void>,
   ): Promise<GatewaySyncResult> {
     const span = trace.getActiveSpan()
     const streamVersion = Token.streamVersion(token)
@@ -138,6 +169,7 @@ export class LibSqlContext {
       streamName,
       encodedEvents,
       streamVersion,
+      updateSnapshot,
     )
 
     switch (result.type) {
@@ -151,31 +183,23 @@ export class LibSqlContext {
     }
   }
 
-  async storeSnapshot(categoryName: string, streamId: Equinox.StreamId, event: IEventData<Format>) {
-    const snapshotCategoryName = Snapshot.snapshotCategory(categoryName)
-    const snapshotStream = Equinox.StreamName.create(categoryName, streamId)
-    await this.conn.write.writeMessages(snapshotCategoryName, snapshotStream, [event], null)
-    trace.getActiveSpan()?.setAttribute(Tags.snapshot_written, true)
-  }
-
   static create({ client, batchSize, maxBatches }: ContextConfig) {
     const connection = LibSqlConnection.create(client)
     return new LibSqlContext(connection, batchSize, maxBatches)
   }
 }
 
-export type OnSync<State> = (
-  conn: Client,
-  streamId: Equinox.StreamId,
-  state: State,
-  version: bigint,
-) => Promise<void>
+export type AccessStrategy<Event, State> =
+  | { type: "Unoptimized" }
+  | { type: "LatestKnownEvent" }
+  | { type: "Snapshot"; isOrigin: (e: Event) => boolean; toSnapshot: (state: State) => Event }
 
-export type AccessStrategy<Event, State> = { type: "Unoptimized" } | { type: "LatestKnownEvent" }
-
+// prettier-ignore
 export namespace AccessStrategy {
-  export const Unoptimized = <E, S>(): AccessStrategy<E, S> => ({ type: "Unoptimized" })
-  export const LatestKnownEvent = <E, S>(): AccessStrategy<E, S> => ({ type: "LatestKnownEvent" })
+  export const Unoptimized = (): AccessStrategy<any, any> => ({ type: "Unoptimized" })
+  export const LatestKnownEvent = (): AccessStrategy<any, any> => ({ type: "LatestKnownEvent" })
+  export const Snapshot = <E, S>(isOrigin: (e: E) => boolean, toSnapshot: (state: S) => E): AccessStrategy<E, S> => 
+    ({ type: "Snapshot", isOrigin, toSnapshot })
 }
 
 class InternalCategory<Event, State, Context>
@@ -203,6 +227,9 @@ class InternalCategory<Event, State, Context>
         return this.context.loadBatched(streamName, this.codec.decode, this.fold, this.initial)
       case "LatestKnownEvent":
         return this.context.loadLast(streamName, this.codec.decode, this.fold, this.initial)
+      case "Snapshot":
+        // prettier-ignore
+        return this.context.loadSnapshot(streamName, this.codec.decode, this.fold, this.initial, this.access.isOrigin)
     }
   }
 
@@ -225,6 +252,30 @@ class InternalCategory<Event, State, Context>
     return { token, state }
   }
 
+  private updateSnapshot(
+    category: string,
+    streamName: string,
+    ctx: Context,
+    newState: State,
+    version: bigint,
+  ) {
+    if (this.access.type !== "Snapshot") return
+    const toSnapshot = this.access.toSnapshot
+    return async (trx: Transaction) => {
+      const snapshot = this.codec.encode(toSnapshot(newState), ctx)
+      const id = randomUUID()
+      await trx.execute({
+        sql: `
+        INSERT INTO snapshots (stream_name, category, type, data, position, id)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT (stream_name) DO UPDATE
+        SET data = excluded.data, position = excluded.position, time = CURRENT_TIMESTAMP, type = excluded.type, id = excluded.id
+      `,
+        args: [streamName, category, snapshot.type, snapshot.data ?? null, version, id],
+      })
+    }
+  }
+
   async sync(
     streamId: Equinox.StreamId,
     ctx: Context,
@@ -239,8 +290,23 @@ class InternalCategory<Event, State, Context>
       [Tags.stream_name]: streamName,
     })
     const encode = (ev: Event) => this.codec.encode(ev, ctx)
-    const encodedEvents = await Promise.all(events.map(encode))
-    const result = await this.context.sync(this.categoryName, streamName, token, encodedEvents)
+    const encodedEvents = events.map(encode)
+    const newState = this.fold(state, events)
+    const newVersion = Token.streamVersion(token) + BigInt(events.length)
+    const updateSnapshot = this.updateSnapshot(
+      this.categoryName,
+      streamName,
+      ctx,
+      newState,
+      newVersion,
+    )
+    const result = await this.context.sync(
+      this.categoryName,
+      streamName,
+      token,
+      encodedEvents,
+      updateSnapshot,
+    )
     switch (result.type) {
       case "ConflictUnknown":
         return {
@@ -248,22 +314,9 @@ class InternalCategory<Event, State, Context>
           resync: () => this.reload(streamId, true, { token, state }),
         }
       case "Written": {
-        const newState = this.fold(state, events)
         return { type: "Written", data: { token: result.token, state: newState } }
       }
     }
-  }
-
-  async storeSnapshot(
-    category: string,
-    streamId: Equinox.StreamId,
-    ctx: Context,
-    token: StreamToken,
-    snapshotEvent: Event,
-  ) {
-    const event = this.codec.encode(snapshotEvent, ctx)
-    event.meta = JSON.stringify(Snapshot.meta(token))
-    await this.context.storeSnapshot(category, streamId, event)
   }
 }
 
