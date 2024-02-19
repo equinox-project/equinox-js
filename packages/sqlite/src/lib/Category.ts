@@ -105,8 +105,6 @@ export class LibSqlContext {
       return this.loadBatched(streamName, decode, fold, initial)
     }
     const decoded = decode(snapshot)
-    console.log("snapshot", snapshot)
-    console.log("decoded", decoded)
     // The snapshot type may have changed, in which case we should ignore it and load a fresh state
     if (!decoded || !isOrigin(decoded)) {
       return this.loadBatched(streamName, decode, fold, initial)
