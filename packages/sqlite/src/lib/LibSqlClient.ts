@@ -59,6 +59,42 @@ export class LibSqlWriter {
 
     return { type: "Written", position }
   }
+
+  async writeSnapshot(
+    category: string,
+    streamName: string,
+    event: IEventData<Format>,
+    expectedVersion?: bigint,
+  ): Promise<LibSqlWriteResult> {
+    const trx = await this.client.transaction("write")
+    try {
+      const current = await trx.execute({
+        sql: "select position from snapshots where stream_name = ?",
+        args: [streamName],
+      })
+      const currentVersion = current.rows.length === 0 ? -1n : BigInt(current.rows[0][0] as number)
+      if (expectedVersion != null && currentVersion !== expectedVersion) {
+        await trx.rollback()
+        return { type: "ConflictUnknown" }
+      }
+      const nextVersion = currentVersion + 1n
+      await trx.execute({
+        sql: `
+        INSERT INTO snapshots (stream_name, category, type, data, position, id)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT (stream_name) DO UPDATE
+        SET data = excluded.data, position = excluded.position, time = CURRENT_TIMESTAMP, type = excluded.type, id = excluded.id
+      `,
+        // prettier-ignore
+        args: [streamName, category, event.type, event.data ?? null, nextVersion, event.id ?? randomUUID()],
+      })
+      await trx.commit()
+      return { type: "Written", position: nextVersion }
+    } catch (err: any) {
+      await trx.rollback()
+      throw err
+    }
+  }
 }
 
 export class LibSqlReader {
