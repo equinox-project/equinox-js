@@ -101,7 +101,6 @@ export class LibSqlReader {
       args: [streamName],
     })
     if (result.rows.length === 0) return
-      console.log(result.rows[0])
     return Parse.row(result.rows[0])
   }
 }
