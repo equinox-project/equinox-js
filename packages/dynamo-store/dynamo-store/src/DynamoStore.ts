@@ -21,7 +21,7 @@ import {
   SyncResult,
   Tags,
   TokenAndState,
-  Internal
+  Internal,
 } from "@equinox-js/core"
 import { randomUUID } from "crypto"
 import { context, trace } from "@opentelemetry/api"
@@ -627,39 +627,39 @@ namespace Sync {
             }),
           }
         : tipE.length === 0
-        ? {
-            text: "SET a = :tipA, b = :b, etag = :etag, u = :u",
-            condition: condExpr,
-            values: compactObjMutable({
-              ...condValues,
-              ":tipA": { N: "0" },
-              ":b": { N: String(b_) },
-              ":u": { L: u },
-              ":etag": etag_ ? { S: etag_ } : undefined,
-            }),
-          }
-        : {
-            text: "SET a = :tipA, b = :b, etag = :etag, u = :u, n = :n, e = list_append(e, :tipE), c = list_append(c, :tipC)",
-            condition: condExpr,
-            values: compactObjMutable({
-              ...condValues,
-              ":tipA": { N: String(tipA) },
-              ":b": { N: String(b_) },
-              ":u": { L: u },
-              ":n": { N: String(n_) },
-              ":tipE": { L: tipE },
-              ":tipC": { L: tipC },
-              ":etag": etag_ ? { S: etag_ } : undefined,
-            }),
-          }
+          ? {
+              text: "SET a = :tipA, b = :b, etag = :etag, u = :u",
+              condition: condExpr,
+              values: compactObjMutable({
+                ...condValues,
+                ":tipA": { N: "0" },
+                ":b": { N: String(b_) },
+                ":u": { L: u },
+                ":etag": etag_ ? { S: etag_ } : undefined,
+              }),
+            }
+          : {
+              text: "SET a = :tipA, b = :b, etag = :etag, u = :u, n = :n, e = list_append(e, :tipE), c = list_append(c, :tipC)",
+              condition: condExpr,
+              values: compactObjMutable({
+                ...condValues,
+                ":tipA": { N: String(tipA) },
+                ":b": { N: String(b_) },
+                ":u": { L: u },
+                ":n": { N: String(n_) },
+                ":tipE": { L: tipE },
+                ":tipC": { L: tipC },
+                ":etag": etag_ ? { S: etag_ } : undefined,
+              }),
+            }
       return updateTip(table, stream, updateExpression)
     }
     const tipUpdate =
       exp == null || exp === 0
         ? putItemIfNotExists(table, genFreshTipItem())
         : typeof exp === "string"
-        ? updateTipIf("etag = :exp", { ":exp": { S: exp } })
-        : updateTipIf("n = :ver", { ":ver": { N: String(exp) } })
+          ? updateTipIf("etag = :exp", { ":exp": { S: exp } })
+          : updateTipIf("n = :ver", { ":ver": { N: String(exp) } })
 
     if (maybeCalf) {
       return [putItemIfNotExists(table, maybeCalf), tipUpdate]
@@ -1496,7 +1496,8 @@ const mapAccess = <E, S>(
       return {
         isOrigin: () => true,
         checkUnfolds: true,
-        mapUnfolds: { type: "Unfold", unfold: (_: E[], s: S) => [access.toSnapshot(s)] },
+        // prettier-ignore
+        mapUnfolds: { type: "Transmute", transmute: (_: E[], s: S) => [[], [access.toSnapshot(s)]] },
       }
     case "Custom":
       return {
