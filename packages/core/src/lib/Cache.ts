@@ -2,8 +2,10 @@ import { StreamToken, SyncResult, TokenAndState } from "./Core.js"
 import LRUCache from "lru-cache"
 import { ICategory } from "./Category.js"
 import { trace } from "@opentelemetry/api"
-import * as Tags from './Tags.js'
+import * as Tags from "./Tags.js"
 import { StreamId } from "./StreamId.js"
+
+type Supersedes = (a: StreamToken, b: StreamToken) => boolean
 
 export class CacheEntry<T> {
   constructor(
@@ -12,7 +14,7 @@ export class CacheEntry<T> {
     public cachedAt: number,
   ) {}
 
-  updateIfNewer(other: CacheEntry<T>) {
+  updateIfNewer(supersedes: Supersedes, other: CacheEntry<T>) {
     if (supersedes(this.token, other.token)) {
       this.token = other.token
       this.state = other.state
@@ -21,7 +23,7 @@ export class CacheEntry<T> {
   }
 
   updateCachedAt(now: number) {
-     this.cachedAt = now
+    this.cachedAt = now
   }
   value(): TokenAndState<T> {
     return { token: this.token, state: this.state }
@@ -36,13 +38,12 @@ export interface ICache {
   readThrough<State>(
     key: string,
     skipReloadIfYoungerThanMs: number,
+    supersedes: Supersedes,
     read: (tokenAndState?: TokenAndState<State>) => Promise<TokenAndState<State>>,
   ): Promise<TokenAndState<State>>
 
-  updateIfNewer<State>(key: string, entry: CacheEntry<State>): void
+  updateIfNewer<State>(key: string, supersedes: Supersedes, entry: CacheEntry<State>): void
 }
-
-export const supersedes = (current: StreamToken, x: StreamToken) => x.version > current.version
 
 export class MemoryCache implements ICache {
   private readonly cache: LRUCache<string, CacheEntry<any>>
@@ -61,12 +62,16 @@ export class MemoryCache implements ICache {
 
   loadsInProgress: Map<string, Promise<any>> = new Map()
 
-  private readWithExactlyOneFetch<State>(key: string, read: () => Promise<TokenAndState<State>>) {
+  private readWithExactlyOneFetch<State>(
+    key: string,
+    supersedes: Supersedes,
+    read: () => Promise<TokenAndState<State>>,
+  ) {
     const fetcher = this.loadsInProgress.get(key)
     if (fetcher) return fetcher
     const p = read()
       .then((tns) => {
-        this.updateIfNewer(key, CacheEntry.ofTokenAndState(tns))
+        this.updateIfNewer(key, supersedes, CacheEntry.ofTokenAndState(tns))
         return tns
       })
       .finally(() => {
@@ -79,6 +84,7 @@ export class MemoryCache implements ICache {
   async readThrough<State>(
     key: string,
     skipReloadIfYoungerThanMs: number,
+    supersedes: Supersedes,
     read: (tns?: TokenAndState<State>) => Promise<TokenAndState<State>>,
   ): Promise<TokenAndState<State>> {
     const span = trace.getActiveSpan()
@@ -86,7 +92,7 @@ export class MemoryCache implements ICache {
     span?.setAttribute(Tags.cache_hit, !!current)
     span?.setAttribute(Tags.max_staleness, skipReloadIfYoungerThanMs)
     if (!current) {
-      return this.readWithExactlyOneFetch(key, () => read())
+      return this.readWithExactlyOneFetch(key, supersedes, () => read())
     }
     const now = Date.now()
     const age = now - current.cachedAt
@@ -94,21 +100,22 @@ export class MemoryCache implements ICache {
     if (age < skipReloadIfYoungerThanMs) {
       return current.value()
     }
-    return this.readWithExactlyOneFetch(key, () => read(current.value()))
+    return this.readWithExactlyOneFetch(key, supersedes, () => read(current.value()))
   }
 
-  updateIfNewer<State>(key: string, entry: CacheEntry<State>): void {
+  updateIfNewer<State>(key: string, supersedes: Supersedes, entry: CacheEntry<State>): void {
     const current = this.cache.get(key)
     if (!current) {
       this.cache.set(key, entry)
     } else {
-      current.updateIfNewer(entry)
+      current.updateIfNewer(supersedes, entry)
     }
   }
 }
 
 export interface IReloadableCategory<E, S, C> extends ICategory<E, S, C> {
   reload(streamId: StreamId, requireLeader: boolean, t: TokenAndState<S>): Promise<TokenAndState<S>>
+  supersedes: Supersedes
 }
 
 export interface ICachingStrategy {
@@ -144,7 +151,12 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
       tns
         ? this.inner.reload(streamId, requireLeader, tns)
         : this.inner.load(streamId, maxStaleMs, requireLeader)
-    return this.strategy.cache.readThrough(this.cacheKey(streamId), maxStaleMs, reload)
+    return this.strategy.cache.readThrough(
+      this.cacheKey(streamId),
+      maxStaleMs,
+      this.inner.supersedes,
+      reload,
+    )
   }
 
   async sync(
@@ -163,6 +175,7 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
             const res = await result.resync()
             this.strategy.cache.updateIfNewer(
               this.cacheKey(streamId),
+              this.inner.supersedes,
               CacheEntry.ofTokenAndState(res),
             )
             return res
@@ -171,6 +184,7 @@ export class CachingCategory<Event, State, Context> implements ICategory<Event, 
       case "Written":
         this.strategy.cache.updateIfNewer(
           this.cacheKey(streamId),
+          this.inner.supersedes,
           CacheEntry.ofTokenAndState(result.data),
         )
         return { type: "Written", data: result.data }

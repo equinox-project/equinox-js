@@ -24,6 +24,7 @@ export async function initializeDatabase(client: Client) {
       data TEXT,
       time DATETIME DEFAULT CURRENT_TIMESTAMP,
       position INTEGER NOT NULL,
+      etag CHAR(36) NOT NULL,
       id CHAR(36) NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_snapshots_category on snapshots(category, type);

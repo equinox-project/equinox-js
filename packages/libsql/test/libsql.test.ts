@@ -58,6 +58,21 @@ namespace CartService {
     const category = Category.create(context, Cart.Category, codec, fold, initial, caching, access)
     return Cart.Service.create(category)
   }
+
+  export function createWithRollingState(context: LibSqlContext, cache = false) {
+    const access = AccessStrategy.RollingState(Cart.Fold.snapshot)
+    const cachestrat = cache ? caching : noCache
+    const category = Category.create(
+      context,
+      Cart.Category,
+      codec,
+      fold,
+      initial,
+      cachestrat,
+      access,
+    )
+    return Cart.Service.create(category)
+  }
 }
 
 try {
@@ -71,6 +86,16 @@ const client = LibSqlConnection.create(libSqlClient)
 beforeAll(async () => {
   await initializeDatabase(libSqlClient)
 })
+
+const waiter = () => {
+  let resolve: (_: unknown) => void
+  return [
+    new Promise((res) => {
+      resolve = res
+    }),
+    () => resolve(undefined),
+  ] as const
+}
 
 const createContext = (connection: LibSqlConnection, batchSize: number) =>
   new LibSqlContext(connection, batchSize)
@@ -180,6 +205,63 @@ namespace CartHelpers {
   ) => addAndThenRemoveItems(true, true, context, cartId, skuId, service, count)
 }
 
+async function manufactureConflict(service1: Cart.Service, service2: Cart.Service) {
+  const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
+  const cartId = Cart.CartId.create()
+
+  const act = (prepare: () => Promise<void>, service: Cart.Service, skuId: string, count: number) =>
+    service.executeManyAsync(
+      cartId,
+      false,
+      [{ type: "SyncItem", skuId, quantity: count, context: cartContext }],
+      prepare,
+    )
+  const sku11 = randomUUID() as Cart.SkuId
+  const sku12 = randomUUID() as Cart.SkuId
+  const sku21 = randomUUID() as Cart.SkuId
+  const sku22 = randomUUID() as Cart.SkuId
+
+  const [w0, s0] = waiter()
+  const [w1, s1] = waiter()
+  const [w2, s2] = waiter()
+  const [w3, s3] = waiter()
+  const [w4, s4] = waiter()
+
+  const t1 = async () => {
+    const prepare = async () => {
+      // Wait for other to have state, signal we have it, await conflict and handle
+      await w0
+      s1()
+      await w2
+    }
+    await act(prepare, service1, sku11, 11)
+    // Wait for other side to load; generate conflict
+    const prepare2 = async () => {
+      await w3
+    }
+    await act(prepare2, service1, sku12, 12)
+    s4()
+  }
+
+  const t2 = async () => {
+    // Signal we have state, wait for other to do same, engineer conflict
+    const prepare = async () => {
+      s0()
+      await w1
+    }
+    await act(prepare, service2, sku21, 21)
+    s2()
+    const prepare2 = async () => {
+      s3()
+      await w4
+    }
+    await act(prepare2, service2, sku22, 22)
+  }
+
+  await Promise.all([t1(), t2()])
+  return { cartId, sku11, sku12, sku21, sku22 }
+}
+
 describe("Round-trips against the store", () => {
   test("batches the reads correctly [without any optimizations]", async () => {
     const batchSize = 3
@@ -225,73 +307,10 @@ describe("Round-trips against the store", () => {
     const batchSize = 3
     const context = createContext(client, batchSize)
 
-    const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
-    const cartId = Cart.CartId.create()
-    const [sku11, sku12, sku21, sku22] = new Array(4).map(() => randomUUID())
-
     const service1 = CartService.createWithoutOptimization(context)
-    const act = (
-      prepare: () => Promise<void>,
-      service: Cart.Service,
-      skuId: string,
-      count: number,
-    ) =>
-      service.executeManyAsync(
-        cartId,
-        false,
-        [{ type: "SyncItem", skuId, quantity: count, context: cartContext }],
-        prepare,
-      )
-
-    const waiter = () => {
-      let resolve: (_: unknown) => void
-      return [
-        new Promise((res) => {
-          resolve = res
-        }),
-        () => resolve(undefined),
-      ] as const
-    }
-
-    const [w0, s0] = waiter()
-    const [w1, s1] = waiter()
-    const [w2, s2] = waiter()
-    const [w3, s3] = waiter()
-    const [w4, s4] = waiter()
-
-    const t1 = async () => {
-      const prepare = async () => {
-        // Wait for other to have state, signal we have it, await conflict and handle
-        await w0
-        s1()
-        await w2
-      }
-      await act(prepare, service1, sku11, 11)
-      // Wait for other side to load; generate conflict
-      const prepare2 = async () => {
-        await w3
-      }
-      await act(prepare2, service1, sku12, 12)
-      s4()
-    }
-
     const service2 = CartService.createWithoutOptimization(context)
-    const t2 = async () => {
-      // Signal we have state, wait for other to do same, engineer conflict
-      const prepare = async () => {
-        s0()
-        await w1
-      }
-      await act(prepare, service2, sku21, 21)
-      s2()
-      const prepare2 = async () => {
-        s3()
-        await w4
-      }
-      await act(prepare2, service2, sku22, 22)
-    }
 
-    await Promise.all([t1(), t2()])
+    const { sku11, sku12, sku21, sku22, cartId } = await manufactureConflict(service1, service2)
 
     const state = await service1.read(cartId)
     const qty = Object.fromEntries(state.items.map((x) => [x.skuId, x.quantity]))
@@ -358,7 +377,7 @@ describe("Caching", () => {
       name: "Query",
       [Tags.batches]: 1,
       [Tags.loaded_count]: 0,
-      [Tags.loaded_from_version]: "9",
+      [Tags.loaded_from_version]: "10",
       [Tags.cache_hit]: true,
     })
     memoryExporter.reset()
@@ -499,26 +518,24 @@ describe("AccessStrategy.Snapshot", () => {
     await service2.read(cartId)
     assertSpans(
       { name: "Transact", [Tags.append_count]: 10 },
-      { name: "Query", [Tags.snapshot_version]: 9, [Tags.loaded_count]: 1 },
+      { name: "Query", [Tags.snapshot_version]: 10, [Tags.loaded_count]: 1 },
     )
     memoryExporter.reset()
 
     // Add two more - the roundtrip should only incur a single read
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 1)
-    assertSpans({ name: "Transact", [Tags.append_count]: 2, [Tags.snapshot_version]: 9 })
+    assertSpans({ name: "Transact", [Tags.append_count]: 2, [Tags.snapshot_version]: 10 })
     memoryExporter.reset()
     // While we now have 12 events, we should be able to read them with a single call
     await service2.read(cartId)
-    assertSpans({ name: "Query", [Tags.snapshot_version]: 11, [Tags.loaded_count]: 1 })
+    assertSpans({ name: "Query", [Tags.snapshot_version]: 12, [Tags.loaded_count]: 1 })
   })
 
   test("Can roundtrip against LibSql, correctly using Snapshotting and Cache to avoid redundant reads", async () => {
     const queryMaxItems = 10
     const context = createContext(client, queryMaxItems)
-    const [service1, service2] = [
-      CartService.createWithSnapshotStrategyAndCaching(context),
-      CartService.createWithSnapshotStrategyAndCaching(context),
-    ]
+    const service1 = CartService.createWithSnapshotStrategyAndCaching(context)
+    const service2 = CartService.createWithSnapshotStrategyAndCaching(context)
 
     const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
     const cartId = Cart.CartId.create()
@@ -529,18 +546,93 @@ describe("AccessStrategy.Snapshot", () => {
     await service2.read(cartId)
     assertSpans(
       { name: "Transact", [Tags.loaded_count]: 0, [Tags.append_count]: 10 },
-      { name: "Query", [Tags.loaded_from_version]: "10", [Tags.loaded_count]: 0, [Tags.cache_hit]: true },
+      {
+        name: "Query",
+        [Tags.loaded_from_version]: "11",
+        [Tags.loaded_count]: 0,
+        [Tags.cache_hit]: true,
+      },
     )
     memoryExporter.reset()
 
     // Add two more - the roundtrip should only incur a single read
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 1)
-    assertSpans({ name: "Transact", [Tags.loaded_count]: 0, [Tags.append_count]: 2, [Tags.cache_hit]: true })
+    assertSpans({
+      name: "Transact",
+      [Tags.loaded_count]: 0,
+      [Tags.append_count]: 2,
+      [Tags.cache_hit]: true,
+    })
     memoryExporter.reset()
 
     // While we now have 12 events, we should be able to read them with a single call
     await service2.read(cartId)
     assertSpans({ name: "Query", [Tags.loaded_count]: 0, [Tags.cache_hit]: true })
+  })
+})
+
+describe("AccessStrategy.RollingState", () => {
+  test("Can roundtrip against DocStore with RollingState, detecting conflicts based on etag", async () => {
+    const queryMaxItems = 10
+    const context = createContext(client, queryMaxItems)
+    const service1 = CartService.createWithRollingState(context)
+    const service2 = CartService.createWithRollingState(context)
+
+    const { sku11, sku12, sku21, sku22, cartId } = await manufactureConflict(service1, service2)
+
+    const state = await service1.read(cartId)
+    const qty = Object.fromEntries(state.items.map((x) => [x.skuId, x.quantity]))
+
+    expect(qty).toEqual({
+      [sku11]: 11,
+      [sku12]: 12,
+      [sku21]: 21,
+      [sku22]: 22,
+    })
+    const syncs = memoryExporter.getFinishedSpans().filter((x) => x.name === "Transact")
+    const conflicts = syncs.filter((x) => x.events.find((x) => x.name == "Conflict"))
+    expect(syncs).toHaveLength(4)
+    expect(conflicts).toHaveLength(2)
+  })
+
+  // Caching doesn't really matter for RollingState as we always do a point read anyway
+  test("Can roundtrip against DocStore with RollingState correctly using and Cache to avoid redundant reads", async () => {
+    const queryMaxItems = 10
+    const context = createContext(client, queryMaxItems)
+    const service1 = CartService.createWithRollingState(context, true)
+    const service2 = CartService.createWithRollingState(context, true)
+
+    const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
+    const cartId = Cart.CartId.create()
+    const skuId = randomUUID()
+
+    // Trigger 10 events, then reload
+    await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 5)
+    await service2.read(cartId)
+    assertSpans(
+      { name: "Transact", [Tags.loaded_count]: 0, [Tags.append_count]: 10 },
+      { name: "Query", [Tags.loaded_count]: 1, [Tags.cache_hit]: true },
+    )
+    memoryExporter.reset()
+
+    // the roundtrip should only incur a single read
+    await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(cartContext, cartId, skuId, service1, 1)
+    assertSpans({
+      name: "Transact",
+      [Tags.loaded_count]: 1,
+      [Tags.append_count]: 1,
+      [Tags.cache_hit]: true,
+    })
+    memoryExporter.reset()
+
+    // Sanity check for whether our Token.supersedes logic is working
+    const stale = await service2.readStale(cartId)
+    const fresh = await service2.read(cartId)
+    assertSpans(
+      { name: "Query", [Tags.loaded_count]: 0, [Tags.cache_hit]: true },
+      { name: "Query", [Tags.loaded_count]: 1, [Tags.cache_hit]: true },
+    )
+    expect(stale).toEqual(fresh)
   })
 })
 

@@ -1,28 +1,20 @@
 import { StreamToken } from "@equinox-js/core"
 
-type TokenValue = { version: bigint; snapshot_version?: bigint }
+type TokenValue = { snapshot_etag?: string }
 
-export const create = (version: bigint, snapshot?: bigint): StreamToken => ({
-  value: { version, snapshot_version: snapshot },
-  version: version + 1n,
+export const create = (version: bigint, snapshot?: string): StreamToken => ({
+  value: { snapshot_etag: snapshot } satisfies TokenValue,
+  version: version,
   bytes: -1n,
 })
+
 const tokenValue = (token: StreamToken) => token.value as TokenValue
-export const streamVersion = (token: StreamToken) => tokenValue(token).version
-export const snapshotVersion = (token: StreamToken) => tokenValue(token).snapshot_version ?? 0n
+export const version = (token: StreamToken) => token.version
+export const snapshotEtag = (token: StreamToken) => tokenValue(token).snapshot_etag
 
-export const withSnapshot = (token: StreamToken, snapshot: bigint) => {
-  const value = tokenValue(token)
-  return {
-    value: { version: value.version, snapshot_version: snapshot },
-    version: token.version,
-    bytes: -1n,
-  }
+export const supersedes = (current: StreamToken, x: StreamToken) => {
+  const etag1 = snapshotEtag(current)
+  const etag2 = snapshotEtag(x)
+  if (etag2 != null && etag1 !== etag2) return true
+  return x.version > current.version
 }
-
-export const shouldSnapshot = (frequency: number, previous: StreamToken, next: StreamToken) => {
-  const lastSnapshot = snapshotVersion(previous)
-  const diff = next.version - lastSnapshot
-  return diff >= BigInt(frequency)
-}
-export const supersedes = (current: StreamToken, x: StreamToken) => x.version > current.version

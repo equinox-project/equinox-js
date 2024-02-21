@@ -2,20 +2,26 @@ import { randomUUID } from "crypto"
 import type { Client, Transaction } from "@libsql/client"
 import { IEventData, ITimelineEvent } from "@equinox-js/core"
 
-type LibSqlWriteResult = { type: "Written"; position: bigint } | { type: "ConflictUnknown" }
+type LibSqlWriteResult =
+  | { type: "Written"; position: bigint; snapshot_etag?: string }
+  | { type: "ConflictUnknown" }
 export type Format = string
 
 export class LibSqlWriter {
   constructor(private readonly client: Client) {}
 
+  /**
+   * Reads the current version of the stream
+   * version is 0 based, an empty stream has version 0
+   */
   async readStreamVersion(trx: Transaction, streamName: string): Promise<bigint> {
     const result = await trx.execute({
       sql: "select max(position) from messages where stream_name = ?",
       args: [streamName],
     })
-    if (result.rows.length === 0) return -1n
+    if (result.rows.length === 0) return 0n
     const position = result.rows[0][0] as string
-    if (position == null) return -1n
+    if (position == null) return 0n
     return BigInt(position)
   }
 
@@ -64,32 +70,32 @@ export class LibSqlWriter {
     category: string,
     streamName: string,
     event: IEventData<Format>,
-    expectedVersion?: bigint,
+    expectedEtag?: string,
   ): Promise<LibSqlWriteResult> {
     const trx = await this.client.transaction("write")
     try {
       const current = await trx.execute({
-        sql: "select position from snapshots where stream_name = ?",
+        sql: "select etag from snapshots where stream_name = ?",
         args: [streamName],
       })
-      const currentVersion = current.rows.length === 0 ? -1n : BigInt(current.rows[0][0] as number)
-      if (expectedVersion != null && currentVersion !== expectedVersion) {
+      const currentEtag = current.rows.length === 0 ? undefined : (current.rows[0][0] as string)
+      if (currentEtag !== expectedEtag) {
         await trx.rollback()
         return { type: "ConflictUnknown" }
       }
-      const nextVersion = currentVersion + 1n
+      const nextEtag = randomUUID()
       await trx.execute({
         sql: `
-        INSERT INTO snapshots (stream_name, category, type, data, position, id)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO snapshots (stream_name, category, type, data, position, etag, id)
+        VALUES (?, ?, ?, ?, 0, ?, ?)
         ON CONFLICT (stream_name) DO UPDATE
-        SET data = excluded.data, position = excluded.position, time = CURRENT_TIMESTAMP, type = excluded.type, id = excluded.id
+        SET data = excluded.data, position = excluded.position, time = CURRENT_TIMESTAMP, type = excluded.type, id = excluded.id, etag = excluded.etag
       `,
         // prettier-ignore
-        args: [streamName, category, event.type, event.data ?? null, nextVersion, event.id ?? randomUUID()],
+        args: [streamName, category, event.type, event.data ?? null, nextEtag, event.id ?? randomUUID()],
       })
       await trx.commit()
-      return { type: "Written", position: nextVersion }
+      return { type: "Written", position: 0n, snapshot_etag: nextEtag }
     } catch (err: any) {
       await trx.rollback()
       throw err
@@ -131,13 +137,14 @@ export class LibSqlReader {
     return result.rows.map(Parse.row)
   }
 
-  async readSnapshot(streamName: string) {
+  async readSnapshot(streamName: string): Promise<[string, ITimelineEvent] | undefined> {
     const result = await this.client.execute({
       sql: "select * from snapshots where stream_name = ?",
       args: [streamName],
     })
     if (result.rows.length === 0) return
-    return Parse.row(result.rows[0])
+    const row = result.rows[0]
+    return [Parse.string(row.etag), Parse.row(row)]
   }
 }
 

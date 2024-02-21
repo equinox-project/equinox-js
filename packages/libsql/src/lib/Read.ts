@@ -10,7 +10,7 @@ type StreamEventsSlice = {
 }
 
 const toSlice = (events: ITimelineEvent<Format>[], isLast: boolean): StreamEventsSlice => {
-  const lastVersion = events.length === 0 ? -1n : events[events.length - 1].index
+  const lastVersion = events.length === 0 ? 0n : events[events.length - 1].index
   return { messages: events, isEnd: isLast, lastVersion }
 }
 
