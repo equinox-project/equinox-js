@@ -18,6 +18,7 @@ const Category = LibSqlCategory
 
 const defaultBatchSize = 500
 
+// prettier-ignore
 namespace CartService {
   type E = Cart.Events.Event
   type S = Cart.Fold.State
@@ -28,15 +29,7 @@ namespace CartService {
   const noCache = CachingStrategy.NoCache()
 
   export function createWithoutOptimization(context: LibSqlContext) {
-    const category = Category.create(
-      context,
-      Cart.Category,
-      codec,
-      fold,
-      initial,
-      noCache,
-      AccessStrategy.Unoptimized(),
-    )
+    const category = Category.create(context, Cart.Category, codec, fold, initial, noCache, AccessStrategy.Unoptimized())
     return Cart.Service.create(category)
   }
 
@@ -62,15 +55,7 @@ namespace CartService {
   export function createWithRollingState(context: LibSqlContext, cache = false) {
     const access = AccessStrategy.RollingState(Cart.Fold.snapshot)
     const cachestrat = cache ? caching : noCache
-    const category = Category.create(
-      context,
-      Cart.Category,
-      codec,
-      fold,
-      initial,
-      cachestrat,
-      access,
-    )
+    const category = Category.create(context, Cart.Category, codec, fold, initial, cachestrat, access)
     return Cart.Service.create(category)
   }
 }
@@ -113,20 +98,13 @@ namespace SimplestThing {
   }
 }
 
+// prettier-ignore
 namespace ContactPreferencesService {
   const { fold, initial, codec } = ContactPreferences
 
   export const createService = (client: LibSqlConnection) => {
     const context = createContext(client, defaultBatchSize)
-    const category = Category.create(
-      context,
-      ContactPreferences.Category,
-      codec,
-      fold,
-      initial,
-      undefined,
-      AccessStrategy.LatestKnownEvent(),
-    )
+    const category = Category.create(context, ContactPreferences.Category, codec, fold, initial, undefined, AccessStrategy.LatestKnownEvent())
     return ContactPreferences.Service.create(category)
   }
 }
@@ -156,16 +134,9 @@ afterEach(() => {
 })
 afterAll(() => provider.shutdown())
 
+// prettier-ignore
 namespace CartHelpers {
-  const addAndThenRemoveItems = (
-    optimistic: boolean,
-    exceptTheLastOne: boolean,
-    context: Cart.Context,
-    cartId: Cart.CartId,
-    skuId: Cart.SkuId,
-    service: Cart.Service,
-    count: number,
-  ) =>
+  const addAndThenRemoveItems = (optimistic: boolean, exceptTheLastOne: boolean, context: Cart.Context, cartId: Cart.CartId, skuId: Cart.SkuId, service: Cart.Service, count: number) => 
     service.executeManyAsync(
       cartId,
       optimistic,
@@ -180,29 +151,14 @@ namespace CartHelpers {
         })(),
       ),
     )
-  export const addAndThenRemoveItemsManyTimes = (
-    context: Cart.Context,
-    cartId: Cart.CartId,
-    skuId: Cart.SkuId,
-    service: Cart.Service,
-    count: number,
-  ) => addAndThenRemoveItems(false, false, context, cartId, skuId, service, count)
+  export const addAndThenRemoveItemsManyTimes = (context: Cart.Context, cartId: Cart.CartId, skuId: Cart.SkuId, service: Cart.Service, count: number) => 
+    addAndThenRemoveItems(false, false, context, cartId, skuId, service, count)
 
-  export const addAndThenRemoveItemsManyTimesExceptTheLastOne = (
-    context: Cart.Context,
-    cartId: Cart.CartId,
-    skuId: Cart.SkuId,
-    service: Cart.Service,
-    count: number,
-  ) => addAndThenRemoveItems(false, true, context, cartId, skuId, service, count)
+  export const addAndThenRemoveItemsManyTimesExceptTheLastOne = (context: Cart.Context, cartId: Cart.CartId, skuId: Cart.SkuId, service: Cart.Service, count: number) => 
+    addAndThenRemoveItems(false, true, context, cartId, skuId, service, count)
 
-  export const addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne = (
-    context: Cart.Context,
-    cartId: Cart.CartId,
-    skuId: Cart.SkuId,
-    service: Cart.Service,
-    count: number,
-  ) => addAndThenRemoveItems(true, true, context, cartId, skuId, service, count)
+  export const addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne = (context: Cart.Context, cartId: Cart.CartId, skuId: Cart.SkuId, service: Cart.Service, count: number) => 
+    addAndThenRemoveItems(true, true, context, cartId, skuId, service, count)
 }
 
 async function manufactureConflict(service1: Cart.Service, service2: Cart.Service) {
@@ -262,6 +218,7 @@ async function manufactureConflict(service1: Cart.Service, service2: Cart.Servic
   return { cartId, sku11, sku12, sku21, sku22 }
 }
 
+// prettier-ignore
 describe("Round-trips against the store", () => {
   test("batches the reads correctly [without any optimizations]", async () => {
     const batchSize = 3
@@ -276,20 +233,9 @@ describe("Round-trips against the store", () => {
     const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
     debugger
 
-    await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(
-      cartContext,
-      cartId,
-      skuId,
-      service,
-      addRemoveCount,
-    )
+    await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(cartContext, cartId, skuId, service, addRemoveCount)
 
-    assertSpans({
-      name: "Transact",
-      [Tags.batches]: 1,
-      [Tags.loaded_count]: 0,
-      [Tags.append_count]: 11,
-    })
+    assertSpans({ name: "Transact", [Tags.batches]: 1, [Tags.loaded_count]: 0, [Tags.append_count]: 11 })
     memoryExporter.reset()
 
     const state = await service.read(cartId)
@@ -297,12 +243,9 @@ describe("Round-trips against the store", () => {
 
     const expectedEventCount = 2 * addRemoveCount - 1
     const expectedBatches = Math.ceil(expectedEventCount / batchSize)
-    assertSpans({
-      name: "Query",
-      [Tags.batches]: expectedBatches,
-      [Tags.loaded_count]: expectedEventCount,
-    })
+    assertSpans({ name: "Query", [Tags.batches]: expectedBatches, [Tags.loaded_count]: expectedEventCount })
   })
+
   test("manages sync conflicts by retrying [without any optimizations]", async () => {
     const batchSize = 3
     const context = createContext(client, batchSize)
@@ -340,6 +283,7 @@ describe("Error handling", () => {
   })
 })
 
+// prettier-ignore
 describe("Caching", () => {
   test("avoids redundant reads", async () => {
     const batchSize = 10
@@ -355,50 +299,21 @@ describe("Caching", () => {
     const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
 
     // Trigger 9 events, then reload
-    await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(
-      cartContext,
-      cartId,
-      skuId,
-      service1,
-      5,
-    )
-    assertSpans({
-      name: "Transact",
-      [Tags.load_method]: "BatchForward",
-      [Tags.loaded_count]: 0,
-      [Tags.append_count]: 9,
-    })
+    await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(cartContext, cartId, skuId, service1, 5)
+    assertSpans({ name: "Transact", [Tags.load_method]: "BatchForward", [Tags.loaded_count]: 0, [Tags.append_count]: 9 })
     const staleRes = await service2.readStale(cartId)
     memoryExporter.reset()
     const freshRes = await service2.read(cartId)
     expect(staleRes).toEqual(freshRes)
 
-    assertSpans({
-      name: "Query",
-      [Tags.batches]: 1,
-      [Tags.loaded_count]: 0,
-      [Tags.loaded_from_version]: "10",
-      [Tags.cache_hit]: true,
-    })
+    assertSpans({ name: "Query", [Tags.batches]: 1, [Tags.loaded_count]: 0, [Tags.loaded_from_version]: "10", [Tags.cache_hit]: true })
     memoryExporter.reset()
 
     // Add one more - the round-trip should only incur a single read
 
     const skuId2 = randomUUID() as Cart.SkuId
-    await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(
-      cartContext,
-      cartId,
-      skuId2,
-      service1,
-      1,
-    )
-    assertSpans({
-      name: "Transact",
-      [Tags.batches]: 1,
-      [Tags.loaded_count]: 0,
-      [Tags.cache_hit]: true,
-      [Tags.append_count]: 1,
-    })
+    await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(cartContext, cartId, skuId2, service1, 1)
+    assertSpans({ name: "Transact", [Tags.batches]: 1, [Tags.loaded_count]: 0, [Tags.cache_hit]: true, [Tags.append_count]: 1 })
     memoryExporter.reset()
 
     const res = await service2.readStale(cartId)
@@ -412,25 +327,13 @@ describe("Caching", () => {
     // Optimistic transactions
     memoryExporter.reset()
     // As the cache is up-to-date, we can transact against the cached value and do a null transaction without a round-trip
-    await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(
-      cartContext,
-      cartId,
-      skuId2,
-      service1,
-      1,
-    )
+    await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(cartContext, cartId, skuId2, service1, 1)
     assertSpans({ name: "Transact", [Tags.cache_hit]: true, [Tags.allow_stale]: true })
     expect(getStoreSpans()[0].attributes).not.to.have.property(Tags.batches)
     memoryExporter.reset()
     // As the cache is up-to-date, we can do an optimistic append, saving a Read round-trip
     const skuId3 = randomUUID() as Cart.SkuId
-    await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(
-      cartContext,
-      cartId,
-      skuId3,
-      service1,
-      1,
-    )
+    await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(cartContext, cartId, skuId3, service1, 1)
 
     // this time, we did something, so we see the append call
     assertSpans({ name: "Transact", [Tags.cache_hit]: true, [Tags.append_count]: 1 })
@@ -439,30 +342,13 @@ describe("Caching", () => {
     // If we don't have a cache attached, we don't benefit from / pay the price for any optimism
     memoryExporter.reset()
     const skuId4 = randomUUID() as Cart.SkuId
-    await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(
-      cartContext,
-      cartId,
-      skuId4,
-      service3,
-      1,
-    )
+    await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(cartContext, cartId, skuId4, service3, 1)
     // Need 2 batches to do the reading
-    assertSpans({
-      name: "Transact",
-      [Tags.batches]: 2,
-      [Tags.cache_hit]: false,
-      [Tags.append_count]: 1,
-    })
+    assertSpans({ name: "Transact", [Tags.batches]: 2, [Tags.cache_hit]: false, [Tags.append_count]: 1 })
     // we've engineered a clash with the cache state (service3 doest participate in caching)
     // Conflict with cached state leads to a read forward to re-sync; Then we'll idempotently decide not to do any append
     memoryExporter.reset()
-    await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(
-      cartContext,
-      cartId,
-      skuId4,
-      service2,
-      1,
-    )
+    await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(cartContext, cartId, skuId4, service2, 1)
 
     assertSpans({ name: "Transact", [Tags.cache_hit]: true, [Tags.allow_stale]: true })
     expect(memoryExporter.getFinishedSpans()[0].events).toEqual([
@@ -471,6 +357,7 @@ describe("Caching", () => {
   })
 })
 
+// prettier-ignore
 describe("AccessStrategy.LatestKnownEvent", () => {
   test("Reads and updates against Store", async () => {
     const id = randomUUID() as ContactPreferences.ClientId
@@ -490,24 +377,18 @@ describe("AccessStrategy.LatestKnownEvent", () => {
     const result = await service.read(id)
     expect(result).toEqual(value)
     assertSpans(
-      {
-        name: "Transact",
-        [Tags.load_method]: "Last",
-        [Tags.loaded_count]: 1,
-        [Tags.append_count]: 1,
-      },
+      { name: "Transact", [Tags.load_method]: "Last", [Tags.loaded_count]: 1, [Tags.append_count]: 1 },
       { name: "Query", [Tags.load_method]: "Last", [Tags.loaded_count]: 1 },
     )
   })
 })
 
+// prettier-ignore
 describe("AccessStrategy.Snapshot", () => {
   test("Can roundtrip against LibSql, using Snapshotting to avoid queries", async () => {
     const context = createContext(client, 10)
-    const [service1, service2] = [
-      CartService.createWithSnapshotStrategy(context),
-      CartService.createWithSnapshotStrategy(context),
-    ]
+    const service1 = CartService.createWithSnapshotStrategy(context)
+    const service2 = CartService.createWithSnapshotStrategy(context)
 
     const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
     const cartId = Cart.CartId.create()
@@ -546,23 +427,13 @@ describe("AccessStrategy.Snapshot", () => {
     await service2.read(cartId)
     assertSpans(
       { name: "Transact", [Tags.loaded_count]: 0, [Tags.append_count]: 10 },
-      {
-        name: "Query",
-        [Tags.loaded_from_version]: "11",
-        [Tags.loaded_count]: 0,
-        [Tags.cache_hit]: true,
-      },
+      { name: "Query", [Tags.loaded_from_version]: "11", [Tags.loaded_count]: 0, [Tags.cache_hit]: true },
     )
     memoryExporter.reset()
 
     // Add two more - the roundtrip should only incur a single read
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 1)
-    assertSpans({
-      name: "Transact",
-      [Tags.loaded_count]: 0,
-      [Tags.append_count]: 2,
-      [Tags.cache_hit]: true,
-    })
+    assertSpans({ name: "Transact", [Tags.loaded_count]: 0, [Tags.append_count]: 2, [Tags.cache_hit]: true })
     memoryExporter.reset()
 
     // While we now have 12 events, we should be able to read them with a single call
@@ -571,6 +442,7 @@ describe("AccessStrategy.Snapshot", () => {
   })
 })
 
+// prettier-ignore
 describe("AccessStrategy.RollingState", () => {
   test("Can roundtrip against DocStore with RollingState, detecting conflicts based on etag", async () => {
     const queryMaxItems = 10
@@ -616,19 +488,8 @@ describe("AccessStrategy.RollingState", () => {
     memoryExporter.reset()
 
     // the roundtrip should only incur a single read
-    await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(
-      cartContext,
-      cartId,
-      skuId,
-      service1,
-      1,
-    )
-    assertSpans({
-      name: "Transact",
-      [Tags.loaded_count]: 1,
-      [Tags.append_count]: 1,
-      [Tags.cache_hit]: true,
-    })
+    await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(cartContext, cartId, skuId, service1, 1)
+    assertSpans({ name: "Transact", [Tags.loaded_count]: 1, [Tags.append_count]: 1, [Tags.cache_hit]: true })
     memoryExporter.reset()
 
     // Sanity check for whether our Token.supersedes logic is working
@@ -656,7 +517,8 @@ test("Evolving access strategy from Unoptimised to Snapshot to RollingState", as
   const skuId3 = randomUUID()
 
   // prettier-ignore
-  const run = (service: Cart.Service, skuId: string, count: number) => CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(cartContext, cartId, skuId, service, count)
+  const run = (service: Cart.Service, skuId: string, count: number) => 
+    CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(cartContext, cartId, skuId, service, count)
 
   await run(service1, skuId, 10)
   // Going from unoptimized to Snapshot is safe
@@ -672,9 +534,6 @@ test("Evolving access strategy from Unoptimised to Snapshot to RollingState", as
 
   const qty1 = Object.fromEntries(state1.items.map((x) => [x.skuId, x.quantity]))
   const qty2 = Object.fromEntries(state2.items.map((x) => [x.skuId, x.quantity]))
-  const qty3 = Object.fromEntries(state3.items.map((x) => [x.skuId, x.quantity]))
-
-  console.log(qty1, qty2, qty3)
 
   expect(qty1).toEqual({
     [skuId]: 9,
