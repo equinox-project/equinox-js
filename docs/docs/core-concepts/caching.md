@@ -40,3 +40,18 @@ Retain a single `state` per `stream_name` in the supplied cache.
 
 Prefix is used to segregate multiple folds per stream when they are stored in the cache.
 
+## `CacheTtl(cache, ttlInMs, ?prefix)`
+
+```ts
+import { CachingStrategy, MemoryCache } from "@equinox-js/core"
+const cache = new MemoryCache()
+const MINUTE = 60 * 1000
+const strategy = CachingStrategy.CacheTtl(cache, 20 * MINUTE)
+```
+
+Retain a single `state` per `stream_name` in the supplied cache. The cache is
+purged of stale items on a 5 second interval.
+
+Prefix is used to segregate multiple folds per stream when they are stored in
+the cache.
+
