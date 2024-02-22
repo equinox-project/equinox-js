@@ -57,6 +57,12 @@ namespace CartService {
     return Cart.Service.create(category)
   }
 
+  export function createWithRollingState(context: DynamoStoreContext) {
+    const access = AccessStrategy.RollingState<E, S>(Cart.Fold.snapshot)
+    const category = Category.create(context, Cart.Category, codec, fold, initial, noCache, access)
+    return Cart.Service.create(category)
+  }
+
   const caching = CachingStrategy.Cache(cache)
 
   export function createWithCaching(context: DynamoStoreContext) {
@@ -634,6 +640,50 @@ test("Version is 0-based", async () => {
     (result, ctx) => [result, ctx.version],
   )
   expect([before, after]).toEqual([0n, 1n])
+})
+
+test("Evolving access strategy from Unoptimised to Snapshot to RollingState", async () => {
+  const batchSize = 10
+  const context = createContext(client, batchSize)
+  const service1 = CartService.createWithoutOptimization(context)
+  const service2 = CartService.createWithSnapshotStrategy(context)
+  const service3 = CartService.createWithRollingState(context)
+
+  const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
+  const cartId = Cart.CartId.create()
+  const skuId1 = randomUUID()
+  const skuId2 = randomUUID()
+  const skuId3 = randomUUID()
+
+  // prettier-ignore
+  const run = (service: Cart.Service, skuId: string, count: number) => 
+    CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(cartContext, cartId, skuId, service, count)
+
+  const toObj = (state: Cart.Fold.State) => Object.fromEntries(state.items.map((x) => [x.skuId, x.quantity]))
+
+  await run(service1, skuId1, 10)
+  // Going from unoptimized to Snapshot is safe
+  await run(service2, skuId2, 11)
+  // Going from Snapshot to RollingState is safe
+  await run(service3, skuId3, 12)
+  // Going back to Snapshot is safe
+  await run(service2, skuId1, 9)
+
+  const state1 = await service1.read(cartId).then(toObj)
+  const state2 = await service2.read(cartId).then(toObj)
+  const state3 = await service3.read(cartId).then(toObj)
+
+  expect(state1).toEqual({
+    [skuId1]: 9,
+    [skuId2]: 11,
+    // RollingState didn't emit an event for skuId3, so it's missing
+  })
+  expect(state2).toEqual({
+    [skuId1]: 9,
+    [skuId2]: 11,
+    [skuId3]: 12,
+  })
+  expect(state2).toEqual(state3)
 })
 
 test("EventsContext can read events for a stream", async () => {

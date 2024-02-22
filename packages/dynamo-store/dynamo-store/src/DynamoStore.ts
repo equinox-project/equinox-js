@@ -1356,7 +1356,7 @@ class StoreCategory<E, S, C> implements IReloadableCategory<E, S, C> {
       case "Unfold":
         exp = Position.toIndex
         eventsEncoded = encode(events)
-        unfoldsEncoded = encode(this.mapUnfolds.unfold(events, originState))
+        unfoldsEncoded = encode(this.mapUnfolds.unfold(events, newState))
         break
       case "Transmute":
         const [events_, unfolds] = this.mapUnfolds.transmute(events, newState)
