@@ -99,10 +99,12 @@ export class LibSqlContext {
     initial: State,
   ): Promise<[StreamToken, State]> {
     const snapshot = await this.conn.read.readSnapshot(streamName)
-    if (snapshot == null) return [this.tokenEmpty, initial]
+    // An end-user might add RollingState to a category after the fact, we should handle this gracefully
+    if (snapshot == null) return this.loadBatched(streamName, decode, fold, initial)
     const [etag, event] = snapshot
     const decoded = decode(event)
-    if (!decoded) return [this.tokenEmpty, initial]
+    // An end-user might add RollingState to a category after the fact, we should handle this gracefully
+    if (!decoded) return this.loadBatched(streamName, decode, fold, initial)
     const version = BigInt(event.index)
     const state = fold(initial, [decoded])
     const span = trace.getActiveSpan()
@@ -176,7 +178,8 @@ export class LibSqlContext {
   ): Promise<GatewaySyncResult> {
     const span = trace.getActiveSpan()
     const etag = Token.snapshotEtag(token)
-    const result = await this.conn.write.writeSnapshot(category, streamName, encodedEvent, etag)
+    const index = Token.version(token)
+    const result = await this.conn.write.writeSnapshot(category, streamName, encodedEvent, index, etag)
     switch (result.type) {
       case "ConflictUnknown":
         span?.addEvent("Conflict")

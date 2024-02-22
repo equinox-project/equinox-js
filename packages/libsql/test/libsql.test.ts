@@ -616,7 +616,13 @@ describe("AccessStrategy.RollingState", () => {
     memoryExporter.reset()
 
     // the roundtrip should only incur a single read
-    await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(cartContext, cartId, skuId, service1, 1)
+    await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(
+      cartContext,
+      cartId,
+      skuId,
+      service1,
+      1,
+    )
     assertSpans({
       name: "Transact",
       [Tags.loaded_count]: 1,
@@ -634,6 +640,53 @@ describe("AccessStrategy.RollingState", () => {
     )
     expect(stale).toEqual(fresh)
   })
+})
+
+test("Evolving access strategy from Unoptimised to Snapshot to RollingState", async () => {
+  const batchSize = 10
+  const context = createContext(client, batchSize)
+  const service1 = CartService.createWithoutOptimization(context)
+  const service2 = CartService.createWithSnapshotStrategy(context)
+  const service3 = CartService.createWithRollingState(context)
+
+  const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
+  const cartId = Cart.CartId.create()
+  const skuId = randomUUID()
+  const skuId2 = randomUUID()
+  const skuId3 = randomUUID()
+
+  // prettier-ignore
+  const run = (service: Cart.Service, skuId: string, count: number) => CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(cartContext, cartId, skuId, service, count)
+
+  await run(service1, skuId, 10)
+  // Going from unoptimized to Snapshot is safe
+  await run(service2, skuId2, 11)
+  // Going from Snapshot to RollingState is safe
+  await run(service3, skuId3, 12)
+  // Going back to Snapshot is safe
+  await run(service2, skuId, 9)
+
+  const state1 = await service1.read(cartId)
+  const state2 = await service2.read(cartId)
+  const state3 = await service3.read(cartId)
+
+  const qty1 = Object.fromEntries(state1.items.map((x) => [x.skuId, x.quantity]))
+  const qty2 = Object.fromEntries(state2.items.map((x) => [x.skuId, x.quantity]))
+  const qty3 = Object.fromEntries(state3.items.map((x) => [x.skuId, x.quantity]))
+
+  console.log(qty1, qty2, qty3)
+
+  expect(qty1).toEqual({
+    [skuId]: 9,
+    [skuId2]: 11,
+    // RollingState didn't emit an event for skuId3, so it's missing
+  })
+  expect(qty2).toEqual({
+    [skuId]: 9,
+    [skuId2]: 11,
+    [skuId3]: 12
+  })
+  expect(state2).toEqual(state3)
 })
 
 test("Version is 0-based", async () => {

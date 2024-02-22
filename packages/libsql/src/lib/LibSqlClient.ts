@@ -7,6 +7,10 @@ type LibSqlWriteResult =
   | { type: "ConflictUnknown" }
 export type Format = string
 
+type Trx = {
+  execute: Client['execute']
+}
+
 export class LibSqlWriter {
   constructor(private readonly client: Client) {}
 
@@ -14,7 +18,7 @@ export class LibSqlWriter {
    * Reads the current version of the stream
    * version is 0 based, an empty stream has version 0
    */
-  async readStreamVersion(trx: Transaction, streamName: string): Promise<bigint> {
+  async readStreamVersion(streamName: string, trx: Trx = this.client): Promise<bigint> {
     const result = await trx.execute({
       sql: "select max(position) from messages where stream_name = ?",
       args: [streamName],
@@ -33,7 +37,7 @@ export class LibSqlWriter {
     updateSnapshot?: (trx: Transaction) => Promise<void>,
   ): Promise<LibSqlWriteResult> {
     const trx = await this.client.transaction("write")
-    let position = await this.readStreamVersion(trx, streamName)
+    let position = await this.readStreamVersion(streamName, trx)
     if (expectedVersion != null && position !== expectedVersion) {
       await trx.rollback()
       return { type: "ConflictUnknown" }
@@ -70,6 +74,7 @@ export class LibSqlWriter {
     category: string,
     streamName: string,
     event: IEventData<Format>,
+    index: bigint,
     expectedEtag?: string,
   ): Promise<LibSqlWriteResult> {
     const trx = await this.client.transaction("write")
@@ -87,12 +92,12 @@ export class LibSqlWriter {
       await trx.execute({
         sql: `
         INSERT INTO snapshots (stream_name, category, type, data, position, etag, id)
-        VALUES (?, ?, ?, ?, 0, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT (stream_name) DO UPDATE
         SET data = excluded.data, position = excluded.position, time = CURRENT_TIMESTAMP, type = excluded.type, id = excluded.id, etag = excluded.etag
       `,
         // prettier-ignore
-        args: [streamName, category, event.type, event.data ?? null, nextEtag, event.id ?? randomUUID()],
+        args: [streamName, category, event.type, event.data ?? null, index, nextEtag, event.id ?? randomUUID()],
       })
       await trx.commit()
       return { type: "Written", position: 0n, snapshot_etag: nextEtag }
