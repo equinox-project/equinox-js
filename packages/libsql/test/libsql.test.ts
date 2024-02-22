@@ -684,7 +684,7 @@ test("Evolving access strategy from Unoptimised to Snapshot to RollingState", as
   expect(qty2).toEqual({
     [skuId]: 9,
     [skuId2]: 11,
-    [skuId3]: 12
+    [skuId3]: 12,
   })
   expect(state2).toEqual(state3)
 })

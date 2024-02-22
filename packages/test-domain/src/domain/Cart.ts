@@ -35,7 +35,7 @@ export namespace Fold {
   export type State = { items: ItemInfo[] }
   export const toSnapshot = (s: State): Events.Compaction.State => ({ items: s.items })
   export const ofSnapshot = (s: Events.Compaction.State) => ({ items: s.items })
-  export const initial = { items: [] }
+  export const initial: State = { items: [] }
   export const snapshotEventType = "Snapshotted"
   export const evolve = (state: State, event: Events.Event): State => {
     const updateItems = (f: (items: ItemInfo[]) => ItemInfo[]) => ({

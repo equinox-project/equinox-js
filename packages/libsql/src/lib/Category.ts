@@ -179,7 +179,13 @@ export class LibSqlContext {
     const span = trace.getActiveSpan()
     const etag = Token.snapshotEtag(token)
     const index = Token.version(token)
-    const result = await this.conn.write.writeSnapshot(category, streamName, encodedEvent, index, etag)
+    const result = await this.conn.write.writeSnapshot(
+      category,
+      streamName,
+      encodedEvent,
+      index,
+      etag,
+    )
     switch (result.type) {
       case "ConflictUnknown":
         span?.addEvent("Conflict")
@@ -237,8 +243,8 @@ export type AccessStrategy<Event, State> =
 
 // prettier-ignore
 export namespace AccessStrategy {
-  export const Unoptimized = (): AccessStrategy<any, any> => ({ type: "Unoptimized" })
-  export const LatestKnownEvent = (): AccessStrategy<any, any> => ({ type: "LatestKnownEvent" })
+  export const Unoptimized = <E=any, S=any>(): AccessStrategy<E, S> => ({ type: "Unoptimized" })
+  export const LatestKnownEvent = <E=any, S=any>(): AccessStrategy<E, S> => ({ type: "LatestKnownEvent" })
   export const Snapshot = <E, S>(isOrigin: (e: E) => boolean, toSnapshot: (state: S) => E): AccessStrategy<E, S> => 
     ({ type: "Snapshot", isOrigin, toSnapshot })
   export const RollingState = <E, S>(toSnapshot: (state: S) => E): AccessStrategy<E, S> => ({ type: "RollingState", toSnapshot })
@@ -394,7 +400,7 @@ class InternalCategory<Event, State, Context>
 }
 
 export class LibSqlCategory {
-  static create<Event, State, Context = null>(
+  static create<Event, State, Context = void>(
     context: LibSqlContext,
     categoryName: string,
     codec: ICodec<Event, Format, Context>,
@@ -402,10 +408,10 @@ export class LibSqlCategory {
     initial: State,
     caching?: ICachingStrategy,
     access?: AccessStrategy<Event, State>,
-  ) {
+  ): Equinox.Category<Event, State, Context> {
     const inner = new InternalCategory(context, categoryName, codec, fold, initial, access)
     const category = CachingCategory.apply(categoryName, inner, caching)
     const empty: TokenAndState<State> = { token: context.tokenEmpty, state: initial }
-    return new Equinox.Category(category, empty)
+    return new Equinox.Category<Event, State, Context>(category, empty)
   }
 }
