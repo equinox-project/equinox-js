@@ -512,7 +512,7 @@ test("Evolving access strategy from Unoptimised to Snapshot to RollingState", as
 
   const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
   const cartId = Cart.CartId.create()
-  const skuId = randomUUID()
+  const skuId1 = randomUUID()
   const skuId2 = randomUUID()
   const skuId3 = randomUUID()
 
@@ -520,13 +520,13 @@ test("Evolving access strategy from Unoptimised to Snapshot to RollingState", as
   const run = (service: Cart.Service, skuId: string, count: number) => 
     CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(cartContext, cartId, skuId, service, count)
 
-  await run(service1, skuId, 10)
+  await run(service1, skuId1, 10)
   // Going from unoptimized to Snapshot is safe
   await run(service2, skuId2, 11)
   // Going from Snapshot to RollingState is safe
   await run(service3, skuId3, 12)
   // Going back to Snapshot is safe
-  await run(service2, skuId, 9)
+  await run(service2, skuId1, 9)
 
   const state1 = await service1.read(cartId)
   const state2 = await service2.read(cartId)
@@ -536,12 +536,12 @@ test("Evolving access strategy from Unoptimised to Snapshot to RollingState", as
   const qty2 = Object.fromEntries(state2.items.map((x) => [x.skuId, x.quantity]))
 
   expect(qty1).toEqual({
-    [skuId]: 9,
+    [skuId1]: 9,
     [skuId2]: 11,
     // RollingState didn't emit an event for skuId3, so it's missing
   })
   expect(qty2).toEqual({
-    [skuId]: 9,
+    [skuId1]: 9,
     [skuId2]: 11,
     [skuId3]: 12,
   })
