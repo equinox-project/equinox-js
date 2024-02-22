@@ -13,8 +13,5 @@ export const version = (token: StreamToken) => token.version
 export const snapshotEtag = (token: StreamToken) => tokenValue(token).snapshot_etag
 
 export const supersedes = (current: StreamToken, x: StreamToken) => {
-  const etag1 = snapshotEtag(current)
-  const etag2 = snapshotEtag(x)
-  if (etag2 != null && etag1 !== etag2) return true
-  return x.version > current.version
+  return x.version > current.version || snapshotEtag(current) !== snapshotEtag(x)
 }

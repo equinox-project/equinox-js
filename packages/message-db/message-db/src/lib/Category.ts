@@ -234,8 +234,6 @@ class InternalCategory<Event, State, Context>
     private readonly onSync?: OnSync<State>,
   ) {}
 
-  supercedes = Token.supersedes
-
   private async loadAlgorithm(
     streamId: Equinox.StreamId,
     requireLeader: boolean,
