@@ -305,7 +305,8 @@ class InternalCategory<Event, State, Context>
       [Tags.stream_name]: streamName,
     })
     if (this.access.type === "RollingState") {
-      if (events.length === 0) return { type: "Written", data: { token, state } }
+      // Note, this is here for the compiler. `transactAsync` in core will short circuit and not call us for 0 events
+      if (events.length === 0) throw new Error("Cannot sync with no events")
       const nextState = this.fold(state, events)
       const event = this.access.toSnapshot(nextState)
       const encodedEvent = this.codec.encode(event, ctx)
