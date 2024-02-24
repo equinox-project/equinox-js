@@ -15,13 +15,13 @@ export namespace Events {
   type ItemRemovedInfo = { context: ContextInfo; skuId: SkuId }
   type ItemQuantityChangedInfo = { context: ContextInfo; skuId: SkuId; quantity: number }
   type ItemPropertiesChangedInfo = { context: ContextInfo; skuId: SkuId; waived: boolean }
-  export namespace Compaction {
-    type StateItemInfo = { skuId: SkuId; quantity: number; returnsWaived?: boolean }
-    export type State = { items: StateItemInfo[] }
+  type StateItemInfo = { skuId: SkuId; quantity: number; returnsWaived?: boolean }
+  export type Snapshotted = {
+    items: StateItemInfo[]
   }
 
   export type Event =
-    | { type: "Snapshotted"; data: Compaction.State }
+    | { type: "Snapshotted"; data: Snapshotted }
     | { type: "ItemAdded"; data: ItemAddedInfo }
     | { type: "ItemRemoved"; data: ItemRemovedInfo }
     | { type: "ItemQuantityChanged"; data: ItemQuantityChangedInfo }
@@ -33,8 +33,8 @@ export namespace Events {
 export namespace Fold {
   export type ItemInfo = { skuId: SkuId; quantity: number; returnsWaived?: boolean }
   export type State = { items: ItemInfo[] }
-  export const toSnapshot = (s: State): Events.Compaction.State => ({ items: s.items })
-  export const ofSnapshot = (s: Events.Compaction.State) => ({ items: s.items })
+  export const toSnapshot = (s: State): Events.Snapshotted => ({ items: s.items })
+  export const ofSnapshot = (s: Events.Snapshotted) => ({ items: s.items })
   export const initial: State = { items: [] }
   export const snapshotEventType = "Snapshotted"
   export const evolve = (state: State, event: Events.Event): State => {
