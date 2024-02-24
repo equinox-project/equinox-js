@@ -17,7 +17,7 @@ import { randomUUID } from "crypto"
 
 const keepMap = Equinox.Internal.keepMap
 
-type GatewaySyncResult = { type: "Written"; token: StreamToken } | { type: "ConflictUnknown" }
+type LibSqlSyncResult = { type: "Written"; token: StreamToken } | { type: "ConflictUnknown" }
 
 type Decode<E> = (v: ITimelineEvent<Format>) => E | undefined
 
@@ -135,7 +135,7 @@ export class LibSqlContext {
     streamName: string,
     token: StreamToken,
     encodedEvent: IEventData<Format>,
-  ): Promise<GatewaySyncResult> {
+  ): Promise<LibSqlSyncResult> {
     const span = trace.getActiveSpan()
     const etag = Token.snapshotEtag(token)
     const version = Token.version(token)
