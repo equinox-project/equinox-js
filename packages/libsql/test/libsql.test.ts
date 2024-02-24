@@ -505,9 +505,9 @@ describe("AccessStrategy.RollingState", () => {
 test("Evolving access strategy from Unoptimised to Snapshot to RollingState", async () => {
   const batchSize = 10
   const context = createContext(client, batchSize)
-  const service1 = CartService.createWithoutOptimization(context)
-  const service2 = CartService.createWithSnapshotStrategy(context)
-  const service3 = CartService.createWithRollingState(context)
+  const unoptimized = CartService.createWithoutOptimization(context)
+  const snapshot = CartService.createWithSnapshotStrategy(context)
+  const rollingState = CartService.createWithRollingState(context)
 
   const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
   const cartId = Cart.CartId.create()
@@ -519,20 +519,20 @@ test("Evolving access strategy from Unoptimised to Snapshot to RollingState", as
   const run = (service: Cart.Service, skuId: string, count: number) => 
     CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(cartContext, cartId, skuId, service, count)
 
-  await run(service1, skuId1, 10)
+  await run(unoptimized, skuId1, 10)
   // Going from unoptimized to Snapshot is safe
-  await run(service2, skuId2, 11)
+  await run(snapshot, skuId2, 11)
   // Going from Snapshot to RollingState is safe
-  await run(service3, skuId3, 12)
+  await run(rollingState, skuId3, 12)
   // Going back to Snapshot is safe
-  await run(service2, skuId1, 9)
+  await run(snapshot, skuId1, 9)
 
-  const state1 = await service1.read(cartId)
-  const state2 = await service2.read(cartId)
-  const state3 = await service3.read(cartId)
+  const unoptimizedState = await unoptimized.read(cartId)
+  const snapshotState = await snapshot.read(cartId)
+  const rollingStateState = await rollingState.read(cartId)
 
-  const qty1 = Object.fromEntries(state1.items.map((x) => [x.skuId, x.quantity]))
-  const qty2 = Object.fromEntries(state2.items.map((x) => [x.skuId, x.quantity]))
+  const qty1 = Object.fromEntries(unoptimizedState.items.map((x) => [x.skuId, x.quantity]))
+  const qty2 = Object.fromEntries(snapshotState.items.map((x) => [x.skuId, x.quantity]))
 
   expect(qty1).toEqual({
     [skuId1]: 9,
@@ -544,7 +544,7 @@ test("Evolving access strategy from Unoptimised to Snapshot to RollingState", as
     [skuId2]: 11,
     [skuId3]: 12,
   })
-  expect(state2).toEqual(state3)
+  expect(snapshotState).toEqual(rollingStateState)
 })
 
 test("Version is 0-based", async () => {
