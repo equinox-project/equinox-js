@@ -231,7 +231,6 @@ describe("Round-trips against the store", () => {
     const skuId = randomUUID() as Cart.SkuId
 
     const cartContext: Cart.Context = { requestId: randomUUID(), time: new Date() }
-    debugger
 
     await CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(cartContext, cartId, skuId, service, addRemoveCount)
 
@@ -306,7 +305,7 @@ describe("Caching", () => {
     const freshRes = await service2.read(cartId)
     expect(staleRes).toEqual(freshRes)
 
-    assertSpans({ name: "Query", [Tags.batches]: 1, [Tags.loaded_count]: 0, [Tags.loaded_from_version]: "10", [Tags.cache_hit]: true })
+    assertSpans({ name: "Query", [Tags.batches]: 1, [Tags.loaded_count]: 0, [Tags.loaded_from_version]: "9", [Tags.cache_hit]: true })
     memoryExporter.reset()
 
     // Add one more - the round-trip should only incur a single read
@@ -427,7 +426,7 @@ describe("AccessStrategy.Snapshot", () => {
     await service2.read(cartId)
     assertSpans(
       { name: "Transact", [Tags.loaded_count]: 0, [Tags.append_count]: 10 },
-      { name: "Query", [Tags.loaded_from_version]: "11", [Tags.loaded_count]: 0, [Tags.cache_hit]: true },
+      { name: "Query", [Tags.loaded_from_version]: "10", [Tags.loaded_count]: 0, [Tags.cache_hit]: true },
     )
     memoryExporter.reset()
 
@@ -468,7 +467,7 @@ describe("AccessStrategy.RollingState", () => {
   })
 
   // Caching doesn't really matter for RollingState as we always do a point read anyway
-  test("Can roundtrip against DocStore with RollingState correctly using and Cache to avoid redundant reads", async () => {
+  test("Can roundtrip RollingState correctly using and Cache to avoid redundant reads", async () => {
     const queryMaxItems = 10
     const context = createContext(client, queryMaxItems)
     const service1 = CartService.createWithRollingState(context, true)

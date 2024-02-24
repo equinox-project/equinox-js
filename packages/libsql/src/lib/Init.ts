@@ -4,7 +4,7 @@ export async function initializeDatabase(client: Client) {
   await client.executeMultiple(`
     CREATE TABLE IF NOT EXISTS messages (
       global_position INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-      position INTEGER NOT NULL,
+      "index" INTEGER NOT NULL,
       id CHAR(36) NOT NULL,
       stream_name CHAR(127) NOT NULL,
       category CHAR(127) NOT NULL,
@@ -12,7 +12,7 @@ export async function initializeDatabase(client: Client) {
       data TEXT,
       metadata TEXT,
       time DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE (stream_name, position),
+      UNIQUE (stream_name, "index"),
       UNIQUE (id)
     );
     CREATE INDEX IF NOT EXISTS idx_messages_category on messages(category, global_position);
@@ -23,7 +23,7 @@ export async function initializeDatabase(client: Client) {
       type CHAR(127) NOT NULL,
       data TEXT,
       time DATETIME DEFAULT CURRENT_TIMESTAMP,
-      position INTEGER NOT NULL,
+      version INTEGER NOT NULL,
       etag CHAR(36) NOT NULL,
       id CHAR(36) NOT NULL
     );

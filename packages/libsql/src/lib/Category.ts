@@ -56,8 +56,6 @@ export class LibSqlContext {
   ): Promise<[StreamToken, State]> {
     let state = initial
     let version = 0n
-    let batches = 0
-    let eventCount = 0
     for await (const [lastVersion, events] of Read.loadForwardsFrom(
       this.conn.read,
       this.batchSize,
@@ -65,16 +63,10 @@ export class LibSqlContext {
       streamName,
       0n,
     )) {
-      batches++
-      eventCount += events.length
       state = fold(state, keepMap(events, decode))
       version = lastVersion
     }
-    trace.getActiveSpan()?.setAttributes({
-      [Tags.loaded_count]: eventCount,
-      [Tags.batches]: batches,
-      [Tags.read_version]: Number(version),
-    })
+
     return [Token.create(version), state]
   }
 
@@ -125,25 +117,16 @@ export class LibSqlContext {
     state: State,
   ): Promise<[StreamToken, State]> {
     let streamVersion = Token.version(token)
-    const startPos = streamVersion + 1n // Reading a stream uses {inclusive} positions
-    let batches = 0
-    let eventCount = 0
     for await (const [version, events] of Read.loadForwardsFrom(
       this.conn.read,
       this.batchSize,
       this.maxBatches,
       streamName,
-      startPos,
+      streamVersion,
     )) {
       state = fold(state, keepMap(events, decode))
-      streamVersion = streamVersion > version ? streamVersion : version
-      batches++
-      eventCount += events.length
+      streamVersion = version
     }
-    trace.getActiveSpan()?.setAttributes({
-      [Tags.loaded_count]: eventCount,
-      [Tags.batches]: batches,
-    })
     return [Token.create(streamVersion), state]
   }
 
@@ -155,12 +138,12 @@ export class LibSqlContext {
   ): Promise<GatewaySyncResult> {
     const span = trace.getActiveSpan()
     const etag = Token.snapshotEtag(token)
-    const index = Token.version(token)
+    const version = Token.version(token)
     const result = await this.conn.write.writeSnapshot(
       category,
       streamName,
       encodedEvent,
-      index,
+      version,
       etag,
     )
     switch (result.type) {
@@ -168,7 +151,7 @@ export class LibSqlContext {
         span?.addEvent("Conflict")
         return { type: "ConflictUnknown" }
       case "Written": {
-        const token = Token.create(result.position, result.snapshot_etag)
+        const token = Token.create(result.version, result.snapshot_etag)
         return { type: "Written", token }
       }
     }
@@ -201,7 +184,7 @@ export class LibSqlContext {
         span?.addEvent("Conflict")
         return { type: "ConflictUnknown" }
       case "Written": {
-        const token = Token.create(result.position)
+        const token = Token.create(result.version)
         return { type: "Written", token }
       }
     }
@@ -298,10 +281,10 @@ class InternalCategory<Event, State, Context>
       const etag = randomUUID()
       await trx.execute({
         sql: `
-        INSERT INTO snapshots (stream_name, category, type, data, position, etag, id)
+        INSERT INTO snapshots (stream_name, category, type, data, version, etag, id)
         VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT (stream_name) DO UPDATE
-        SET data = excluded.data, position = excluded.position, time = CURRENT_TIMESTAMP, type = excluded.type, id = excluded.id, etag = excluded.etag
+        SET data = excluded.data, version = excluded.version, time = CURRENT_TIMESTAMP, type = excluded.type, id = excluded.id, etag = excluded.etag
       `,
         args: [streamName, category, snapshot.type, snapshot.data ?? null, version, etag, id],
       })
