@@ -92,29 +92,6 @@ export class LibSqlContext {
     return [Token.create(version), fold(initial, keepMap(events, decode))]
   }
 
-  async loadState<Event, State>(
-    streamName: string,
-    decode: Decode<Event>,
-    fold: (state: State, events: Event[]) => State,
-    initial: State,
-  ): Promise<[StreamToken, State]> {
-    const snapshot = await this.conn.read.readSnapshot(streamName)
-    // An end-user might add RollingState to a category after the fact, we should handle this gracefully
-    if (snapshot == null) return this.loadBatched(streamName, decode, fold, initial)
-    const [etag, event] = snapshot
-    const decoded = decode(event)
-    // An end-user might add RollingState to a category after the fact, we should handle this gracefully
-    if (!decoded) return this.loadBatched(streamName, decode, fold, initial)
-    const version = BigInt(event.index)
-    const state = fold(initial, [decoded])
-    const span = trace.getActiveSpan()
-    span?.setAttributes({
-      [Tags.loaded_count]: 1,
-      [Tags.snapshot_version]: Number(version),
-    })
-    return [Token.create(version, etag), state]
-  }
-
   async loadSnapshot<Event, State>(
     streamName: string,
     decode: Decode<Event>,
@@ -126,7 +103,7 @@ export class LibSqlContext {
     // An end-user might add snapshotting to a category after the fact, in which case there might not be a snapshot
     // in all other cases the snapshot is guaranteed to exist if there are any events in the stream
     if (snapshot == null) return this.loadBatched(streamName, decode, fold, initial)
-    const [_, event] = snapshot
+    const [etag, event] = snapshot
     const decoded = decode(event)
     // The snapshot type may have changed, in which case we should ignore it and load a fresh state
     if (!decoded || !isOrigin(decoded)) return this.loadBatched(streamName, decode, fold, initial)
@@ -137,7 +114,7 @@ export class LibSqlContext {
       [Tags.loaded_count]: 1,
       [Tags.snapshot_version]: Number(version),
     })
-    return [Token.create(version), state]
+    return [Token.create(version, etag), state]
   }
 
   async reload<Event, State>(
@@ -206,10 +183,11 @@ export class LibSqlContext {
   ): Promise<GatewaySyncResult> {
     const span = trace.getActiveSpan()
     const streamVersion = Token.version(token)
-    const appendedTypes = new Set(encodedEvents.map((x) => x.type))
-    if (appendedTypes.size <= 10) {
-      span?.setAttribute(Tags.append_types, Array.from(appendedTypes))
-    }
+    const appendedTypes = encodedEvents.map((x) => x.type)
+    span?.setAttribute(
+      Tags.append_types,
+      appendedTypes.length <= 10 ? appendedTypes : uniq(appendedTypes),
+    )
     const result = await this.conn.write.writeMessages(
       category,
       streamName,
@@ -281,7 +259,7 @@ class InternalCategory<Event, State, Context>
       case "Snapshot":
         return this.context.loadSnapshot(streamName, this.codec.decode, this.fold, this.initial, this.access.isOrigin)
       case "RollingState":
-        return this.context.loadState(streamName, this.codec.decode, this.fold, this.initial)
+        return this.context.loadSnapshot(streamName, this.codec.decode, this.fold, this.initial, () => true)
     }
   }
 
@@ -414,4 +392,17 @@ export class LibSqlCategory {
     const empty: TokenAndState<State> = { token: context.tokenEmpty, state: initial }
     return new Equinox.Category<Event, State, Context>(category, empty)
   }
+}
+
+// uniques an array while preserving order
+function uniq<T>(arr: T[]): T[] {
+  const set = new Set<T>()
+  const result: T[] = []
+  for (const item of arr) {
+    if (!set.has(item)) {
+      set.add(item)
+      result.push(item)
+    }
+  }
+  return result
 }
