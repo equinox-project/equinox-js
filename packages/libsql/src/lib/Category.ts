@@ -163,7 +163,7 @@ export class LibSqlContext {
     token: StreamToken,
     encodedEvents: IEventData<Format>[],
     updateSnapshot?: (trx: Transaction) => Promise<void>,
-  ): Promise<GatewaySyncResult> {
+  ): Promise<LibSqlSyncResult> {
     const span = trace.getActiveSpan()
     const streamVersion = Token.version(token)
     const appendedTypes = encodedEvents.map((x) => x.type)
@@ -270,13 +270,13 @@ class InternalCategory<Event, State, Context>
     category: string,
     streamName: string,
     ctx: Context,
-    newState: State,
+    state: State,
     version: bigint,
   ) {
     if (this.access.type !== "Snapshot") return
     const toSnapshot = this.access.toSnapshot
     return async (trx: Transaction) => {
-      const snapshot = this.codec.encode(toSnapshot(newState), ctx)
+      const snapshot = this.codec.encode(toSnapshot(state), ctx)
       const id = randomUUID()
       const etag = randomUUID()
       await trx.execute({
