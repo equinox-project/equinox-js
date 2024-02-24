@@ -43,6 +43,7 @@ class Stream<Event, State, Context> implements IStream<Event, State> {
       [Tags.stream_id]: this.streamId,
       [Tags.requires_leader]: requireLeader,
       [Tags.cache_hit]: false,
+      [Tags.loaded_count]: 0,
       [Tags.allow_stale]: maxStaleMs == Number.MAX_SAFE_INTEGER,
     })
     return this.inner.load(this.streamId, maxStaleMs, requireLeader)

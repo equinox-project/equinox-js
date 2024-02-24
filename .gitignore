@@ -40,3 +40,5 @@ dist/
 .envrc.private
 
 _site/
+
+.data/

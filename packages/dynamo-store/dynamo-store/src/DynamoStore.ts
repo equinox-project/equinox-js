@@ -1313,6 +1313,8 @@ class StoreCategory<E, S, C> implements IReloadableCategory<E, S, C> {
     private readonly mapUnfolds: MapUnfolds<E, S>,
   ) {}
 
+  supersedes = Token.supersedes
+
   private streamName(x: StreamId) {
     return StreamName.create(this.categoryName, x)
   }
