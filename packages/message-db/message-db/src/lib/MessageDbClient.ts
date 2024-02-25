@@ -2,7 +2,7 @@ import { Client, Pool } from "pg"
 import { randomUUID } from "crypto"
 import { IEventData, ITimelineEvent, StreamName } from "@equinox-js/core"
 
-type MdbWriteResult = { type: "Written"; position: bigint } | { type: "ConflictUnknown" }
+type MdbWriteResult = { type: "Written"; version: bigint } | { type: "ConflictUnknown" }
 export type Format = string
 
 export class MessageDbWriter {
@@ -26,7 +26,7 @@ export class MessageDbWriter {
         ],
       })
       const position = BigInt(results.rows[0].write_message)
-      return { type: "Written", position }
+      return { type: "Written", version: position + 1n }
     } catch (err: any) {
       if (err?.message?.startsWith("Wrong expected version: ")) {
         return { type: "ConflictUnknown" }
@@ -35,16 +35,19 @@ export class MessageDbWriter {
     }
   }
 
+  // Note: MessageDB version is -1 based, equinox version is 0 based
+  // This function is never called with 0 events
   async writeMessages(
     streamName: string,
     messages: IEventData<Format>[],
-    expectedVersion: bigint | null,
+    equinoxOriginVersion: bigint | null,
     runInSameTransaction?: (client: Client) => Promise<void>,
   ): Promise<MdbWriteResult> {
+    let expectedVersion = equinoxOriginVersion == null ? null : equinoxOriginVersion - 1n
     if (messages.length === 1 && !runInSameTransaction)
       return this.writeSingleMessage(streamName, messages[0], expectedVersion)
     const client = await this.pool.connect()
-    let position = -1n
+    let position = 0n
     try {
       await client.query("BEGIN")
 
@@ -80,7 +83,7 @@ export class MessageDbWriter {
     } finally {
       client.release()
     }
-    return { type: "Written", position }
+    return { type: "Written", version: position + 1n }
   }
 }
 
@@ -106,7 +109,7 @@ export class MessageDbReader {
 
   async readStream(
     streamName: string,
-    fromPosition: bigint,
+    minIndex: bigint,
     batchSize: number,
     requiresLeader: boolean,
   ): Promise<ITimelineEvent<Format>[]> {
@@ -114,7 +117,7 @@ export class MessageDbReader {
       text: `select position, type, data, metadata, id, time
          from get_stream_messages($1, $2, $3)`,
       name: "get_stream_messages",
-      values: [streamName, String(fromPosition), batchSize],
+      values: [streamName, String(minIndex), batchSize],
     })
     return result.rows.map(fromDb)
   }

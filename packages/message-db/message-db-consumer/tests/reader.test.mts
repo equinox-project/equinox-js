@@ -14,7 +14,7 @@ describe("MessageDbCategoryReader", () => {
   const streamId = StreamId.create(randomUUID().replace(/-/g, ""))
   const streamName = StreamName.create(category, streamId)
   beforeAll(async () => {
-    await conn.write.writeMessages(streamName, Array(100).fill({ type: "TestEvent" }), -1n)
+    await conn.write.writeMessages(streamName, Array(100).fill({ type: "TestEvent" }), 0n)
     await conn.write.writeSingleMessage(streamName, { type: "ExclusiveEvent" }, null)
   })
   test("Can read a category", async () => {

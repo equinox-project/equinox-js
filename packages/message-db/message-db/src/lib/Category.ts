@@ -17,7 +17,7 @@ import { CachingCategory, ICachingStrategy, IReloadableCategory, Tags } from "@e
 
 const keepMap = Equinox.Internal.keepMap
 
-type GatewaySyncResult = { type: "Written"; token: StreamToken } | { type: "ConflictUnknown" }
+type MdbSyncResult = { type: "Written"; token: StreamToken } | { type: "ConflictUnknown" }
 
 type Decode<E> = (v: ITimelineEvent<Format>) => E | undefined
 
@@ -57,29 +57,21 @@ export class MessageDbContext {
     decode: Decode<Event>,
     fold: (state: State, events: Event[]) => State,
     initial: State,
+    version = 0n,
   ): Promise<[StreamToken, State]> {
     let state = initial
-    let version = -1n
-    let batches = 0
-    let eventCount = 0
     for await (const [lastVersion, events] of Read.loadForwardsFrom(
       this.conn.read,
       this.batchSize,
       this.maxBatches,
       streamName,
-      0n,
+      version,
       requireLeader,
     )) {
-      batches++
-      eventCount += events.length
       state = fold(state, keepMap(events, decode))
       version = lastVersion
     }
-    trace.getActiveSpan()?.setAttributes({
-      [Tags.loaded_count]: eventCount,
-      [Tags.batches]: batches,
-      [Tags.read_version]: Number(version),
-    })
+
     return [Token.create(version), state]
   }
 
@@ -91,10 +83,6 @@ export class MessageDbContext {
     initial: State,
   ): Promise<[StreamToken, State]> {
     const [version, events] = await Read.loadLastEvent(this.conn.read, requireLeader, streamName)
-    trace.getActiveSpan()?.setAttributes({
-      [Tags.loaded_count]: 1,
-      [Tags.read_version]: Number(version),
-    })
     return [Token.create(version), fold(initial, keepMap(events, decode))]
   }
 
@@ -112,43 +100,11 @@ export class MessageDbContext {
       snapshotStream,
       eventType,
     )
-    const decoded = await Snapshot.decode(decode, events)
+    const decoded = Snapshot.decode(decode, events)
     trace.getActiveSpan()?.setAttributes({
-      [Tags.snapshot_version]: decoded ? Number(decoded?.[0].version) : -1,
+      [Tags.snapshot_version]: decoded ? Number(decoded?.[0].version) : 0,
     })
     return decoded
-  }
-
-  async reload<Event, State>(
-    streamName: Equinox.StreamName,
-    requireLeader: boolean,
-    token: StreamToken,
-    decode: Decode<Event>,
-    fold: (state: State, events: Event[]) => State,
-    state: State,
-  ): Promise<[StreamToken, State]> {
-    let streamVersion = Token.streamVersion(token)
-    const startPos = streamVersion + 1n // Reading a stream uses {inclusive} positions, but the streamVersion is `-1`-based
-    let batches = 0
-    let eventCount = 0
-    for await (const [version, events] of Read.loadForwardsFrom(
-      this.conn.read,
-      this.batchSize,
-      this.maxBatches,
-      streamName,
-      startPos,
-      requireLeader,
-    )) {
-      state = fold(state, keepMap(events, decode))
-      streamVersion = streamVersion > version ? streamVersion : version
-      batches++
-      eventCount += events.length
-    }
-    trace.getActiveSpan()?.setAttributes({
-      [Tags.loaded_count]: eventCount,
-      [Tags.batches]: batches,
-    })
-    return [Token.create(streamVersion), state]
   }
 
   async sync(
@@ -156,26 +112,23 @@ export class MessageDbContext {
     token: StreamToken,
     encodedEvents: IEventData<Format>[],
     runAfter?: (conn: Client) => Promise<void>,
-  ): Promise<GatewaySyncResult> {
+  ): Promise<MdbSyncResult> {
     const span = trace.getActiveSpan()
-    const streamVersion = Token.streamVersion(token)
-    const appendedTypes = new Set(encodedEvents.map((x) => x.type))
-    if (appendedTypes.size <= 10) {
-      span?.setAttribute(Tags.append_types, Array.from(appendedTypes))
-    }
-    const result = await this.conn.write.writeMessages(
-      streamName,
-      encodedEvents,
-      streamVersion,
-      runAfter,
+    const version = Token.version(token)
+    const appendedTypes = encodedEvents.map((x) => x.type)
+    span?.setAttribute(
+      Tags.append_types,
+      appendedTypes.length < 10 ? appendedTypes : uniq(appendedTypes),
     )
+    // prettier-ignore
+    const result = await this.conn.write.writeMessages(streamName, encodedEvents, version, runAfter)
 
     switch (result.type) {
       case "ConflictUnknown":
         span?.addEvent("Conflict")
         return { type: "ConflictUnknown" }
       case "Written": {
-        const token = Token.create(result.position)
+        const token = Token.create(result.version)
         return { type: "Written", token }
       }
     }
@@ -193,8 +146,12 @@ export class MessageDbContext {
   }
 }
 
-
-export type OnSync<State> = (conn: Client, streamId: Equinox.StreamId, state: State, version: bigint) => Promise<void>
+export type OnSync<State> = (
+  conn: Client,
+  streamId: Equinox.StreamId,
+  state: State,
+  version: bigint,
+) => Promise<void>
 
 export type AccessStrategy<Event, State> =
   | { type: "Unoptimized" }
@@ -280,13 +237,13 @@ class InternalCategory<Event, State, Context>
           )
         const [pos, snapshotEvent] = result
         const initial = this.fold(this.initial, [snapshotEvent])
-        const [token, state] = await this.context.reload(
+        const [token, state] = await this.context.loadBatched(
           streamName,
           requireLeader,
-          pos,
           this.codec.decode,
           this.fold,
           initial,
+          Token.version(pos),
         )
         return [Token.withSnapshot(token, pos.version), state]
       }
@@ -302,13 +259,13 @@ class InternalCategory<Event, State, Context>
 
   async reload(streamId: Equinox.StreamId, requireLeader: boolean, t: TokenAndState<State>) {
     const streamName = Equinox.StreamName.create(this.categoryName, streamId)
-    const [token, state] = await this.context.reload(
+    const [token, state] = await this.context.loadBatched(
       streamName,
       requireLeader,
-      t.token,
       this.codec.decode,
       this.fold,
       t.state,
+      Token.version(t.token),
     )
     return { token, state }
   }
@@ -331,7 +288,8 @@ class InternalCategory<Event, State, Context>
     const newState = this.fold(state, events)
     const newVersion = token.version + BigInt(events.length)
     const onSync = this.onSync
-    const runInSameTransaction = onSync && ((conn: Client) => onSync(conn, streamId, newState, newVersion))
+    const runInSameTransaction =
+      onSync && ((conn: Client) => onSync(conn, streamId, newState, newVersion))
     const result = await this.context.sync(streamName, token, encodedEvents, runInSameTransaction)
     switch (result.type) {
       case "ConflictUnknown":
@@ -393,4 +351,17 @@ export class MessageDbCategory {
     const empty: TokenAndState<State> = { token: context.tokenEmpty, state: initial }
     return new Equinox.Category(category, empty)
   }
+}
+
+// uniques an array while preserving order
+function uniq<T>(arr: T[]): T[] {
+  const set = new Set<T>()
+  const result: T[] = []
+  for (const item of arr) {
+    if (!set.has(item)) {
+      set.add(item)
+      result.push(item)
+    }
+  }
+  return result
 }
