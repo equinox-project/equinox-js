@@ -1,5 +1,13 @@
 import { Cart, ContactPreferences } from "../../../test-domain/src/index.js"
-import { Decider, MemoryCache, Codec, CachingStrategy, Tags, StreamId } from "@equinox-js/core"
+import {
+  Decider,
+  MemoryCache,
+  Codec,
+  CachingStrategy,
+  Tags,
+  StreamId,
+  ICachingStrategy,
+} from "@equinox-js/core"
 import { describe, test, expect, afterEach, afterAll, vi } from "vitest"
 import { Client, Pool } from "pg"
 import { randomUUID } from "crypto"
@@ -26,30 +34,21 @@ namespace CartService {
   const initial = Cart.Fold.initial
   const cache = new MemoryCache()
   const noCache = CachingStrategy.NoCache()
+  const cached = CachingStrategy.Cache(cache)
 
-  export function createWithoutOptimization(context: MessageDbContext) {
-    const category = Category.create(context, Cart.Category, codec, fold, initial, noCache, AccessStrategy.Unoptimized())
-    return Cart.Service.create(category)
-  }
+  const create = 
+    (access: AccessStrategy<E, S>, caching?: ICachingStrategy) =>
+    (context: MessageDbContext) => {
+      const category = Category.create(context, Cart.Category, codec, fold, initial, caching, access)
+      return Cart.Service.create(category)
+    }
+  const unoptimized = AccessStrategy.Unoptimized<E,S>()
+  const snapshot = AccessStrategy.AdjacentSnapshots<E, S>(Cart.Fold.snapshotEventType, Cart.Fold.snapshot)
 
-  export function createWithSnapshotStrategy(context: MessageDbContext) {
-    const access = AccessStrategy.AdjacentSnapshots<E, S>(Cart.Fold.snapshotEventType, Cart.Fold.snapshot)
-    const category = Category.create(context, Cart.Category, codec, fold, initial, noCache, access)
-    return Cart.Service.create(category)
-  }
-
-  const caching = CachingStrategy.Cache(cache)
-
-  export function createWithCaching(context: MessageDbContext) {
-    const category = Category.create(context, Cart.Category, codec, fold, initial, caching)
-    return Cart.Service.create(category)
-  }
-
-  export function createWithSnapshotStrategyAndCaching(context: MessageDbContext) {
-    const access = AccessStrategy.AdjacentSnapshots<E, S>(Cart.Fold.snapshotEventType, Cart.Fold.snapshot)
-    const category = Category.create(context, Cart.Category, codec, fold, initial, caching, access)
-    return Cart.Service.create(category)
-  }
+  export const createWithoutOptimization = create(unoptimized, noCache)
+  export const createWithSnapshotStrategy = create(snapshot, noCache)
+  export const createWithCaching = create(unoptimized, cached)
+  export const createWithSnapshotStrategyAndCaching = create(snapshot, cached)
 }
 
 const client = MessageDbConnection.create(
