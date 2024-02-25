@@ -35,16 +35,19 @@ export class MessageDbWriter {
     }
   }
 
+  // Note: MessageDB version is -1 based, equinox version is 0 based
+  // This function is never called with 0 events
   async writeMessages(
     streamName: string,
     messages: IEventData<Format>[],
-    expectedVersion: bigint | null,
+    equinoxOriginVersion: bigint | null,
     runInSameTransaction?: (client: Client) => Promise<void>,
   ): Promise<MdbWriteResult> {
+    let expectedVersion = equinoxOriginVersion == null ? null : equinoxOriginVersion - 1n
     if (messages.length === 1 && !runInSameTransaction)
       return this.writeSingleMessage(streamName, messages[0], expectedVersion)
     const client = await this.pool.connect()
-    let position = -1n
+    let position = 0n
     try {
       await client.query("BEGIN")
 

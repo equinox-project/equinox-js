@@ -17,7 +17,7 @@ import { CachingCategory, ICachingStrategy, IReloadableCategory, Tags } from "@e
 
 const keepMap = Equinox.Internal.keepMap
 
-type GatewaySyncResult = { type: "Written"; token: StreamToken } | { type: "ConflictUnknown" }
+type MdbSyncResult = { type: "Written"; token: StreamToken } | { type: "ConflictUnknown" }
 
 type Decode<E> = (v: ITimelineEvent<Format>) => E | undefined
 
@@ -112,9 +112,9 @@ export class MessageDbContext {
     token: StreamToken,
     encodedEvents: IEventData<Format>[],
     runAfter?: (conn: Client) => Promise<void>,
-  ): Promise<GatewaySyncResult> {
+  ): Promise<MdbSyncResult> {
     const span = trace.getActiveSpan()
-    const streamVersion = Token.maxIndex(token)
+    const version = Token.version(token)
     const appendedTypes = encodedEvents.map((x) => x.type)
     span?.setAttribute(
       Tags.append_types,
@@ -123,7 +123,7 @@ export class MessageDbContext {
     const result = await this.conn.write.writeMessages(
       streamName,
       encodedEvents,
-      streamVersion,
+      version,
       runAfter,
     )
 
