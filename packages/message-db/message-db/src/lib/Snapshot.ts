@@ -6,22 +6,24 @@ export const snapshotCategory = (original: string) => original + ":snapshot"
 
 export const streamName = (category: string, streamId: string) =>
   `${snapshotCategory(category)}-${streamId}`
-export type Meta = { streamVersion: string }
-const streamVersion = (evt: ITimelineEvent<Format>) => {
+export type Meta = { streamVersion: string } | { version: string }
+const snapshotVersion = (evt: ITimelineEvent<Format>) => {
   const meta = JSON.parse(evt.meta ?? "null") as Meta | null
-  return meta ? BigInt(meta.streamVersion) : -1n
+  if (!meta) return 0n
+  if ("version" in meta) return BigInt(meta.version)
+  return BigInt(meta.streamVersion) + 1n
 }
 
 export const meta = (token: StreamToken): Meta => ({
-  streamVersion: String(Token.streamVersion(token)),
+  version: String(Token.version(token)),
 })
-export async function decode<V>(
-  decode: (ev: ITimelineEvent<Format>) => Promise<V | null | undefined> | V | null | undefined,
+export function decode<V>(
+  decode: (ev: ITimelineEvent<Format>) => V | null | undefined,
   events: ITimelineEvent<Format>[],
-): Promise<[StreamToken, V] | null> {
+): [StreamToken, V] | null {
   if (events.length > 0) {
-    const decoded = await decode(events[0])
-    if (decoded != null) return [Token.create(streamVersion(events[0])), decoded]
+    const decoded = decode(events[0])
+    if (decoded != null) return [Token.create(snapshotVersion(events[0])), decoded]
   }
   return null
 }

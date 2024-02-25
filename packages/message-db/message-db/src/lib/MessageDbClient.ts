@@ -2,7 +2,7 @@ import { Client, Pool } from "pg"
 import { randomUUID } from "crypto"
 import { IEventData, ITimelineEvent, StreamName } from "@equinox-js/core"
 
-type MdbWriteResult = { type: "Written"; position: bigint } | { type: "ConflictUnknown" }
+type MdbWriteResult = { type: "Written"; version: bigint } | { type: "ConflictUnknown" }
 export type Format = string
 
 export class MessageDbWriter {
@@ -26,7 +26,7 @@ export class MessageDbWriter {
         ],
       })
       const position = BigInt(results.rows[0].write_message)
-      return { type: "Written", position }
+      return { type: "Written", version: position + 1n }
     } catch (err: any) {
       if (err?.message?.startsWith("Wrong expected version: ")) {
         return { type: "ConflictUnknown" }
@@ -80,7 +80,7 @@ export class MessageDbWriter {
     } finally {
       client.release()
     }
-    return { type: "Written", position }
+    return { type: "Written", version: position + 1n }
   }
 }
 
@@ -106,7 +106,7 @@ export class MessageDbReader {
 
   async readStream(
     streamName: string,
-    fromPosition: bigint,
+    minIndex: bigint,
     batchSize: number,
     requiresLeader: boolean,
   ): Promise<ITimelineEvent<Format>[]> {
@@ -114,7 +114,7 @@ export class MessageDbReader {
       text: `select position, type, data, metadata, id, time
          from get_stream_messages($1, $2, $3)`,
       name: "get_stream_messages",
-      values: [streamName, String(fromPosition), batchSize],
+      values: [streamName, String(minIndex), batchSize],
     })
     return result.rows.map(fromDb)
   }

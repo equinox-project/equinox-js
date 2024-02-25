@@ -500,11 +500,11 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
       {
         name: "Transact",
         [Tags.loaded_count]: 0,
-        [Tags.snapshot_version]: -1,
+        [Tags.snapshot_version]: 0,
         [Tags.append_count]: 8,
         [Tags.snapshot_written]: false,
       },
-      { name: "Query", [Tags.loaded_count]: 8, [Tags.snapshot_version]: -1 },
+      { name: "Query", [Tags.loaded_count]: 8, [Tags.snapshot_version]: 0 },
     )
 
     // Add two more, which should push it over the threshold and hence trigger an append of a snapshot event
@@ -513,7 +513,7 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
     assertSpans({
       name: "Transact",
       [Tags.loaded_count]: 8,
-      [Tags.snapshot_version]: -1,
+      [Tags.snapshot_version]: 0,
       [Tags.append_count]: 2,
       [Tags.snapshot_written]: true,
     })
@@ -585,10 +585,10 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
       {
         name: "Transact",
         [Tags.loaded_count]: 0,
-        [Tags.snapshot_version]: -1,
+        [Tags.snapshot_version]: 0,
         [Tags.snapshot_written]: false,
       },
-      { name: "Query", [Tags.loaded_count]: 8, [Tags.snapshot_version]: -1 },
+      { name: "Query", [Tags.loaded_count]: 8, [Tags.snapshot_version]: 0 },
     )
 
     // Add two more, which should push it over the threshold and hence trigger generation of a snapshot event
@@ -597,7 +597,7 @@ describe("AccessStrategy.AdjacentSnapshots", () => {
     assertSpans({
       name: "Transact",
       [Tags.loaded_count]: 8,
-      [Tags.snapshot_version]: -1,
+      [Tags.snapshot_version]: 0,
       [Tags.snapshot_written]: true,
     })
 
