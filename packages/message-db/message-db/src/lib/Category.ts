@@ -120,12 +120,8 @@ export class MessageDbContext {
       Tags.append_types,
       appendedTypes.length < 10 ? appendedTypes : uniq(appendedTypes),
     )
-    const result = await this.conn.write.writeMessages(
-      streamName,
-      encodedEvents,
-      version,
-      runAfter,
-    )
+    // prettier-ignore
+    const result = await this.conn.write.writeMessages(streamName, encodedEvents, version, runAfter)
 
     switch (result.type) {
       case "ConflictUnknown":
