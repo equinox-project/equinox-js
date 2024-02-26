@@ -194,6 +194,8 @@ class InternalCategory<Event, State, Context>
   private async loadAlgorithm(
     streamId: Equinox.StreamId,
     requireLeader: boolean,
+    initial: State,
+    version = 0n,
   ): Promise<[StreamToken, State]> {
     const streamName = Equinox.StreamName.create(this.categoryName, streamId)
     const span = trace.getActiveSpan()
@@ -209,7 +211,8 @@ class InternalCategory<Event, State, Context>
           requireLeader,
           this.codec.decode,
           this.fold,
-          this.initial,
+          initial,
+          version,
         )
       case "LatestKnownEvent":
         return this.context.loadLast(
@@ -217,7 +220,7 @@ class InternalCategory<Event, State, Context>
           requireLeader,
           this.codec.decode,
           this.fold,
-          this.initial,
+          initial,
         )
       case "AdjacentSnapshots": {
         const result = await this.context.loadSnapshot(
@@ -253,20 +256,36 @@ class InternalCategory<Event, State, Context>
   supersedes = Token.supersedes
 
   async load(streamId: Equinox.StreamId, _maxStaleMs: number, requireLeader: boolean) {
-    const [token, state] = await this.loadAlgorithm(streamId, requireLeader)
+    const [token, state] = await this.loadAlgorithm(streamId, requireLeader, this.initial, 0n)
     return { token, state }
   }
 
   async reload(streamId: Equinox.StreamId, requireLeader: boolean, t: TokenAndState<State>) {
-    const streamName = Equinox.StreamName.create(this.categoryName, streamId)
-    const [token, state] = await this.context.loadBatched(
-      streamName,
-      requireLeader,
-      this.codec.decode,
-      this.fold,
-      t.state,
-      Token.version(t.token),
-    )
+    let token: StreamToken, state: State
+    // Seriously, we need a switch expression already
+    switch (this.access.type) {
+      case "Unoptimized":
+      case "LatestKnownEvent":
+        ;[token, state] = await this.loadAlgorithm(
+          streamId,
+          requireLeader,
+          t.state,
+          Token.version(t.token),
+        )
+        break
+      // it is usually not ecomical to reload a snapshot due to it taking two roundtrips
+      case "AdjacentSnapshots":
+        const streamName = Equinox.StreamName.create(this.categoryName, streamId)
+        ;[token, state] = await this.context.loadBatched(
+          streamName,
+          requireLeader,
+          this.codec.decode,
+          this.fold,
+          t.state,
+          Token.version(t.token),
+        )
+        break
+    }
     return { token, state }
   }
 
