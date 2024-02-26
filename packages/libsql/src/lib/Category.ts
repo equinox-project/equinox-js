@@ -53,15 +53,15 @@ export class LibSqlContext {
     decode: Decode<Event>,
     fold: (state: State, events: Event[]) => State,
     initial: State,
+    version: bigint,
   ): Promise<[StreamToken, State]> {
     let state = initial
-    let version = 0n
     for await (const [lastVersion, events] of Read.loadForwardsFrom(
       this.conn.read,
       this.batchSize,
       this.maxBatches,
       streamName,
-      0n,
+      version,
     )) {
       state = fold(state, keepMap(events, decode))
       version = lastVersion
@@ -94,11 +94,12 @@ export class LibSqlContext {
     const snapshot = await this.conn.read.readSnapshot(streamName)
     // An end-user might add snapshotting to a category after the fact, in which case there might not be a snapshot
     // in all other cases the snapshot is guaranteed to exist if there are any events in the stream
-    if (snapshot == null) return this.loadBatched(streamName, decode, fold, initial)
+    if (snapshot == null) return this.loadBatched(streamName, decode, fold, initial, 0n)
     const [etag, event] = snapshot
     const decoded = decode(event)
     // The snapshot type may have changed, in which case we should ignore it and load a fresh state
-    if (!decoded || !isOrigin(decoded)) return this.loadBatched(streamName, decode, fold, initial)
+    if (!decoded || !isOrigin(decoded))
+      return this.loadBatched(streamName, decode, fold, initial, 0n)
     const version = event.index
     const state = fold(initial, [decoded])
     const span = trace.getActiveSpan()
@@ -236,7 +237,7 @@ class InternalCategory<Event, State, Context>
     })
     switch (this.access.type) {
       case "Unoptimized":
-        return this.context.loadBatched(streamName, this.codec.decode, this.fold, this.initial)
+        return this.context.loadBatched(streamName, this.codec.decode, this.fold, this.initial, 0n)
       case "LatestKnownEvent":
         return this.context.loadLast(streamName, this.codec.decode, this.fold, this.initial)
       case "Snapshot":
@@ -252,18 +253,25 @@ class InternalCategory<Event, State, Context>
   }
 
   async reload(streamId: Equinox.StreamId, _requireLeader: boolean, t: TokenAndState<State>) {
-    if (this.access.type === "RollingState") {
-      return this.load(streamId, 0)
+    switch (this.access.type) {
+      // These strategies all have it in common that their state 
+      // can be reconstituted in a single round trip to the database
+      // as such is it as cheap to load them as it is to reload them
+      case "RollingState":
+      case "Snapshot":
+      case "LatestKnownEvent":
+        return this.load(streamId, 0)
+      case "Unoptimized":
+        const streamName = Equinox.StreamName.create(this.categoryName, streamId)
+        const [token, state] = await this.context.loadBatched(
+          streamName,
+          this.codec.decode,
+          this.fold,
+          t.state,
+          Token.version(t.token),
+        )
+        return { token, state }
     }
-    const streamName = Equinox.StreamName.create(this.categoryName, streamId)
-    const [token, state] = await this.context.reload(
-      streamName,
-      t.token,
-      this.codec.decode,
-      this.fold,
-      t.state,
-    )
-    return { token, state }
   }
 
   private updateSnapshot(
