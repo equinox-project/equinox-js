@@ -57,22 +57,18 @@ export class MessageDbContext {
     decode: Decode<Event>,
     fold: (state: State, events: Event[]) => State,
     initial: State,
-    version = 0n,
-  ): Promise<[StreamToken, State]> {
+    version: bigint,
+  ): Promise<TokenAndState<State>> {
     let state = initial
-    for await (const [lastVersion, events] of Read.loadForwardsFrom(
-      this.conn.read,
-      this.batchSize,
-      this.maxBatches,
-      streamName,
-      version,
-      requireLeader,
-    )) {
+    const { conn, batchSize, maxBatches } = this
+    // prettier-ignore
+    const iterator = Read.loadForwardsFrom(conn.read, batchSize, maxBatches, streamName, version, requireLeader)
+    for await (const [lastVersion, events] of iterator) {
       state = fold(state, keepMap(events, decode))
       version = lastVersion
     }
 
-    return [Token.create(version), state]
+    return { token: Token.create(version), state }
   }
 
   async loadLast<Event, State>(
@@ -81,9 +77,9 @@ export class MessageDbContext {
     decode: Decode<Event>,
     fold: (state: State, events: Event[]) => State,
     initial: State,
-  ): Promise<[StreamToken, State]> {
+  ): Promise<TokenAndState<State>> {
     const [version, events] = await Read.loadLastEvent(this.conn.read, requireLeader, streamName)
-    return [Token.create(version), fold(initial, keepMap(events, decode))]
+    return { token: Token.create(version), state: fold(initial, keepMap(events, decode)) }
   }
 
   async loadSnapshot<Event>(
@@ -94,12 +90,8 @@ export class MessageDbContext {
     eventType: string,
   ) {
     const snapshotStream = Snapshot.streamName(category, streamId)
-    const [, events] = await Read.loadLastEvent(
-      this.conn.read,
-      requireLeader,
-      snapshotStream,
-      eventType,
-    )
+    // prettier-ignore
+    const [, events] = await Read.loadLastEvent(this.conn.read, requireLeader, snapshotStream, eventType)
     const decoded = Snapshot.decode(decode, events)
     trace.getActiveSpan()?.setAttributes({
       [Tags.snapshot_version]: decoded ? Number(decoded?.[0].version) : 0,
@@ -116,10 +108,8 @@ export class MessageDbContext {
     const span = trace.getActiveSpan()
     const version = Token.version(token)
     const appendedTypes = encodedEvents.map((x) => x.type)
-    span?.setAttribute(
-      Tags.append_types,
-      appendedTypes.length < 10 ? appendedTypes : uniq(appendedTypes),
-    )
+    const spanTypes = appendedTypes.length < 10 ? appendedTypes : uniq(appendedTypes)
+    span?.setAttribute(Tags.append_types, spanTypes)
     // prettier-ignore
     const result = await this.conn.write.writeMessages(streamName, encodedEvents, version, runAfter)
 
@@ -191,10 +181,13 @@ class InternalCategory<Event, State, Context>
     private readonly onSync?: OnSync<State>,
   ) {}
 
+  // prettier-ignore
   private async loadAlgorithm(
     streamId: Equinox.StreamId,
     requireLeader: boolean,
-  ): Promise<[StreamToken, State]> {
+    initial: State,
+    version = 0n,
+  ): Promise<TokenAndState<State>> {
     const streamName = Equinox.StreamName.create(this.categoryName, streamId)
     const span = trace.getActiveSpan()
     span?.setAttributes({
@@ -204,70 +197,43 @@ class InternalCategory<Event, State, Context>
     })
     switch (this.access.type) {
       case "Unoptimized":
-        return this.context.loadBatched(
-          streamName,
-          requireLeader,
-          this.codec.decode,
-          this.fold,
-          this.initial,
-        )
+        return this.context.loadBatched(streamName, requireLeader, this.codec.decode, this.fold, initial, version)
       case "LatestKnownEvent":
-        return this.context.loadLast(
-          streamName,
-          requireLeader,
-          this.codec.decode,
-          this.fold,
-          this.initial,
-        )
+        return this.context.loadLast(streamName, requireLeader, this.codec.decode, this.fold, initial)
       case "AdjacentSnapshots": {
-        const result = await this.context.loadSnapshot(
-          this.categoryName,
-          streamId,
-          requireLeader,
-          this.codec.decode,
-          this.access.eventName,
-        )
-        if (!result)
-          return this.context.loadBatched(
-            streamName,
-            requireLeader,
-            this.codec.decode,
-            this.fold,
-            this.initial,
-          )
+        const result = await this.context.loadSnapshot(this.categoryName, streamId, requireLeader, this.codec.decode, this.access.eventName)
+        if (!result) return this.context.loadBatched(streamName, requireLeader, this.codec.decode, this.fold, this.initial, 0n)
         const [pos, snapshotEvent] = result
         const initial = this.fold(this.initial, [snapshotEvent])
-        const [token, state] = await this.context.loadBatched(
-          streamName,
-          requireLeader,
-          this.codec.decode,
-          this.fold,
-          initial,
-          Token.version(pos),
-        )
-        return [Token.withSnapshot(token, pos.version), state]
+        const tns = await this.context.loadBatched(streamName, requireLeader, this.codec.decode, this.fold, initial, Token.version(pos))
+        return { token: Token.withSnapshot(tns.token, pos.version), state: tns.state }
       }
     }
   }
 
   supersedes = Token.supersedes
 
-  async load(streamId: Equinox.StreamId, _maxStaleMs: number, requireLeader: boolean) {
-    const [token, state] = await this.loadAlgorithm(streamId, requireLeader)
-    return { token, state }
+  load(streamId: Equinox.StreamId, _maxStaleMs: number, requireLeader: boolean) {
+    return this.loadAlgorithm(streamId, requireLeader, this.initial, 0n)
   }
 
   async reload(streamId: Equinox.StreamId, requireLeader: boolean, t: TokenAndState<State>) {
-    const streamName = Equinox.StreamName.create(this.categoryName, streamId)
-    const [token, state] = await this.context.loadBatched(
-      streamName,
-      requireLeader,
-      this.codec.decode,
-      this.fold,
-      t.state,
-      Token.version(t.token),
-    )
-    return { token, state }
+    let result: TokenAndState<State>
+    // Seriously, we need a switch expression already
+    switch (this.access.type) {
+      case "Unoptimized":
+      case "LatestKnownEvent":
+        // prettier-ignore
+        result = await this.loadAlgorithm(streamId, requireLeader, t.state, Token.version(t.token))
+        break
+      // it is usually not ecomical to reload a snapshot due to it taking two roundtrips
+      case "AdjacentSnapshots":
+        const streamName = Equinox.StreamName.create(this.categoryName, streamId)
+        // prettier-ignore
+        result = await this.context.loadBatched(streamName, requireLeader, this.codec.decode, this.fold, t.state, Token.version(t.token))
+        break
+    }
+    return result
   }
 
   async sync(
@@ -307,13 +273,8 @@ class InternalCategory<Event, State, Context>
             const shouldSnapshot = Token.shouldSnapshot(shapshotFrequency, token, result.token)
             span?.setAttribute(Tags.snapshot_written, shouldSnapshot)
             if (shouldSnapshot) {
-              await this.storeSnapshot(
-                this.categoryName,
-                streamId,
-                ctx,
-                result.token,
-                this.access.toSnapshot(newState),
-              )
+              // prettier-ignore
+              await this.storeSnapshot(this.categoryName, streamId, ctx, result.token, this.access.toSnapshot(newState))
             }
           }
         }

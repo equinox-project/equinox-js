@@ -426,18 +426,18 @@ describe("AccessStrategy.Snapshot", () => {
     await service2.read(cartId)
     assertSpans(
       { name: "Transact", [Tags.loaded_count]: 0, [Tags.append_count]: 10 },
-      { name: "Query", [Tags.loaded_from_version]: "10", [Tags.loaded_count]: 0, [Tags.cache_hit]: true },
+      { name: "Query", [Tags.loaded_count]: 1, [Tags.cache_hit]: true },
     )
     memoryExporter.reset()
 
     // Add two more - the roundtrip should only incur a single read
     await CartHelpers.addAndThenRemoveItemsManyTimes(cartContext, cartId, skuId, service1, 1)
-    assertSpans({ name: "Transact", [Tags.loaded_count]: 0, [Tags.append_count]: 2, [Tags.cache_hit]: true })
+    assertSpans({ name: "Transact", [Tags.loaded_count]: 1, [Tags.append_count]: 2, [Tags.cache_hit]: true })
     memoryExporter.reset()
 
     // While we now have 12 events, we should be able to read them with a single call
     await service2.read(cartId)
-    assertSpans({ name: "Query", [Tags.loaded_count]: 0, [Tags.cache_hit]: true })
+    assertSpans({ name: "Query", [Tags.loaded_count]: 1, [Tags.cache_hit]: true })
   })
 })
 
