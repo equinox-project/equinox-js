@@ -54,20 +54,16 @@ export class LibSqlContext {
     fold: (state: State, events: Event[]) => State,
     initial: State,
     version: bigint,
-  ): Promise<[StreamToken, State]> {
+  ): Promise<TokenAndState<State>> {
     let state = initial
-    for await (const [lastVersion, events] of Read.loadForwardsFrom(
-      this.conn.read,
-      this.batchSize,
-      this.maxBatches,
-      streamName,
-      version,
-    )) {
+    const { conn, batchSize, maxBatches } = this
+    const iterator = Read.loadForwardsFrom(conn.read, batchSize, maxBatches, streamName, version)
+    for await (const [lastVersion, events] of iterator) {
       state = fold(state, keepMap(events, decode))
       version = lastVersion
     }
 
-    return [Token.create(version), state]
+    return { token: Token.create(version), state }
   }
 
   async loadLast<Event, State>(
@@ -75,13 +71,13 @@ export class LibSqlContext {
     decode: Decode<Event>,
     fold: (state: State, events: Event[]) => State,
     initial: State,
-  ): Promise<[StreamToken, State]> {
+  ): Promise<TokenAndState<State>> {
     const [version, events] = await Read.loadLastEvent(this.conn.read, streamName)
     trace.getActiveSpan()?.setAttributes({
       [Tags.loaded_count]: 1,
       [Tags.read_version]: Number(version),
     })
-    return [Token.create(version), fold(initial, keepMap(events, decode))]
+    return { token: Token.create(version), state: fold(initial, keepMap(events, decode)) }
   }
 
   async loadSnapshot<Event, State>(
@@ -90,7 +86,7 @@ export class LibSqlContext {
     fold: (state: State, events: Event[]) => State,
     initial: State,
     isOrigin: (e: Event) => boolean,
-  ): Promise<[StreamToken, State]> {
+  ): Promise<TokenAndState<State>> {
     const snapshot = await this.conn.read.readSnapshot(streamName)
     // An end-user might add snapshotting to a category after the fact, in which case there might not be a snapshot
     // in all other cases the snapshot is guaranteed to exist if there are any events in the stream
@@ -107,7 +103,7 @@ export class LibSqlContext {
       [Tags.loaded_count]: 1,
       [Tags.snapshot_version]: Number(version),
     })
-    return [Token.create(version, etag), state]
+    return { token: Token.create(version, etag), state }
   }
 
   async reload<Event, State>(
@@ -116,19 +112,16 @@ export class LibSqlContext {
     decode: Decode<Event>,
     fold: (state: State, events: Event[]) => State,
     state: State,
-  ): Promise<[StreamToken, State]> {
+  ): Promise<TokenAndState<State>> {
     let streamVersion = Token.version(token)
-    for await (const [version, events] of Read.loadForwardsFrom(
-      this.conn.read,
-      this.batchSize,
-      this.maxBatches,
-      streamName,
-      streamVersion,
-    )) {
+    const { conn, batchSize, maxBatches } = this
+    // prettier-ignore
+    const iterator = Read.loadForwardsFrom(conn.read, batchSize, maxBatches, streamName, streamVersion)
+    for await (const [version, events] of iterator) {
       state = fold(state, keepMap(events, decode))
       streamVersion = version
     }
-    return [Token.create(streamVersion), state]
+    return { token: Token.create(streamVersion), state }
   }
 
   async syncRollingState(
@@ -140,13 +133,8 @@ export class LibSqlContext {
     const span = trace.getActiveSpan()
     const etag = Token.snapshotEtag(token)
     const version = Token.version(token)
-    const result = await this.conn.write.writeSnapshot(
-      category,
-      streamName,
-      encodedEvent,
-      version,
-      etag,
-    )
+    // prettier-ignore
+    const result = await this.conn.write.writeSnapshot(category, streamName, encodedEvent, version, etag)
     switch (result.type) {
       case "ConflictUnknown":
         span?.addEvent("Conflict")
@@ -168,17 +156,10 @@ export class LibSqlContext {
     const span = trace.getActiveSpan()
     const streamVersion = Token.version(token)
     const appendedTypes = encodedEvents.map((x) => x.type)
-    span?.setAttribute(
-      Tags.append_types,
-      appendedTypes.length <= 10 ? appendedTypes : uniq(appendedTypes),
-    )
-    const result = await this.conn.write.writeMessages(
-      category,
-      streamName,
-      encodedEvents,
-      streamVersion,
-      updateSnapshot,
-    )
+    const spanTypes = appendedTypes.length <= 10 ? appendedTypes : uniq(appendedTypes)
+    span?.setAttribute(Tags.append_types, spanTypes)
+    // prettier-ignore
+    const result = await this.conn.write.writeMessages(category, streamName, encodedEvents, streamVersion, updateSnapshot)
 
     switch (result.type) {
       case "ConflictUnknown":
@@ -227,7 +208,7 @@ class InternalCategory<Event, State, Context>
   supersedes = Token.supersedes
 
   // prettier-ignore
-  private async loadAlgorithm(streamId: Equinox.StreamId): Promise<[StreamToken, State]> {
+  private loadAlgorithm(streamId: Equinox.StreamId): Promise<TokenAndState<State>> {
     const streamName = Equinox.StreamName.create(this.categoryName, streamId)
     const span = trace.getActiveSpan()
     span?.setAttributes({
@@ -247,30 +228,23 @@ class InternalCategory<Event, State, Context>
     }
   }
 
-  async load(streamId: Equinox.StreamId, _maxStaleMs: number) {
-    const [token, state] = await this.loadAlgorithm(streamId)
-    return { token, state }
+  load(streamId: Equinox.StreamId, _maxStaleMs: number): Promise<TokenAndState<State>> {
+    return this.loadAlgorithm(streamId)
   }
 
-  async reload(streamId: Equinox.StreamId, _requireLeader: boolean, t: TokenAndState<State>) {
+  reload(streamId: Equinox.StreamId, _requireLeader: boolean, t: TokenAndState<State>) {
     switch (this.access.type) {
-      // These strategies all have it in common that their state 
+      // These strategies all have it in common that their state
       // can be reconstituted in a single round trip to the database
-      // as such is it as cheap to load them as it is to reload them
+      // as such, is it as cheap to load them as it is to reload them
       case "RollingState":
       case "Snapshot":
       case "LatestKnownEvent":
         return this.load(streamId, 0)
       case "Unoptimized":
         const streamName = Equinox.StreamName.create(this.categoryName, streamId)
-        const [token, state] = await this.context.loadBatched(
-          streamName,
-          this.codec.decode,
-          this.fold,
-          t.state,
-          Token.version(t.token),
-        )
-        return { token, state }
+        // prettier-ignore
+        return this.context.loadBatched(streamName, this.codec.decode, this.fold, t.state, Token.version(t.token))
     }
   }
 
@@ -318,12 +292,8 @@ class InternalCategory<Event, State, Context>
       const nextState = this.fold(state, events)
       const event = this.access.toSnapshot(nextState)
       const encodedEvent = this.codec.encode(event, ctx)
-      const result = await this.context.syncRollingState(
-        this.categoryName,
-        streamName,
-        token,
-        encodedEvent,
-      )
+      // prettier-ignore
+      const result = await this.context.syncRollingState(this.categoryName, streamName, token, encodedEvent)
       switch (result.type) {
         case "ConflictUnknown":
           return {
@@ -342,20 +312,10 @@ class InternalCategory<Event, State, Context>
     const encodedEvents = events.map(encode)
     const newState = this.fold(state, events)
     const newVersion = Token.version(token) + BigInt(events.length)
-    const updateSnapshot = this.updateSnapshot(
-      this.categoryName,
-      streamName,
-      ctx,
-      newState,
-      newVersion,
-    )
-    const result = await this.context.sync(
-      this.categoryName,
-      streamName,
-      token,
-      encodedEvents,
-      updateSnapshot,
-    )
+    // prettier-ignore
+    const updateSnapshot = this.updateSnapshot(this.categoryName, streamName, ctx, newState, newVersion)
+    // prettier-ignore
+    const result = await this.context.sync(this.categoryName, streamName, token, encodedEvents, updateSnapshot)
     switch (result.type) {
       case "ConflictUnknown":
         return {
