@@ -55,14 +55,14 @@ describe("Caching", () => {
       const cache = new Cache.MemoryCache(5)
       const read1 = vi.fn().mockImplementation(read(1n))
       const read2 = vi.fn().mockImplementation(read(1n))
-      await cache.readThrough("1", anyValue, read1, 1)
+      await cache.readThrough("1", anyValue, supersedes, read1, 1)
       // noTTL
-      await cache.readThrough("2", anyValue, read2)
+      await cache.readThrough("2", anyValue, supersedes, read2)
       await sleep(2)
       // this will get called every 5s, we're just speeding it up for the purposes of this test
       cache["cache"].purgeStale()
-      await cache.readThrough("1", anyValue, read1, 1)
-      await cache.readThrough("2", anyValue, read2)
+      await cache.readThrough("1", anyValue, supersedes, read1, 1)
+      await cache.readThrough("2", anyValue, supersedes, read2)
       expect(read1).toHaveBeenCalledTimes(2)
       expect(read2).toHaveBeenCalledTimes(1)
     })
