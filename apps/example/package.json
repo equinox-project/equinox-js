@@ -6,7 +6,7 @@
     "build": "tsc -p . --noEmit && tsup src/entrypoints/*.ts --format cjs",
     "start:http": "tsup src/entrypoints/http.ts --format cjs --onSuccess 'node dist/http.cjs'",
     "start:reactions": "tsup src/entrypoints/reactions.ts --format cjs --onSuccess 'node dist/reactions.cjs'",
-    "test": "vitest run",
+    "test": "direnv exec . vitest run",
     "explorer": "NODE_PATH=./node_modules eqx-explorer -cs $MDB_RO_CONN_STR -c ./src/explorer-config.ts",
     "create-db": "createdb --host 127.0.0.1 -U postgres equinox_example",
     "migrate:message-db": "pg-migrations apply --database $DBURL_ADMIN --directory ./node_modules/@equinox-js/message-db/migrations --version-table mdb_migrations_version --migrations-table mdb_migrations_applied",

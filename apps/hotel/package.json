@@ -5,7 +5,7 @@
   "scripts": {
     "build": "tsup src/entrypoints/*.ts --clean --format cjs --sourcemap",
     "lint": "tsc -p . --noEmit",
-    "test": "vitest run",
+    "test": "direnv exec . vitest run",
     "explorer": "NODE_PATH=./node_modules eqx-explorer -cs $MDB_RO_CONN_STR -c ./src/explorer-config.ts",
     "create-db": "createdb --host 127.0.0.1 -U postgres equinox_hotel",
     "migrate:message-db": "pg-migrations apply --database $DBURL_ADMIN --directory ./node_modules/@equinox-js/message-db/migrations --version-table mdb_migrations_version --migrations-table mdb_migrations_applied",
