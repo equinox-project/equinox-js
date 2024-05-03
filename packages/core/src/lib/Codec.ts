@@ -70,6 +70,42 @@ export const upcast = <E extends DomainEvent, Ctx = void>(
   }
 }
 
+export function keep<E extends DomainEvent, Ctx = void>(
+  codec: ICodec<DomainEvent, string, Ctx>,
+  keep: (e: DomainEvent) => e is E,
+): ICodec<E, string, Ctx> {
+  return {
+    decode: (e: ITimelineEvent<string>) => {
+      const decoded = codec.decode(e)
+      if (!decoded || !keep(decoded)) return undefined
+      return decoded
+    },
+    encode: codec.encode,
+  }
+}
+
+// Cursed type level programming zone
+type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void
+  ? I
+  : never
+
+type LastOf<T> =
+  UnionToIntersection<T extends any ? () => T : never> extends () => infer R ? R : never
+
+type Push<T extends any[], V> = [...T, V]
+
+type UnionToTuple<T, L = LastOf<T>, N = [T] extends [never] ? true : false> = true extends N
+  ? []
+  : Push<UnionToTuple<Exclude<T, L>>, L>
+
+export function keepTypes<E extends DomainEvent, Ctx = void>(
+  codec: ICodec<DomainEvent, string, Ctx>,
+  types: UnionToTuple<E["type"]>,
+): ICodec<E, string, Ctx> {
+  const known = new Set(types as string[])
+  return keep(codec, (e): e is E => known.has(e.type))
+}
+
 export enum Encoding {
   Raw = 0,
   Deflate = 1,

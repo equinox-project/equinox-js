@@ -1,7 +1,7 @@
 import { describe, test, expect } from "vitest"
 import { Codec } from "../src"
 import { z } from "zod"
-import { randomUUID } from "crypto"
+import { keepMap } from "../src/lib/Internal"
 
 describe("Codec", () => {
   describe("json", () => {
@@ -112,6 +112,32 @@ describe("Codec", () => {
       })
     })
   })
+
+  describe("keep", () => {
+    test("allows keeping events based on arbitrary criteria", () => {
+      const codec = Codec.keep(Codec.json(), (e): e is any => e.type === "Hello")
+      const events = [{ type: "Hello" }, { type: "Goodbye" }]
+      const encoded = events.map((e) => codec.encode(e))
+      expect(keepMap(encoded as any, codec.decode)).toEqual([{ type: "Hello" }])
+    })
+  })
+
+  describe("keepTypes", () => {
+    type Event = { type: "Hello" } | { type: "Goodbye" }
+    test("allows keeping events based on type", () => {
+      const codec = Codec.keepTypes<Event>(Codec.json(), ["Hello", "Goodbye"])
+      const events = [
+        { type: "Hello" },
+        { type: "Goodbye" },
+        { type: "OldEventTypeThatWeDoNotUseAnymore" },
+      ]
+      const encoded = events.map((e) => codec.encode(e as any))
+      expect(keepMap(encoded as any, codec.decode)).toEqual([
+        { type: "Hello" },
+        { type: "Goodbye" },
+      ])
+    })
+  })
 })
 
 describe("Mapping metadata", () => {
@@ -148,7 +174,7 @@ describe("Mapping metadata", () => {
       return { id, meta: { $correlationId: id, $causationId: id } }
     }
     const codec = Codec.json<any, void>(correlate)
-    const event = { id: '456', type: "Hello", data: { world: "hello" } }
+    const event = { id: "456", type: "Hello", data: { world: "hello" } }
     expect(codec.encode(event)).toEqual({
       type: "Hello",
       data: '{"world":"hello"}',
