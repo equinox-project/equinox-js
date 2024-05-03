@@ -13,7 +13,7 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --clean"
   },
-  "version": "1.0.0-rc.10",
+  "version": "1.0.0",
   "devDependencies": {
     "@types/node": "^20.10.5",
     "tsup": "^8.0.1",
