@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       message_db:
-        image: 'postgres'
+        image: "postgres"
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_HOST_AUTH_METHOD: trust
@@ -38,18 +38,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - uses: pnpm/action-setup@v2
-        with:
-          version: latest
-
       - name: Node setup
         uses: actions/setup-node@v3
         with:
-          node-version: 18
-          cache: pnpm
+          node-version-file: .nvmrc
+
+      - name: enable corepack
+        run: corepack enable
 
       - name: Install dependencies
         run: pnpm i --frozen-lockfile
+
+      - name: Install direnv
+        run: |
+          mkdir -p ~/.local/bin
+          curl -sfL https://direnv.net/install.sh | bash
+          direnv allow
+          (cd ./apps/example && direnv allow)
+          (cd ./apps/hotel && direnv allow)
+          direnv export gha > $GITHUB_ENV
 
       - name: Build
         run: pnpm dlx turbo build
@@ -57,23 +64,10 @@ jobs:
       - name: Set up message_db
         env:
           PGHOST: localhost
-          PGPORT: '5432'
+          PGPORT: "5432"
           PGUSER: postgres
           PGPASSWORD: postgres
-        run: |
-          createdb message_store
-          createdb equinox_example
-
-          npx pg-migrations apply \
-          --database postgresql://postgres@localhost:5432/message_store \
-          --directory ./packages/message-db/message-db/migrations
-
-      - name: Set up example
-        working-directory: ./apps/example
-        env:
-          DBURL_ADMIN: postgresql://postgres@localhost:5432/equinox_example
-        run: |
-          pnpm migrate
+        run: ./scripts/bootstrap.sh
 
       - name: Test
         env:
@@ -83,4 +77,3 @@ jobs:
 
       - name: Lint
         run: pnpm dlx turbo lint
-

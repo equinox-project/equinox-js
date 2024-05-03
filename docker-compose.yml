@@ -1,8 +1,8 @@
-version: '3.7'
-
 services:
   messagedb:
-    image: ethangarofolo/message-db
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - db-data:/var/lib/postgresql/data:cached
     ports:
