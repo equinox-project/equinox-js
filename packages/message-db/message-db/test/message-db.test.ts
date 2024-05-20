@@ -7,6 +7,7 @@ import {
   Tags,
   StreamId,
   ICachingStrategy,
+  LoadOption,
 } from "@equinox-js/core"
 import { describe, test, expect, afterEach, afterAll, vi } from "vitest"
 import { Client, Pool } from "pg"
@@ -462,6 +463,17 @@ test("Version is 0-based", async () => {
     (result, ctx) => [result, ctx.version],
   )
   expect([before, after]).toEqual([0n, 1n])
+})
+
+test("Simple transact", async () => {
+  const batchSize = 3
+  const context = createContext(client, batchSize)
+  let id = StreamId.create(randomUUID())
+  const decider = SimplestThing.resolve(context, SimplestThing.categoryName, id)
+  await decider.transact(() => [{ type: "StuffHappened" }], LoadOption.AssumeEmpty)
+  await decider.transact(() => [{ type: "StuffHappened" }])
+  const version = await decider.queryEx((ctx) => ctx.version)
+  expect(version).toEqual(2n)
 })
 
 describe("Immediately consistent projections", () => {

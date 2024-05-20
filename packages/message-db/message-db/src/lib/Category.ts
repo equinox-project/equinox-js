@@ -49,7 +49,7 @@ export class MessageDbContext {
     public readonly maxBatches?: number,
   ) {}
 
-  tokenEmpty = Token.create(-1n)
+  tokenEmpty = Token.create(0n)
 
   async loadBatched<Event, State>(
     streamName: string,
