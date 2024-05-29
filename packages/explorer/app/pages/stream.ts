@@ -146,13 +146,13 @@ export const StreamPage: m.ClosureComponent<{ stream_name: string }> = (vnode) =
       if (isLoading) return [m(Navbar), m("main.container.mx-auto.mt-8", "Loading...")]
 
       return [
-        m(Navbar),
         m(
-          "main.grid.grid-cols-3.gap-1.dark:bg-gray-900.h-screen.max-h-screen.overflow-hidden",
+          "main.grid.grid-cols-3.gap-1.dark:bg-gray-900.h-screen.max-h-screen",
           {
-            style: "grid-template-rows: auto auto auto;",
+            class: "grid-rows-[auto_auto_auto_1fr]",
           },
           [
+            m("div.col-span-3", m(Navbar)),
             m("h1.text-3xl.col-span-3.mt-8.mb-4.ml-4", ["Stream ", vnode.attrs.stream_name]),
             m("section.mt-4.col-span-3", [
               m(EventTimeline, {
@@ -164,24 +164,18 @@ export const StreamPage: m.ClosureComponent<{ stream_name: string }> = (vnode) =
                 },
               }),
             ]),
-            m(".flex.flex-col.dark:bg-gray-800.px-1.py-6", [
+            m(".flex.flex-col.dark:bg-gray-800.px-1.py-6.flex-1.max-h-full.min-h-0", [
               m("h3.text-xl.mb-4.ml-3", "Events"),
-              m(
-                ".overflow-y-auto",
-                {
-                  style: "height: calc(100vh - 280px);",
-                },
-                [
-                  m(EventTypeList, {
-                    events: data.events,
-                    selectedEvent,
-                    streamName: vnode.attrs.stream_name,
-                    onselect: (ev) => {
-                      selectedEvent = ev ?? null
-                    },
-                  }),
-                ],
-              ),
+              m(".overflow-y-auto.min-h-0", [
+                m(EventTypeList, {
+                  events: data.events,
+                  selectedEvent,
+                  streamName: vnode.attrs.stream_name,
+                  onselect: (ev) => {
+                    selectedEvent = ev ?? null
+                  },
+                }),
+              ]),
             ]),
             m(".dark:bg-gray-800.px-4.py-6.col-span-2.overflow-y-auto", [
               m("h3.text-xl.mb-4", "State"),
