@@ -14,7 +14,7 @@
     "build": "tsup src/index.mts --format esm,cjs --dts --clean --sourcemap",
     "test": "vitest run"
   },
-  "version": "1.0.0",
+  "version": "1.0.2",
   "files": [
     "./dist"
   ],
