@@ -4,15 +4,14 @@ import { describe, test, expect, afterAll, beforeAll } from "vitest"
 import { Delete, Insert, Update, Upsert, createHandler, createProjection } from "../src/index.js"
 
 const pool = new Pool({
-  connectionString:
-    process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/postgres",
+  connectionString: "postgres://postgres:postgres@localhost:5432/postgres",
 })
 afterAll(() => pool.end())
 
 describe("User table", () => {
   beforeAll(async () => {
     await pool.query(
-      `create table if not exists view_data_test (
+      `create table if not exists public.view_data_test (
       id uuid not null primary key,
       name text not null,
       age int not null
@@ -20,7 +19,7 @@ describe("User table", () => {
     )
   })
 
-  const projection = { table: "view_data_test", id: ["id"] }
+  const projection = { table: "view_data_test", id: ["id"], schema: "public" }
   const handler = createHandler(projection)
 
   test("Insert", async () => {
