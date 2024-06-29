@@ -1,0 +1,38 @@
+rescript = 1
+rule cp
+  command = cp $i $out
+rule touch
+ command = touch $out
+o Http.cmi : cp ../bs/src/entrypoints/Http.cmi
+o Http.cmj : cp ../bs/src/entrypoints/Http.cmj
+o Http.cmt : cp ../bs/src/entrypoints/Http.cmt
+o Http.res : cp ../../src/entrypoints/Http.res
+o Hono.cmi : cp ../bs/src/interop/Hono.cmi
+o Hono.cmj : cp ../bs/src/interop/Hono.cmj
+o Hono.cmt : cp ../bs/src/interop/Hono.cmt
+o Hono.res : cp ../../src/interop/Hono.res
+o JsonCodec.cmi : cp ../bs/src/interop/JsonCodec.cmi
+o JsonCodec.cmj : cp ../bs/src/interop/JsonCodec.cmj
+o JsonCodec.cmt : cp ../bs/src/interop/JsonCodec.cmt
+o JsonCodec.res : cp ../../src/interop/JsonCodec.res
+o Payer.cmi : cp ../bs/src/domain/Payer.cmi
+o Payer.cmj : cp ../bs/src/domain/Payer.cmj
+o Payer.cmt : cp ../bs/src/domain/Payer.cmt
+o Payer.res : cp ../../src/domain/Payer.res
+o Invoice.cmi : cp ../bs/src/domain/Invoice.cmi
+o Invoice.cmj : cp ../bs/src/domain/Invoice.cmj
+o Invoice.cmt : cp ../bs/src/domain/Invoice.cmt
+o Invoice.res : cp ../../src/domain/Invoice.res
+o EmailSender.cmi : cp ../bs/src/domain/EmailSender.cmi
+o EmailSender.cmj : cp ../bs/src/domain/EmailSender.cmj
+o EmailSender.cmt : cp ../bs/src/domain/EmailSender.cmt
+o EmailSender.res : cp ../../src/domain/EmailSender.res
+o Identifiers.cmi : cp ../bs/src/domain/Identifiers.cmi
+o Identifiers.cmj : cp ../bs/src/domain/Identifiers.cmj
+o Identifiers.cmt : cp ../bs/src/domain/Identifiers.cmt
+o Identifiers.res : cp ../../src/domain/Identifiers.res
+o InvoiceAutoEmailer.cmi : cp ../bs/src/domain/InvoiceAutoEmailer.cmi
+o InvoiceAutoEmailer.cmj : cp ../bs/src/domain/InvoiceAutoEmailer.cmj
+o InvoiceAutoEmailer.cmt : cp ../bs/src/domain/InvoiceAutoEmailer.cmt
+o InvoiceAutoEmailer.res : cp ../../src/domain/InvoiceAutoEmailer.res
+build install.stamp : touch Http.cmi Http.cmj Hono.cmi Hono.cmj JsonCodec.cmi JsonCodec.cmj Payer.cmi Payer.cmj Invoice.cmi Invoice.cmj EmailSender.cmi EmailSender.cmj Identifiers.cmi Identifiers.cmj InvoiceAutoEmailer.cmi InvoiceAutoEmailer.cmj 

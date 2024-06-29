@@ -1,0 +1,37 @@
+rescript = 1
+g_finger := /home/nordfjord/git/nordfjord/equinox-js/apps/example-rescript/node_modules/@equinox-js/rescript/lib/ocaml/install.stamp
+g_finger := /home/nordfjord/git/nordfjord/equinox-js/apps/example-rescript/node_modules/@rescript-labs/decco/lib/ocaml/install.stamp
+g_finger := /home/nordfjord/git/nordfjord/equinox-js/apps/example-rescript/node_modules/@rescript/core/lib/ocaml/install.stamp
+rule astj
+  command = /home/nordfjord/git/nordfjord/equinox-js/node_modules/.pnpm/rescript@11.1.1/node_modules/rescript/linux/bsc.exe  -bs-v 11.1.1,1719170546.02 -ppx /home/nordfjord/git/nordfjord/equinox-js/apps/example-rescript/node_modules/@rescript-labs/decco/ppx -uncurried -open RescriptCore -absname -bs-ast -o $out $i
+o src/entrypoints/Http.ast : astj ../../src/entrypoints/Http.res
+rule deps
+  command = /home/nordfjord/git/nordfjord/equinox-js/node_modules/.pnpm/rescript@11.1.1/node_modules/rescript/linux/bsb_helper.exe -hash a74946ebddf80efb9f8f6e378ba46603 $in
+  restat = 1
+o src/entrypoints/Http.d : deps src/entrypoints/Http.ast
+rule mij
+  command = /home/nordfjord/git/nordfjord/equinox-js/node_modules/.pnpm/rescript@11.1.1/node_modules/rescript/linux/bsc.exe -I src/domain -I src/interop -I src/entrypoints -I src -I /home/nordfjord/git/nordfjord/equinox-js/apps/example-rescript/node_modules/@equinox-js/rescript/lib/ocaml -I /home/nordfjord/git/nordfjord/equinox-js/apps/example-rescript/node_modules/@rescript-labs/decco/lib/ocaml -I /home/nordfjord/git/nordfjord/equinox-js/apps/example-rescript/node_modules/@rescript/core/lib/ocaml -open RescriptCore  -uncurried -bs-package-name example-rescript -bs-package-output esmodule:lib/es6/$in_d:.res.mjs -bs-v $g_finger $i
+  dyndep = 1
+  restat = 1
+o src/entrypoints/Http.cmj src/entrypoints/Http.cmi ../es6/src/entrypoints/Http.res.mjs : mij src/entrypoints/Http.ast
+o src/interop/Hono.ast : astj ../../src/interop/Hono.res
+o src/interop/Hono.d : deps src/interop/Hono.ast
+o src/interop/Hono.cmj src/interop/Hono.cmi ../es6/src/interop/Hono.res.mjs : mij src/interop/Hono.ast
+o src/interop/JsonCodec.ast : astj ../../src/interop/JsonCodec.res
+o src/interop/JsonCodec.d : deps src/interop/JsonCodec.ast
+o src/interop/JsonCodec.cmj src/interop/JsonCodec.cmi ../es6/src/interop/JsonCodec.res.mjs : mij src/interop/JsonCodec.ast
+o src/domain/Payer.ast : astj ../../src/domain/Payer.res
+o src/domain/Payer.d : deps src/domain/Payer.ast
+o src/domain/Payer.cmj src/domain/Payer.cmi ../es6/src/domain/Payer.res.mjs : mij src/domain/Payer.ast
+o src/domain/Invoice.ast : astj ../../src/domain/Invoice.res
+o src/domain/Invoice.d : deps src/domain/Invoice.ast
+o src/domain/Invoice.cmj src/domain/Invoice.cmi ../es6/src/domain/Invoice.res.mjs : mij src/domain/Invoice.ast
+o src/domain/EmailSender.ast : astj ../../src/domain/EmailSender.res
+o src/domain/EmailSender.d : deps src/domain/EmailSender.ast
+o src/domain/EmailSender.cmj src/domain/EmailSender.cmi ../es6/src/domain/EmailSender.res.mjs : mij src/domain/EmailSender.ast
+o src/domain/Identifiers.ast : astj ../../src/domain/Identifiers.res
+o src/domain/Identifiers.d : deps src/domain/Identifiers.ast
+o src/domain/Identifiers.cmj src/domain/Identifiers.cmi ../es6/src/domain/Identifiers.res.mjs : mij src/domain/Identifiers.ast
+o src/domain/InvoiceAutoEmailer.ast : astj ../../src/domain/InvoiceAutoEmailer.res
+o src/domain/InvoiceAutoEmailer.d : deps src/domain/InvoiceAutoEmailer.ast
+o src/domain/InvoiceAutoEmailer.cmj src/domain/InvoiceAutoEmailer.cmi ../es6/src/domain/InvoiceAutoEmailer.res.mjs : mij src/domain/InvoiceAutoEmailer.ast

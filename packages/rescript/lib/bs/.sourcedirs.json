@@ -1,0 +1,1 @@
+{ "dirs" : [ "src" ] , "pkgs" : [ [ "@rescript/core" , "/home/nordfjord/git/nordfjord/equinox-js/packages/rescript/node_modules/@rescript/core" ] ] , "generated" : [] }

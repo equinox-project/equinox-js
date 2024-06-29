@@ -1,0 +1,7 @@
+11.1.1
+/home/nordfjord/git/nordfjord/equinox-js/apps/example-rescript/node_modules/@equinox-js/rescript
+1 -bs-package-output esmodule:lib/es6:.res.mjs
+rescript.json	0x1.99d927cca8111p+30
+src	0x1.99d96ee7a8118p+30
+===
+/home/nordfjord/git/nordfjord/equinox-js/node_modules/.pnpm/rescript@11.1.1/node_modules/rescript/linux/rescript.exe	0x1.99e1b9a292c07p+30

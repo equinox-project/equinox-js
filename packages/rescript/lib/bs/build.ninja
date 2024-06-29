@@ -1,0 +1,65 @@
+rescript = 1
+g_finger := /home/nordfjord/git/nordfjord/equinox-js/apps/example-rescript/node_modules/@equinox-js/rescript/node_modules/@rescript/core/lib/ocaml/install.stamp
+rule astj
+  command = /home/nordfjord/git/nordfjord/equinox-js/node_modules/.pnpm/rescript@11.1.1/node_modules/rescript/linux/bsc.exe  -w a -bs-v 11.1.1 -uncurried -open RescriptCore -absname -bs-ast -o $out $i
+o src/Equinox.ast : astj ../../src/Equinox.res
+rule deps
+  command = /home/nordfjord/git/nordfjord/equinox-js/node_modules/.pnpm/rescript@11.1.1/node_modules/rescript/linux/bsb_helper.exe -hash c157b7d1525db1fb53ebbd9236a32687 $in
+  restat = 1
+o src/Equinox.d : deps src/Equinox.ast
+rule mij
+  command = /home/nordfjord/git/nordfjord/equinox-js/node_modules/.pnpm/rescript@11.1.1/node_modules/rescript/linux/bsc.exe -I src -I /home/nordfjord/git/nordfjord/equinox-js/apps/example-rescript/node_modules/@equinox-js/rescript/node_modules/@rescript/core/lib/ocaml -open RescriptCore  -w a -uncurried -bs-package-name @equinox-js/rescript -bs-package-output esmodule:lib/es6/$in_d:.res.mjs -bs-v $g_finger $i
+  dyndep = 1
+  restat = 1
+o src/Equinox.cmj src/Equinox.cmi ../es6/src/Equinox.res.mjs : mij src/Equinox.ast
+o src/Postgres.ast : astj ../../src/Postgres.res
+o src/Postgres.d : deps src/Postgres.ast
+o src/Postgres.cmj src/Postgres.cmi ../es6/src/Postgres.res.mjs : mij src/Postgres.ast
+o src/AbortSignal.ast : astj ../../src/AbortSignal.res
+o src/AbortSignal.d : deps src/AbortSignal.ast
+o src/AbortSignal.cmj src/AbortSignal.cmi ../es6/src/AbortSignal.res.mjs : mij src/AbortSignal.ast
+o src/Equinox__Cache.ast : astj ../../src/Equinox__Cache.res
+o src/Equinox__Cache.d : deps src/Equinox__Cache.ast
+o src/Equinox__Cache.cmj src/Equinox__Cache.cmi ../es6/src/Equinox__Cache.res.mjs : mij src/Equinox__Cache.ast
+o src/Equinox__Codec.ast : astj ../../src/Equinox__Codec.res
+o src/Equinox__Codec.d : deps src/Equinox__Codec.ast
+o src/Equinox__Codec.cmj src/Equinox__Codec.cmi ../es6/src/Equinox__Codec.res.mjs : mij src/Equinox__Codec.ast
+o src/Equinox__Types.ast : astj ../../src/Equinox__Types.res
+o src/Equinox__Types.d : deps src/Equinox__Types.ast
+o src/Equinox__Types.cmj src/Equinox__Types.cmi ../es6/src/Equinox__Types.res.mjs : mij src/Equinox__Types.ast
+o src/AbortController.ast : astj ../../src/AbortController.res
+o src/AbortController.d : deps src/AbortController.ast
+o src/AbortController.cmj src/AbortController.cmi ../es6/src/AbortController.res.mjs : mij src/AbortController.ast
+o src/Propeller__Sink.ast : astj ../../src/Propeller__Sink.res
+o src/Propeller__Sink.d : deps src/Propeller__Sink.ast
+o src/Propeller__Sink.cmj src/Propeller__Sink.cmi ../es6/src/Propeller__Sink.res.mjs : mij src/Propeller__Sink.ast
+o src/Equinox__Decider.ast : astj ../../src/Equinox__Decider.res
+o src/Equinox__Decider.d : deps src/Equinox__Decider.ast
+o src/Equinox__Decider.cmj src/Equinox__Decider.cmi ../es6/src/Equinox__Decider.res.mjs : mij src/Equinox__Decider.ast
+o src/Equinox__Category.ast : astj ../../src/Equinox__Category.res
+o src/Equinox__Category.d : deps src/Equinox__Category.ast
+o src/Equinox__Category.cmj src/Equinox__Category.cmi ../es6/src/Equinox__Category.res.mjs : mij src/Equinox__Category.ast
+o src/Equinox__StreamId.ast : astj ../../src/Equinox__StreamId.res
+o src/Equinox__StreamId.d : deps src/Equinox__StreamId.ast
+o src/Equinox__StreamId.cmj src/Equinox__StreamId.cmi ../es6/src/Equinox__StreamId.res.mjs : mij src/Equinox__StreamId.ast
+o src/Equinox__MessageDb.ast : astj ../../src/Equinox__MessageDb.res
+o src/Equinox__MessageDb.d : deps src/Equinox__MessageDb.ast
+o src/Equinox__MessageDb.cmj src/Equinox__MessageDb.cmi ../es6/src/Equinox__MessageDb.res.mjs : mij src/Equinox__MessageDb.ast
+o src/Equinox__LoadOption.ast : astj ../../src/Equinox__LoadOption.res
+o src/Equinox__LoadOption.d : deps src/Equinox__LoadOption.ast
+o src/Equinox__LoadOption.cmj src/Equinox__LoadOption.cmi ../es6/src/Equinox__LoadOption.res.mjs : mij src/Equinox__LoadOption.ast
+o src/Equinox__StreamName.ast : astj ../../src/Equinox__StreamName.res
+o src/Equinox__StreamName.d : deps src/Equinox__StreamName.ast
+o src/Equinox__StreamName.cmj src/Equinox__StreamName.cmi ../es6/src/Equinox__StreamName.res.mjs : mij src/Equinox__StreamName.ast
+o src/Propeller__MessageDb.ast : astj ../../src/Propeller__MessageDb.res
+o src/Propeller__MessageDb.d : deps src/Propeller__MessageDb.ast
+o src/Propeller__MessageDb.cmj src/Propeller__MessageDb.cmi ../es6/src/Propeller__MessageDb.res.mjs : mij src/Propeller__MessageDb.ast
+o src/Propeller__Checkpoints.ast : astj ../../src/Propeller__Checkpoints.res
+o src/Propeller__Checkpoints.d : deps src/Propeller__Checkpoints.ast
+o src/Propeller__Checkpoints.cmj src/Propeller__Checkpoints.cmi ../es6/src/Propeller__Checkpoints.res.mjs : mij src/Propeller__Checkpoints.ast
+o src/Propeller__StreamsSink.ast : astj ../../src/Propeller__StreamsSink.res
+o src/Propeller__StreamsSink.d : deps src/Propeller__StreamsSink.ast
+o src/Propeller__StreamsSink.cmj src/Propeller__StreamsSink.cmi ../es6/src/Propeller__StreamsSink.res.mjs : mij src/Propeller__StreamsSink.ast
+o src/Equinox__CachingStrategy.ast : astj ../../src/Equinox__CachingStrategy.res
+o src/Equinox__CachingStrategy.d : deps src/Equinox__CachingStrategy.ast
+o src/Equinox__CachingStrategy.cmj src/Equinox__CachingStrategy.cmi ../es6/src/Equinox__CachingStrategy.res.mjs : mij src/Equinox__CachingStrategy.ast

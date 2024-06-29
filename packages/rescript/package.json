@@ -1,0 +1,19 @@
+{
+  "name": "@equinox-js/rescript",
+  "scripts": {
+    "build": "rescript build",
+    "test": "vitest run"
+  },
+  "version": "1.0.2",
+  "files": [
+    "./dist"
+  ],
+  "devDependencies": {
+    "rescript": "^11.1.1",
+    "vitest": "^1.0.4"
+  },
+  "dependencies": {
+    "@equinox-js/core": "workspace:*",
+    "@rescript/core": "^1.5.0"
+  }
+}

@@ -1,0 +1,12 @@
+8
+Hono
+Http
+Payer
+Invoice
+JsonCodec
+EmailSender
+Identifiers
+InvoiceAutoEmailer
+src/interop	src/entrypoints	src/domain	
+1
+0

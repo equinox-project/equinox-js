@@ -1,0 +1,11 @@
+11.1.1
+/home/nordfjord/git/nordfjord/equinox-js/apps/example-rescript
+0
+rescript.json	0x1.99e32f5fe3184p+30
+src	0x1.99e1b9dc14b55p+30
+src/entrypoints	0x1.99e1da2a83bf1p+30
+src/interop	0x1.99e335c85d55fp+30
+src/domain	0x1.99e333841377ep+30
+===
+/home/nordfjord/git/nordfjord/equinox-js/node_modules/.pnpm/rescript@11.1.1/node_modules/rescript/linux/rescript.exe	0x1.99e1b9a292c07p+30
+/home/nordfjord/git/nordfjord/equinox-js/apps/example-rescript/node_modules/@rescript-labs/decco/ppx	0x1.99e1d7c8f1b18p+30

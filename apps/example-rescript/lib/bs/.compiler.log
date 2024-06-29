@@ -1,0 +1,9 @@
+#Start(1719192946104)
+
+  We've found a bug for you!
+  /home/nordfjord/git/nordfjord/equinox-js/apps/example-rescript/src/domain/Invoice.res
+
+  The value t_encode can't be found in Date
+
+FAILED: cannot make progress due to previous errors.
+#Done(1719192946137)
