@@ -1,5 +1,5 @@
 import { tracer } from "./Tracing"
-import { context, trace } from "@opentelemetry/api"
+import { SpanStatusCode, context, trace } from "@opentelemetry/api"
 import { eqxAttrs } from "./Tags"
 
 export type TokenAndState<State> = { token: StreamToken; state: State }
@@ -73,15 +73,21 @@ function wrapInTrace<T>(name: string, fn: () => Promise<T>) {
   const attrs = new Map<string, any>()
   const otelCtx = trace.setSpan(context.active(), span).setValue(eqxAttrs, attrs)
   return context.with(otelCtx, () =>
-    fn().finally(() => {
-      const attrs = otelCtx.getValue(eqxAttrs) as Map<string, any> | undefined
-      if (attrs) {
-        for (const [key, value] of attrs) {
-          span.setAttribute(key, value)
+    fn()
+      .catch((err) => {
+        span.recordException(err)
+        span.setStatus({ code: SpanStatusCode.ERROR, message: err?.message })
+        throw err
+      })
+      .finally(() => {
+        const attrs = otelCtx.getValue(eqxAttrs) as Map<string, any> | undefined
+        if (attrs) {
+          for (const [key, value] of attrs) {
+            span.setAttribute(key, value)
+          }
         }
-      }
-      span.end()
-    }),
+        span.end()
+      }),
   )
 }
 
