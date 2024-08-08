@@ -358,7 +358,7 @@ export class BatchLimiter {
   private inProgressBatches = 0
   private events = new EventEmitter()
 
-  constructor(private maxReadAhead: number) {}
+  constructor(public maxReadAhead: number) {}
 
   waitForCapacity(signal: AbortSignal): Promise<void> | void {
     if (this.inProgressBatches < this.maxReadAhead) return
@@ -412,7 +412,13 @@ export class StreamsSink implements Sink {
     private requireCompleteStreams = false,
     tracingAttrs: Attributes = {},
   ) {
-    this.tracingAttrs = Object.assign({ "eqx.max_read_ahead": maxConcurrentStreams }, tracingAttrs)
+    this.tracingAttrs = Object.assign(
+      {
+        "eqx.max_concurrent_streams": maxConcurrentStreams,
+        "eqx.max_read_ahead": limiter.maxReadAhead,
+      },
+      tracingAttrs,
+    )
     this.handler = traceHandler(tracer, this.tracingAttrs, handler)
   }
 
