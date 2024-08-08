@@ -15,7 +15,7 @@
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
     "test": "vitest run"
   },
-  "version": "1.0.2",
+  "version": "1.0.3",
   "files": [
     "./dist",
     "./migrations"
