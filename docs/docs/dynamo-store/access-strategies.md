@@ -44,9 +44,9 @@ type State = number
 const initial = 0
 const evolve = (state: State, event: Event) => {
   switch (event.type) {
-    case "Increment":
+    case "Incremented":
       return state + event.data.amount
-    case "Snapshot":
+    case "Snapshotted":
       return event.data.current
   }
 }
