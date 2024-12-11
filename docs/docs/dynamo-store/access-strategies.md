@@ -31,8 +31,8 @@ In Equinox the Snapshot is a member of the Event DU
 
 ```ts
 type Event =
-  | { type: "Increment"; data: { amount: number } }
-  | { type: "Snapshot"; data: { current: number } }
+  | { type: "Incremented"; data: { amount: number } }
+  | { type: "Snapshotted"; data: { current: number } }
 
 const codec = Codec.json<Event>()
 ```
