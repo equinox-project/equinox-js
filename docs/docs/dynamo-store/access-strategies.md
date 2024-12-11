@@ -57,7 +57,7 @@ In addition to this we need to specify to Equinox which event type represents a
 Snapshot and how to transform the current state into a Snapshot
 
 ```ts
-const isOrigin = (ev: Event) => ev.type === "Snapshot"
+const isOrigin = (ev: Event) => ev.type === "Snapshotted"
 const toSnapshot = (state: State): Event => ({ type: snapshotEventType, data: { current: state } })
 ```
 
