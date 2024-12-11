@@ -31,8 +31,8 @@ In Equinox the Snapshot is a member of the Event DU
 
 ```ts
 type Event =
-  | { type: "Increment"; data: { amount: number } }
-  | { type: "Snapshot"; data: { current: number } }
+  | { type: "Incremented"; data: { amount: number } }
+  | { type: "Snapshotted"; data: { current: number } }
 
 const codec = Codec.json<Event>()
 ```
@@ -44,9 +44,9 @@ type State = number
 const initial = 0
 const evolve = (state: State, event: Event) => {
   switch (event.type) {
-    case "Increment":
+    case "Incremented":
       return state + event.data.amount
-    case "Snapshot":
+    case "Snapshotted":
       return event.data.current
   }
 }
@@ -57,7 +57,7 @@ In addition to this we need to specify to Equinox which event type represents a
 Snapshot and how to transform the current state into a Snapshot
 
 ```ts
-const isOrigin = (ev: Event) => ev.type === "Snapshot"
+const isOrigin = (ev: Event) => ev.type === "Snapshotted"
 const toSnapshot = (state: State): Event => ({ type: snapshotEventType, data: { current: state } })
 ```
 
