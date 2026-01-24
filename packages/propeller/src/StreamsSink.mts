@@ -228,6 +228,11 @@ class StreamStates {
     this.markIdle(stream)
     this.markCompleted(stream, write)
   }
+
+  recordComplete(stream: StreamName): void {
+    this.markIdle(stream)
+    this.states.delete(stream)
+  }
 }
 
 type BatchState = { markCompleted: () => void; streamToRequiredIndex: Map<StreamName, bigint> }
@@ -346,7 +351,11 @@ class ConcurrentDispatcher {
       this.computation(stream, events).then((result) => {
         const nextIndex = StreamResult.toIndex(events, result ?? StreamResult.AllProcessed)
         this.batches.markStreamProgress(stream, nextIndex)
-        this.streams.recordProgress(stream, nextIndex)
+        if (result?.type === "StreamCompleted") {
+          this.streams.recordComplete(stream)
+        } else {
+          this.streams.recordProgress(stream, nextIndex)
+        }
         this.sem.release()
         this.processOnNextTick()
       })

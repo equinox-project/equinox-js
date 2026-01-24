@@ -489,4 +489,39 @@ describe("StreamResult", () => {
     expect(checkpoint).toHaveBeenCalledTimes(1)
     await sinkP
   })
+  test("StreamCompleted will completely remove the stream from state tracking", async () => {
+    let invocations = 0
+    const ctrl = new AbortController()
+
+    async function handler() {
+      invocations++
+      await new Promise(setImmediate)
+      return StreamResult.StreamCompleted
+    }
+
+    const limiter = new BatchLimiter(3)
+    const sink = new StreamsSink(handler, 10, limiter)
+    const sinkP = sink.start(ctrl.signal)
+
+    const checkpoint = vi.fn().mockResolvedValue(undefined)
+
+    // each mkBatch has 1 event in 10 streams
+    await sink.pump(mkBatch(checkpoint, 0n, 0n), ctrl.signal)
+    await sink.pump(mkBatch(checkpoint, 1n, 1n), ctrl.signal)
+
+    await limiter.waitForEmpty()
+    expect(invocations).toBe(10)
+
+    // whoopsie, at-least-once delivery means we can receive older events again
+    await sink.pump(mkBatch(checkpoint, 0n, 2n), ctrl.signal)
+    await sink.pump(mkBatch(checkpoint, 1n, 3n), ctrl.signal)
+    await limiter.waitForEmpty()
+    ctrl.abort()
+
+    // we expect them to be processed again
+    expect(invocations).toBe(20)
+    // but we don't expect the checkpoint to advance
+    expect(checkpoint).toHaveBeenCalledTimes(4)
+    await sinkP
+  })
 })
