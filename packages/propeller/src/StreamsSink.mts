@@ -226,12 +226,11 @@ class StreamStates {
 
   recordProgress(stream: StreamName, write: bigint): void {
     this.markIdle(stream)
+    if (write === -2n) {
+      this.states.delete(stream)
+      return
+    }
     this.markCompleted(stream, write)
-  }
-
-  recordComplete(stream: StreamName): void {
-    this.markIdle(stream)
-    this.states.delete(stream)
   }
 }
 
@@ -258,7 +257,7 @@ class ProgressState {
     for (const batch of this.pending) {
       const requiredIndex = batch.streamToRequiredIndex.get(stream)
       if (requiredIndex === undefined) continue
-      if (requiredIndex <= index) batch.streamToRequiredIndex.delete(stream)
+      if (requiredIndex <= index || index === -2n) batch.streamToRequiredIndex.delete(stream)
     }
     this.trim()
   }
@@ -351,11 +350,7 @@ class ConcurrentDispatcher {
       this.computation(stream, events).then((result) => {
         const nextIndex = StreamResult.toIndex(events, result ?? StreamResult.AllProcessed)
         this.batches.markStreamProgress(stream, nextIndex)
-        if (result?.type === "StreamCompleted") {
-          this.streams.recordComplete(stream)
-        } else {
-          this.streams.recordProgress(stream, nextIndex)
-        }
+        this.streams.recordProgress(stream, nextIndex)
         this.sem.release()
         this.processOnNextTick()
       })

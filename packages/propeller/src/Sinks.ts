@@ -5,7 +5,7 @@ export type StreamResult =
   | { type: "AllProcessed" }
   | { type: "PartiallyProcessed"; count: number }
   | { type: "OverrideNextIndex"; index: bigint }
-  | { type: "StreamCompleted" }
+  | { type: "Purge" }
 
 export namespace StreamResult {
   /**
@@ -32,7 +32,7 @@ export namespace StreamResult {
    * Indicates the stream has been fully processed and should be removed from state tracking.
    * NOTE: Using this can result in reprocessing of events if the stream is re-added later.
    */
-  export const StreamCompleted: StreamResult = { type: "StreamCompleted" }
+  export const Purge: StreamResult = { type: "Purge" }
 
   /**
    * Apply an externally observed Version determined by the handler during processing.
@@ -49,12 +49,13 @@ export namespace StreamResult {
       case "NoneProcessed":
         return span[0]!.index
       case "AllProcessed":
-      case "StreamCompleted":
         return span[0]!.index + BigInt(span.length)
       case "PartiallyProcessed":
         return span[0]!.index + BigInt(result.count)
       case "OverrideNextIndex":
         return result.index
+      case "Purge":
+        return -2n
     }
   }
 }

@@ -496,7 +496,7 @@ describe("StreamResult", () => {
     async function handler() {
       invocations++
       await new Promise(setImmediate)
-      return StreamResult.StreamCompleted
+      return StreamResult.Purge
     }
 
     const limiter = new BatchLimiter(3)
