@@ -226,7 +226,7 @@ class StreamStates {
 
   recordProgress(stream: StreamName, write: bigint): void {
     this.markIdle(stream)
-    if (write === -2n) {
+    if (write === -2n) { // handler requested purge
       this.states.delete(stream)
       return
     }
