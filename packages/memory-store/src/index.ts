@@ -119,7 +119,10 @@ class Category<Event, State, Context, Format>
     if (res.success) {
       return {
         type: "Written",
-        data: { token: Token.ofValue(events), state: this.fold(originState, events) },
+        data: {
+          token: Token.streamTokenOfEventCount(eventCount + events.length),
+          state: this.fold(originState, events),
+        },
       }
     }
     const conflictingEvents = res.events
