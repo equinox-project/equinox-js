@@ -102,7 +102,7 @@ const assertSpans = (...expected: Record<string, any>[]) => {
     ...x.attributes,
     status_message: x.status.message,
   }))
-  expect(attributes).toEqual(expected.map(expect.objectContaining))
+  expect(attributes).toEqual(expected.map((x) => expect.objectContaining(x)))
 }
 
 provider.addSpanProcessor(spanProcessor)

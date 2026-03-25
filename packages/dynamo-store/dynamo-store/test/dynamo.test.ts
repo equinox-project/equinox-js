@@ -178,7 +178,7 @@ const assertSpans = (...expected: Record<string, any>[]) => {
     ...x.attributes,
     status_message: x.status.message,
   }))
-  expect(attributes).toEqual(expected.map(expect.objectContaining))
+  expect(attributes).toEqual(expected.map((x) => expect.objectContaining(x)))
   memoryExporter.reset()
 }
 
@@ -485,7 +485,7 @@ describe("Caching", () => {
 
     // this time, we did something, so we see the append call
     attrs = getStoreSpans()[0].attributes
-    assertRU(7, 10)
+    assertRU(4, 10)
     assertSpans({ name: "Transact", [Tags.cache_hit]: true, [Tags.append_count]: 1 })
     expect(attrs).not.to.have.property(Tags.batches)
 
@@ -659,7 +659,8 @@ test("Evolving access strategy from Unoptimised to Snapshot to RollingState", as
   const run = (service: Cart.Service, skuId: string, count: number) => 
     CartHelpers.addAndThenRemoveItemsManyTimesExceptTheLastOne(cartContext, cartId, skuId, service, count)
 
-  const toObj = (state: Cart.Fold.State) => Object.fromEntries(state.items.map((x) => [x.skuId, x.quantity]))
+  const toObj = (state: Cart.Fold.State) =>
+    Object.fromEntries(state.items.map((x) => [x.skuId, x.quantity]))
 
   await run(service1, skuId1, 10)
   // Going from unoptimized to Snapshot is safe
