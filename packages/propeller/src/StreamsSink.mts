@@ -343,13 +343,17 @@ class ConcurrentDispatcher {
       // CAUTION: If the end-user has set up an unhandledRejection handler, it
       // will keep the process alive and the dispatcher will have lost track of
       // the semaphore, potentially causing it to stop processing.
-      this.computation(stream, events).then((result) => {
-        const nextIndex = StreamResult.toIndex(events, result ?? StreamResult.AllProcessed)
-        this.batches.markStreamProgress(stream, nextIndex)
-        this.streams.recordProgress(stream, nextIndex)
-        this.sem.release()
-        this.processOnNextTick()
-      })
+      this.computation(stream, events)
+        .then((result) => {
+          const nextIndex = StreamResult.toIndex(events, result ?? StreamResult.AllProcessed)
+          this.batches.markStreamProgress(stream, nextIndex)
+          this.streams.recordProgress(stream, nextIndex)
+          this.sem.release()
+          this.processOnNextTick()
+        })
+        .catch((err) => {
+          // do nothing here, it's already been handled by streamssink
+        })
     }
   }
 }
@@ -400,7 +404,6 @@ type CreateOptions = {
 }
 
 export class StreamsSink implements Sink {
-  private events = new EventEmitter()
   private readonly handler: EventHandler<string>
   private dispatcher!: ConcurrentDispatcher
   private tracingAttrs: Attributes
@@ -426,8 +429,6 @@ export class StreamsSink implements Sink {
     Object.assign(this.tracingAttrs, attrs)
   }
 
-  private onNextError(handler: (err: Error) => void) {}
-
   pump(ingesterBatch: IngesterBatch, signal: AbortSignal): void | Promise<void> {
     this.limiter.startBatch()
     const onComplete = () => {
@@ -439,30 +440,25 @@ export class StreamsSink implements Sink {
   }
 
   async start(signal: AbortSignal) {
-    this.dispatcher = new ConcurrentDispatcher(
-      this.maxConcurrentStreams,
-      async (stream, events) =>
-        this.handler(stream, events).catch((err) => {
-          this.events.emit("error", err)
-        }),
-      !this.requireCompleteStreams,
-      signal,
-    )
-    return this.waitForErrorOrAbort(signal)
-  }
-
-  waitForErrorOrAbort(signal: AbortSignal): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       const onAbort = () => {
-        // avoid leaking the closure
-        this.events.off("error", reject)
         resolve()
       }
       const onError = (err: Error) => {
         signal.removeEventListener("abort", onAbort)
         reject(err)
       }
-      this.events.once("error", onError)
+      this.dispatcher = new ConcurrentDispatcher(
+        this.maxConcurrentStreams,
+        async (stream, events) =>
+          this.handler(stream, events).catch((err) => {
+            onError(err)
+            throw err
+          }),
+        !this.requireCompleteStreams,
+        signal,
+      )
+
       signal.addEventListener("abort", onAbort, { once: true })
     })
   }

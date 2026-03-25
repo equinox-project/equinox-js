@@ -186,18 +186,13 @@ test("Does not catch errors from handlers", async () => {
   const sinkP = sink.start(ctrl.signal)
 
   const checkpoint = vi.fn().mockResolvedValue(undefined)
-  const onError = vi.fn()
-  // We need to capture all the errors otherwise the test will fail
-  sink["events"].on("error", onError)
-
   await sink.pump(mkBatch(checkpoint, 0n), ctrl.signal)
 
   await expect(sinkP).rejects.toThrow("Test error")
   // we need to wait for the other errors to be emitted
   await setTimeout(10)
-  expect(onError).toHaveBeenCalledTimes(10)
   expect(invocations).toBe(10)
-  expect(checkpoint).toHaveBeenCalledTimes(1)
+  expect(checkpoint).toHaveBeenCalledTimes(0)
 })
 
 test("Old events are ignored even if re-submitted", async () => {
