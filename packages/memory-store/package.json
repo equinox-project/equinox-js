@@ -11,14 +11,15 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean"
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "test": "vitest run"
   },
   "version": "1.0.3",
   "devDependencies": {
     "@types/node": "^20.10.5",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",
-    "vitest": "^1.0.4"
+    "vitest": "^4.1.1"
   },
   "dependencies": {
     "@equinox-js/core": "workspace:*"

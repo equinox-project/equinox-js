@@ -108,8 +108,6 @@ test("it fails fast", async () => {
     sink,
   })
 
-  const onError = vi.fn()
-  sink['events'].on('error', onError)
   const epochWriter = AppendsEpoch.Config.createMem(1024 * 1024, 5000n, 100_000, store)
   await epochWriter.ingest(
     AppendsPartitionId.wellKnownId,
@@ -194,8 +192,8 @@ test("loading event bodies", async () => {
                 }),
               }
             : Math.random() < 0.5
-            ? { encoding: 2, body: zlib.brotliCompressSync(Buffer.from(x.data!)) }
-            : { encoding: 0, body: Buffer.from(x.data!) },
+              ? { encoding: 2, body: zlib.brotliCompressSync(Buffer.from(x.data!)) }
+              : { encoding: 0, body: Buffer.from(x.data!) },
       })),
     )
     await epochWriter.ingest(AppendsPartitionId.wellKnownId, AppendsEpochId.initial, [

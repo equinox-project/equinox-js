@@ -39,7 +39,7 @@ export const expectEventsMatching =
   (specs: unknown[]) =>
   ({ events, error }: ScenarioState<any, any>) => {
     expect(error).toBeUndefined()
-    expect(events).toEqual(specs.map(expect.objectContaining))
+    expect(events).toEqual(specs.map((x) => expect.objectContaining(x)))
   }
 
 export const expectNoEvents = ({ events, error }: ScenarioState<any, any>) => {

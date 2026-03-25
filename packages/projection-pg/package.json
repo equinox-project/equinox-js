@@ -23,7 +23,7 @@
     "@types/pg": "^8.6.6",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",
-    "vitest": "^1.0.4"
+    "vitest": "^4.1.1"
   },
   "dependencies": {
     "pg": "^8.8.0"
