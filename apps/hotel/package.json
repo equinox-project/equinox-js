@@ -36,7 +36,9 @@
     "variant": "^2.1.0"
   },
   "devDependencies": {
+    "@aws-sdk/client-dynamodb-streams": "^3.262.0",
     "@databases/pg-migrations": "^5.0.2",
+    "@equinox-js/dynamo-store-indexer": "workspace:*",
     "@types/express": "^4.17.17",
     "@types/node": "^20.10.5",
     "@types/pg": "^8.0.0",
