@@ -1,13 +1,9 @@
 {
   "name": "@equinox-js/dynamo-store",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "require": "./dist/index.js",
-      "import": "./dist/index.mjs",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/index.mjs"
     }
   },
   "scripts": {
@@ -18,7 +14,7 @@
     "@opentelemetry/sdk-trace-base": "^2.6.1",
     "@opentelemetry/sdk-trace-node": "^2.6.1",
     "@types/node": "^24.12.0",
-    "tsup": "^8.0.1",
+    "tsup": "^8.5.1",
     "typescript": "^5.3.3",
     "vitest": "^4.1.1"
   },

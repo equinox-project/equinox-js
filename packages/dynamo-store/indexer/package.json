@@ -1,13 +1,9 @@
 {
   "name": "@equinox-js/dynamo-store-indexer",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/index.js",
       "import": "./dist/index.mjs",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.js"
     }
   },
   "scripts": {
@@ -17,7 +13,7 @@
   "devDependencies": {
     "@equinox-js/memory-store": "workspace:*",
     "@types/node": "^24.12.0",
-    "tsup": "^8.0.1",
+    "tsup": "^8.5.1",
     "typescript": "^5.3.3",
     "vitest": "4.1.1"
   },
