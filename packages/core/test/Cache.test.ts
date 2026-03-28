@@ -27,18 +27,29 @@ describe("Caching", () => {
   })
 
   test("reloads when stale", async () => {
+    const now = new Date()
+    vi.useFakeTimers()
+    vi.setSystemTime(now)
     const cache = new Cache.MemoryCache(2)
     await cache.readThrough("1", 0, supersedes, read(1n))
-    await sleep(5)
+    vi.advanceTimersByTime(1)
     const item = await cache.readThrough("1", 1, supersedes, read(2n))
     expect(item).toEqual({ state: null, token: { version: 2n, bytes: 0n, value: null } })
+    vi.useRealTimers()
   })
 
+  const waiter = () => {
+    let resolve!: () => void
+    const promise = new Promise<void>((res) => (resolve = res))
+    return [promise, resolve] as const
+  }
+
   test("only one reload of a stream is in flight at any given moment", async () => {
+    const [w, r] = waiter()
     const reload = vi
       .fn()
       .mockImplementationOnce(async () => {
-        await sleep(5)
+        await w
         return read(1n)()
       })
       .mockRejectedValue(new Error("Unexpected reload"))
@@ -47,8 +58,25 @@ describe("Caching", () => {
     const p1 = cache.readThrough("1", anyValue, supersedes, reload)
     const p2 = cache.readThrough("1", anyValue, supersedes, reload)
     const p3 = cache.readThrough("1", anyValue, supersedes, reload)
+    r()
     await Promise.all([p1, p2, p3])
+    expect(reload).toHaveBeenCalledTimes(1)
+  })
+
+  test("compatible overlapping stale reads share the reload", async () => {
+    let loadCount = 0
+    const [w, r] = waiter()
+    const reload = vi.fn(async () => {
+      loadCount++
+      await w
+      return { state: loadCount, token: { version: BigInt(loadCount), bytes: 0n, value: null } }
+    })
+    const cache = new Cache.MemoryCache(2)
+    const p1 = cache.readThrough("1", 0, supersedes, reload)
+    const p2 = cache.readThrough("1", 300, supersedes, reload)
+    r()
+    const expected = { state: 1, token: { version: 1n, bytes: 0n, value: null } }
+    await expect(Promise.all([p1, p2])).resolves.toEqual([expected, expected])
+    expect(reload).toHaveBeenCalledTimes(1)
   })
 })
-
-const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms))

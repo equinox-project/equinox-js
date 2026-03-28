@@ -12,7 +12,9 @@ export const sdk = new Sdk.NodeSDK({
       enhancedDatabaseReporting: true,
       requireParentSpan: true,
       responseHook: (span, response) => {
-        span.setAttribute("db.row_count", response.data.rowCount)
+        if (response.data.rowCount != null) {
+          span.setAttribute("db.row_count", response.data.rowCount)
+        }
       },
     }),
     new http.HttpInstrumentation(),
@@ -20,7 +22,6 @@ export const sdk = new Sdk.NodeSDK({
 })
 
 diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ALL)
-
 
 sdk.start()
 

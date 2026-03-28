@@ -87,14 +87,14 @@ namespace ContactPreferencesService {
   }
 }
 
-const provider = new NodeTracerProvider()
 const memoryExporter = new InMemorySpanExporter()
 const spanProcessor = new SimpleSpanProcessor(memoryExporter)
+const provider = new NodeTracerProvider({ spanProcessors: [spanProcessor] })
 
 const getStoreSpans = () =>
   memoryExporter
     .getFinishedSpans()
-    .filter((x) => x.instrumentationLibrary.name === "@equinox-js/core")
+    .filter((x) => x.instrumentationScope.name === "@equinox-js/core")
 
 const assertSpans = (...expected: Record<string, any>[]) => {
   const attributes = getStoreSpans().map((x) => ({
@@ -105,7 +105,6 @@ const assertSpans = (...expected: Record<string, any>[]) => {
   expect(attributes).toEqual(expected.map((x) => expect.objectContaining(x)))
 }
 
-provider.addSpanProcessor(spanProcessor)
 provider.register()
 afterEach(() => {
   memoryExporter.reset()
