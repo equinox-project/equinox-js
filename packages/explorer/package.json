@@ -20,11 +20,11 @@
     "@types/mithril": "^2.2.6",
     "@types/pg": "^8.10.9",
     "autoprefixer": "^10.4.16",
-    "mithril": "^2.2.2",
+    "mithril": "^2.3.8",
     "pg": "^8.11.3",
     "postcss": "^8.4.31",
-    "tailwindcss": "^3.3.5",
-    "tsup": "^8.0.1",
+    "tailwindcss": "^3.4.19",
+    "tsup": "^8.5.1",
     "vite": "^8.0.2"
   },
   "dependencies": {
@@ -33,7 +33,7 @@
     "cors": "^2.8.5",
     "d3": "^7.8.5",
     "date-fns": "^2.30.0",
-    "esbuild": "^0.19.8",
+    "esbuild": "^0.27.4",
     "express": "^4.18.2",
     "rxjs": "^7.8.1"
   },

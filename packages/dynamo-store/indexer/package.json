@@ -1,22 +1,19 @@
 {
   "name": "@equinox-js/dynamo-store-indexer",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/index.js",
       "import": "./dist/index.mjs",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.js"
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts"
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@equinox-js/memory-store": "workspace:*",
-    "@types/node": "^20.10.5",
-    "tsup": "^8.0.1",
+    "@types/node": "^24.12.0",
+    "tsup": "^8.5.1",
     "typescript": "^5.3.3",
     "vitest": "4.1.1"
   },
@@ -25,7 +22,7 @@
     "@aws-sdk/types": "^3.410.0",
     "@equinox-js/core": "workspace:*",
     "@equinox-js/dynamo-store": "workspace:*",
-    "@opentelemetry/api": "^1.4.0",
+    "@opentelemetry/api": "^1.9.1",
     "immutable": "5.0.0-beta.4"
   },
   "version": "1.1.0"

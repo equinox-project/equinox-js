@@ -141,7 +141,7 @@ test("Splits into epochs, duplication occurs across epochs", async () => {
     expect(state.closed).toBe(i < activeEpoch)
   }
 
-  expect(changes).toMatchInlineSnapshot([
+  expect(changes).toEqual([
     [0, 0, [{ c: ["A", "B"], i: 0, p: "Cat-stream1" }]],
     [0, 1, [{ c: ["A", "B"], i: 0, p: "Cat-stream2" }]],
     [0, 2, [{ c: ["A", "B"], i: 0, p: "Cat-stream3" }]],
