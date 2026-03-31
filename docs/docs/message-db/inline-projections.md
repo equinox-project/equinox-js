@@ -8,8 +8,12 @@ sourced application significantly. Under normal circumstances each of your
 read-models would be polling the store for events in order to apply updates.
 This causes some pressure on the system that, while easily relieved with
 read-replicas, can be a hassle to deal with and increases infrastructure costs.
-In contrast, immediately consistent read models will trade off some write
+In contrast, inline read models will trade off some write
 performance to entirely circumvent the need for a read-model consumer.
+
+This is intentionally presented as a tradeoff, not a default. The feature is
+there because some systems genuinely benefit from it, not because every read
+model should be updated inline.
 
 ### When to avoid
 
@@ -36,11 +40,11 @@ updates, and most likely won't have any record of it in the system. If you're
 lucky you'll have caught it with observability tooling. The former now needs a
 more involved intervention as well. Instead of replaying the projection you'll
 need to write a script that traverses the category and updates the projection in
-place for every affected stream. 
+place for every affected stream.
 
 ### Setting up
 
-Setting up immediately consistent read models requires some extra work on top of
+Setting up inline read models requires some extra work on top of
 the regular message-db install. The read model needs to be in the same database
 as your events and you must use a role that has privileges on the
 `message_store` schema as well as your projection schema.

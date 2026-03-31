@@ -14,6 +14,11 @@ and therefore a consistent `state`. The Category abstracts the details of how ev
 concrete store. The Equinox programming model de-emphasises infrastructural plumbing in your application code, helping
 you write your domain code in a storage agnostic way.
 
+Categories are also where EquinoxJS surfaces store-specific behavior honestly.
+Access strategies, caching and load behavior are configured at this boundary,
+which keeps performance choices explicit instead of burying them behind a
+generic repository interface.
+
 # Folds and State
 
 It's been said that, in event sourcing, current state is a left fold of previous history, but what does this mean?
@@ -38,19 +43,21 @@ export function reducer(state: State = { count: 0 }, action: Action): State {
 One way you can exercise a `redux` reducer is to use `Array#reduce`
 
 ```ts
-[{ type: 'Increment' }, { type: 'Increment' }].reduce(reducer, { count: 0 }) // { count: 2 }
+[{ type: "Increment" }, { type: "Increment" }].reduce(reducer, { count: 0 }) // { count: 2 }
 ```
 
 In functional languages like OCaml, and F# this concept is not called `reduce`. It's called `fold`. We could
 implement fold in javascript like so:
 
 ```ts
-const fold = <Acc, T>(folder: (acc: Acc, value: T) => Acc) => (initial: Acc, items: T[]) => {
-  let result = initial
-  for (let i = 0; i < items.length; ++i) {
-    result = folder(result, items[i])
+function fold<Acc, T>(folder: (acc: Acc, value: T) => Acc) {
+  return (initial: Acc, items: T[]) => {
+    let result = initial
+    for (let i = 0; i < items.length; ++i) {
+      result = folder(result, items[i])
+    }
+    return result
   }
-  return result
 }
 ```
 

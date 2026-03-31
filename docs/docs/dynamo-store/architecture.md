@@ -4,6 +4,11 @@ sidebar_position: 1
 
 # DynamoStore Architecture
 
+DynamoStore is the serverless deployment option in EquinoxJS. This page explains
+why it is shaped the way it is: the design is driven by DynamoDB's cost model,
+item limits and ordering characteristics rather than by trying to mimic a SQL
+event table.
+
 When building an event store on top of a serverless NoSQL database it is
 imperative to apply mechanical sympathy. We've seen implementations of DynamoDB
 event stores using a single event-per-item strategy. This would seem the obvious
@@ -49,6 +54,10 @@ To summarise:
 - The Tip document can contain snapshots (we call these unfolds)
 - Since attribute keys count towards item-size we use single letter key names
 
+The key point is that DynamoStore is not a generic adapter layer. It is an event
+store design tuned specifically for DynamoDB so EquinoxJS can preserve explicit
+stream semantics in a serverless environment.
+
 ## Table schema
 
 | Key         | Type                                | Description                                                    |
@@ -63,7 +72,7 @@ To summarise:
 | `a`ppends   | Number                              | The number of events appended in the latest update             |
 | `n`extIndex | Number                              | the index that the next page starts at.                        |
 
-<h2 id="event-schema">Event schema</h2>
+## Event schema
 
 | Key             | Type    | Description                                                              |
 | --------------- | ------- | ------------------------------------------------------------------------ |
@@ -75,7 +84,7 @@ To summarise:
 | `x`actionId     | ?String | The correlation id of the event                                          |
 | wh`y`           | ?String | The causation id (wh`y` did this event occur)                            |
 
-<h2 id="unfold-schema">Unfold schema</h2>
+## Unfold schema
 
 | Key             | Type    | Description                                                      |
 | --------------- | ------- | ---------------------------------------------------------------- |
@@ -89,7 +98,7 @@ To summarise:
 
 # Reactions
 
-Reacting to events is quite frankly _the point_ of an event-sourced
+Reacting to events is one of the main reasons to choose an event-sourced
 architecture. DynamoDB offers DynamoDB Streams, a Change Data Capture (CDC) for
 your table. The stream is comprised of _stream records_ containing information
 about a data modification to a single item in a DynamoDB table. This feed offers
@@ -123,7 +132,7 @@ batch (1-10,000 DDB Stream Records) fed to the Lambda is represented as an
 `Ingested` event in a sequence of `$AppendsEpoch-<partitionId>-<epoch>` streams
 in near real-time after they are appended. Because there's no retention window,
 this structure can be deterministically traversed by current or future readers
-in perpetuity. 
+in perpetuity.
 
 To avoid problems with the ordering guarantees of Streams every event MUST first
 be written to the Tip document.

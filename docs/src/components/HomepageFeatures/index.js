@@ -4,32 +4,56 @@ import styles from "./styles.module.css"
 
 const FeatureList = [
   {
-    title: "Store agnostic",
+    title: "Small, sharp primitives",
     description: (
       <>
-        Equinox is a lightweight library that makes it easy to develop event-sourced applications processing against stream-based stores. Your domain
-        code is written in a storage-agnostic way and later wired up against concrete stores.
+        EquinoxJS centers the model around deciders, folds, services and reactions. You get the core
+        building blocks for event sourced systems without having to adopt a surrounding framework or
+        command bus architecture.
       </>
     ),
   },
   {
-    title: "Multiple access strategies",
-    description: <>Equinox has multiple access strategies available, including snapshots and only reading the latest event.</>,
+    title: "Real deployment coverage",
+    description: (
+      <>PostgreSQL via MessageDB for relational deployments and DynamoStore for serverless ones.</>
+    ),
   },
   {
-    title: "Transparent caching",
-    description: <>Equinox supports caching aggregate state using an LRU cache in an optimized and transparent way</>,
+    title: "Store-aware performance",
+    description: (
+      <>
+        Performance characteristics stay visible at the category boundary. EquinoxJS lets you tune
+        loading and caching behavior explicitly instead of flattening everything into a generic
+        store abstraction.
+      </>
+    ),
   },
   {
-    title: "Concurrency Control",
-    description: <>Equinox automates optimistic concurrency controls using a retry-loop.</>,
+    title: "Operationally honest",
+    description: (
+      <>
+        Ordering, idempotency, checkpointing and read lag stay explicit in the model. That makes
+        production tradeoffs visible early instead of showing up later as framework-shaped
+        surprises.
+      </>
+    ),
   },
   {
     title: "Not a framework",
     description: (
       <>
-        Equinox provides a set of low-dependency libraries that can be composed to create a flexible architecture that meets the needs of your
-        evolving application.
+        You can expose a service API, a command handler API, or both. EquinoxJS has opinions about
+        boundaries, not about your transport or application architecture.
+      </>
+    ),
+  },
+  {
+    title: "First-class reactions",
+    description: (
+      <>
+        Reactions and projection helpers cover the common read-model and process-manager patterns
+        without locking you into one shape.
       </>
     ),
   },

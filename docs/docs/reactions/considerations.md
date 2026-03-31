@@ -13,6 +13,10 @@ While the order of events within a stream is guaranteed, the order of events
 across different streams is not. This is something you need to be aware of when
 designing your reactions.
 
+This is one of the core constraints of event sourcing and it is better to make
+it explicit up front. If a reaction depends on cross-stream ordering, the
+reaction needs an explicit ordering mechanism rather than wishful thinking.
+
 In the rare case you absolutely need ordering across streams we recommend
 creating a third stream whose purpose is to provide a repeatably read order.
 This is an easily abstractable problem. Take a look at
@@ -48,6 +52,10 @@ The checkpointer is a crucial component that ensures the state of the event
 processing is preserved. It maintains checkpoints on a per category per group
 basis, recording the progress of event processing. This enables the system to
 resume from where it left off in case of a restart or a failure.
+
+The important point is that checkpoints live in the same coordinate system as
+consumption: category and group. That keeps the mental model small and makes
+replay behaviour easier to reason about.
 
 ## Polling and Batches
 

@@ -1,10 +1,19 @@
 ---
-sidebar_position: 3
+sidebar_position: 4
 ---
 
 # Anatomy of an Equinox Service
 
 An Equinox service is composed of a few modules (namespaces).
+
+This structure is worth calling out because it gives you a clean public API
+without forcing a handler framework onto the domain. In most applications the
+`Service` is the only part other modules should depend on; the rest exists to
+keep the domain model explicit and testable.
+
+This is the default EquinoxJS boundary: domain logic stays close to the stream,
+while transports such as HTTP handlers, jobs or message consumers depend on a
+small service surface.
 
 - **Stream**: shows which category the service writes to and how the identity
   of the stream is composed (and the reverse operations for when running Reaction logic)
@@ -13,7 +22,7 @@ An Equinox service is composed of a few modules (namespaces).
 - **Decide**: shows which actions can be taken upon the state (resulting in
   new events being written)
 - **Query**: shows how we map the state to answer questions.
-- **Service**: the class that wraps the above into a cohesive domain service.
+- **Service**: the class that wraps the above into a cohesive domain service and default application boundary.
 - **Config**: shows how we've opted to to bind the Service to Streams in a Concrete Store (which Access Strategies to apply, if any)
   including important information like access strategies.
 
@@ -22,6 +31,12 @@ An Equinox service is composed of a few modules (namespaces).
 Everything above `Service` is considered internal to the module. It is exported
 as a convenience for testing, but other modules should not take a dependency on
 anything other than the `Service`.
+
+This is one of the main reasons the pattern scales well: you keep the domain
+logic decomposed without leaking storage and stream details across the codebase.
+
+If you prefer command handlers, you can still derive them trivially from the
+service methods. EquinoxJS keeps the more reusable boundary as the default.
 
 :::
 
