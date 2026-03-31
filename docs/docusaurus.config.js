@@ -8,7 +8,7 @@ const darkCodeTheme = prism.themes.dracula
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: "EquinoxJS",
-  tagline: "Lightweight event sourcing library",
+  tagline: "Composable event sourcing primitives for TypeScript applications",
   favicon: "img/Equinox-favicon.png",
 
   // Set the production url of your site here
@@ -84,7 +84,7 @@ const config = {
             items: [
               {
                 label: "Docs",
-                to: "/docs/intro",
+                to: "/docs/getting-started",
               },
             ],
           },

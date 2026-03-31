@@ -11,6 +11,18 @@ Manager." These are both valuable concepts, but exist at a higher level than
 a Reaction, that is all projections are reactions, but not all reactions are
 projections.
 
+Reactions are the primitive abstraction here. Projections and process managers
+are both special cases built on top of the same underlying shape:
+
+- A projection reacts to events in order to build a read model
+- A process manager reacts to events in order to coordinate more work
+
+See also:
+
+- [Projections](/docs/reactions/projections)
+- [PG Projections](/docs/reactions/pg-projections)
+- [Hotel example](/docs/examples/hotel)
+
 ## Example
 
 Imagine you have a group chat with your friends. After posting a message to the
@@ -60,8 +72,8 @@ Now that we have a notifier, we need something to actuate it when a message is
 sent.
 
 ```ts
-async function handler(stream: string, events: ITimelineEvent[]) {
-  const [category, streamId] = StreamName.parseCategoryAndId(stream)
+async function handler(stream: StreamName, events: ITimelineEvent[]) {
+  const [category, streamId] = StreamName.split(stream)
   if (category !== Message.CATEGORY) return
   const messageId = MessageId.parse(streamId)
   // We know that the MessageSent event is always the first event in the stream

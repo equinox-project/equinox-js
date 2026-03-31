@@ -11,6 +11,11 @@ Consistent Decisions against a Store derived from Events on a Stream. As Jeremie
 explained in his article, a Decider for a counter whose values must be between 0
 and 10 could look like this:
 
+EquinoxJS uses the decider as the core domain primitive, but deliberately keeps
+the programming model a little looser than some command-centric presentations of
+event sourcing. The library does not require a single command union or a single
+handler API shape.
+
 ```ts
 type Event = { type: "Incremented" } | { type: "Decremented" }
 type Command = { type: "Increment" } | { type: "Decrement" }
@@ -21,7 +26,7 @@ const evolve = (state: State, event: Event): State => {
     case "Incremented":
       return { count: state.count + 1 }
     case "Decremented":
-      return { count: state - 1 }
+      return { count: state.count - 1 }
   }
 }
 const decide = (command: Command, state: State): Event[] => {
@@ -92,10 +97,10 @@ function fold(state: State, events: Event[]) {
   for (const event of events) {
     switch (event.type) {
       case "ItemAdded":
-        state.add(event.data.itemId)
+        newState.add(event.data.itemId)
         break
       case "ItemRemoved":
-        state.delete(event.data.itemId)
+        newState.delete(event.data.itemId)
         break
     }
   }
@@ -109,13 +114,13 @@ performance requirements won't require mutability like this, but when it does
 matter it tends to really matter. Because of this you are asked to supply
 equinox with a `fold` function instead of an `evolve` function.
 
-The second divergence from the pattern has to do with Commands. We've come to
-reject the Command pattern entirely. Instead of exposing a union type of all
-possible commands we expose functions. This is due to the fact that a single
-Command DU implies a single return type for all commands. There are however
-cases where you want to return a result in addition to writing down a fact. A
-single Command DU becomes a burden at that point. Imagine the case of checking
-out of a hotel stay.
+The second divergence from the pattern has to do with Commands. We do not treat
+a command DU as the mandatory center of the design. Instead of exposing a union
+type of all possible commands we generally expose functions. This is due to the
+fact that a single Command DU implies a single return type for all commands.
+There are however cases where you want to return a result in addition to
+writing down a fact. A single Command DU becomes a burden at that point.
+Imagine the case of checking out of a hotel stay.
 
 ```ts
 type CheckoutResult = { type: "Ok" } | { type: "BalanceOutstanding"; amount: number }
@@ -198,8 +203,9 @@ class Service {
 }
 ```
 
-It should be noted that these modifications do not sacrifice the testability of
-the decider.
+These modifications do not sacrifice the testability of the decider. The domain
+still reduces cleanly to "given events, decide new events", but you retain more
+freedom over performance and API shape.
 
 ```ts
 const given = (events: Event[], decide: (state: State) => Event[]) => decide(fold(initial, events))

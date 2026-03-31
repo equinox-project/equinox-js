@@ -8,9 +8,14 @@
   text-align: center;
   position: relative;
   overflow: hidden;
-  background: url('/img/hero_banner.png') no-repeat center center;
+  background: url("/img/hero_banner.png") no-repeat center center;
   background-size: cover;
   color: white;
+}
+
+.heroBanner h1,
+.heroBanner p {
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
 }
 
 @media screen and (max-width: 996px) {

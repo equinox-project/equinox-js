@@ -4,6 +4,11 @@ The access strategy allows you to opt into custom loading or reloading
 algorithms. For most systems, `Unoptimized` is a safe default; you can always
 switch later.
 
+This is one of the main places where EquinoxJS exposes performance choices
+directly. Different stream shapes want different loading strategies, and the
+library prefers making that visible over hiding it behind a one-size-fits-all
+store API.
+
 # Unoptimized
 
 The first, and likely most used access strategy is the unoptimized one. It'll
@@ -146,7 +151,7 @@ export class Service {
   static create(context: DynamoStoreContext, cache?: ICachingStrategy) {
     const access = AccessStrategy.RollingState(Fold.toSnapshot)
     // prettier-ignore
-    const category = DynamoStoreCategory.create(context, "$UserIndex", Events.codec, Fold.fold, Fold.initial, access, cache)
+    const category = DynamoStoreCategory.create(context, "$UserIndex", Events.codec, Fold.fold, Fold.initial, cache, access)
     const resolve = () => Decider.forStream(category, StreamId.create("0"), null)
     return new Service(resolve)
   }

@@ -9,7 +9,7 @@ This is the default load option, always obtaining the latest state from the stor
 
 ```ts
 const decider = this.resolve(id)
-return decider.transact(decide, LoadOption.Requireload)
+return decider.transact(decide, LoadOption.RequireLoad)
 ```
 
 ## `RequireLeader`

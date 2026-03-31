@@ -8,6 +8,10 @@ the actual memory usage of your process. You'll need to fine tune it to your
 actual requirements. As an example if you have 1 million states, each of which
 is 50 bytes that's 50MB of memory.
 
+Caching in EquinoxJS is deliberately simple. It is there to make stream loads
+cheaper and smoother, not to act as a second consistency model hidden behind the
+store API.
+
 The cache doubles as a concurrency limiter on stream loads and guarantees that
 for each stream at most one load is happening concurrently.
 
@@ -39,4 +43,3 @@ const strategy = CachingStrategy.Cache(cache)
 Retain a single `state` per `stream_name` in the supplied cache.
 
 Prefix is used to segregate multiple folds per stream when they are stored in the cache.
-
