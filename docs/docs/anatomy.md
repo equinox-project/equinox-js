@@ -213,14 +213,14 @@ export class Service {
 
   readStatus(appointmentId: AppointmentId, userId: UserId) {
     const decider = this.resolve(appointmentId, userId)
-    decider.queryEx(Query.status)
+    return decider.queryEx(Query.status)
   }
 
   /** In many cases we do not need to fetch missing events because we can accept a stale value from the cache.
    *  We prefer making the staleness explicit in the method name */
   readStatusStale(appointmentId: AppointmentId, userId: UserId) {
     const decider = this.resolve(appointmentId, userId)
-    decider.queryEx(Query.status, LoadOption.AnyCachedValue)
+    return decider.queryEx(Query.status, LoadOption.AnyCachedValue)
   }
 }
 ```

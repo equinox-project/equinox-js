@@ -26,7 +26,7 @@ const evolve = (state: State, event: Event): State => {
     case "Incremented":
       return { count: state.count + 1 }
     case "Decremented":
-      return { count: state - 1 }
+      return { count: state.count - 1 }
   }
 }
 const decide = (command: Command, state: State): Event[] => {
@@ -97,10 +97,10 @@ function fold(state: State, events: Event[]) {
   for (const event of events) {
     switch (event.type) {
       case "ItemAdded":
-        state.add(event.data.itemId)
+        newState.add(event.data.itemId)
         break
       case "ItemRemoved":
-        state.delete(event.data.itemId)
+        newState.delete(event.data.itemId)
         break
     }
   }

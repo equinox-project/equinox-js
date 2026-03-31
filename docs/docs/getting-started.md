@@ -20,15 +20,7 @@ folding logic, decision functions per operation, and a small `Service` boundary
 that the rest of the application depends on.
 
 ```ts
-import {
-  Decider,
-  StreamId,
-  StreamName,
-  Uuid,
-  Codec,
-  ICache,
-  CachingStrategy,
-} from "@equinox-js/core"
+import { Decider, StreamId, StreamName, Uuid, Codec, ICache, CachingStrategy } from "@equinox-js/core"
 import { MessageDbCategory, MessageDbContext, AccessStrategy } from "@equinox-js/message-db"
 import { VolatileStore, MemoryStoreCategory } from "@equinox-js/memory-store"
 
@@ -39,7 +31,7 @@ export namespace Stream {
   export const category = "Account"
   export const id = StreamId.gen(AccountId.toString)
   export const decodeId = StreamId.dec(AccountId.parse)
-  export const match = StreamName.tryMatch(Category, decodeId)
+  export const match = StreamName.tryMatch(category, decodeId)
 }
 
 export namespace Events {
@@ -106,28 +98,14 @@ export class Service {
   static create(context: MessageDbContext, cache: ICache) {
     const caching = CachingStrategy.Cache(cache)
     const access = AccessStrategy.Unoptimized()
-    const category = MessageDbCategory.create(
-      context,
-      Stream.category,
-      Events.codec,
-      Fold.fold,
-      Fold.initial,
-      caching,
-      access,
-    )
+    const category = MessageDbCategory.create(context, Stream.category, Events.codec, Fold.fold, Fold.initial, caching, access)
     const resolve = (id: AccountId) => Decider.forStream(category, Stream.id(id), null)
     return new Service(resolve)
   }
 
   // Creates a service instance wired up against MemoryStore
   static createMem(store: VolatileStore<string>) {
-    const category = MemoryStoreCategory.create(
-      store,
-      Stream.category,
-      Events.codec,
-      Fold.fold,
-      Fold.initial,
-    )
+    const category = MemoryStoreCategory.create(store, Stream.category, Events.codec, Fold.fold, Fold.initial)
     const resolve = (id: AccountId) => Decider.forStream(category, Stream.id(id), null)
     return new Service(resolve)
   }
@@ -179,21 +157,25 @@ const createService = () => {
   return Service.createMem(store)
 }
 
+
 test("Depositing", async () => {
+  const accountId = AccountId.create()
   const service = createService()
-  await service.deposit("1", 100)
-  expect(await service.readBalance("1")).toEqual(100)
+  await service.deposit(accountId, 100)
+  expect(await service.readBalance(accountId)).toEqual(100)
 })
 
 test("Withdrawing without funds", async () => {
+  const accountId = AccountId.create()
   const service = createService()
-  await expect(service.withdraw("1", 100)).rejects.toThrow("Insufficient funds")
+  await expect(service.withdraw(accountId, 100)).rejects.toThrow("Insufficient funds")
 })
 
 test("Withdrawing with funds", async () => {
+  const accountId = AccountId.create()
   const service = createService()
-  await service.deposit("1", 100)
-  await service.withdraw("1", 25)
-  expect(await service.readBalance("1")).toEqual(75)
+  await service.deposit(accountId, 100)
+  await service.withdraw(accountId, 25)
+  expect(await service.readBalance(accountId)).toEqual(75)
 })
 ```

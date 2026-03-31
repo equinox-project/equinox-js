@@ -30,9 +30,9 @@ of event sourcing from you.
 - If you need cross-stream coordination to feel like a single ambient transaction, EquinoxJS will feel too explicit.
 - If your team does not want to think about replay, checkpointing, ordering and idempotency, the model will feel heavier than it should.
 
-## What deployment shapes does it cover?
+## What deployment paths are documented?
 
-The main ones:
+The primary ones today:
 
 - PostgreSQL via MessageDB
 - Serverless deployments via DynamoStore

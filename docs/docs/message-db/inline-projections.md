@@ -126,7 +126,7 @@ class Service {
   static create(ctx: MessageDbContext, cache: ICache) {
     const caching = CachingStrategy.Cache(cache)
     const access = AccessStrategy.LatestKnownEvent()
-    return MessageDbCategory.create(..., access, caching, PayerReadModel.onSync)
+    return MessageDbCategory.create(..., caching, access, PayerReadModel.onSync)
   }
 }
 ```

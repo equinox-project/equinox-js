@@ -72,8 +72,8 @@ Now that we have a notifier, we need something to actuate it when a message is
 sent.
 
 ```ts
-async function handler(stream: string, events: ITimelineEvent[]) {
-  const [category, streamId] = StreamName.parseCategoryAndId(stream)
+async function handler(stream: StreamName, events: ITimelineEvent[]) {
+  const [category, streamId] = StreamName.split(stream)
   if (category !== Message.CATEGORY) return
   const messageId = MessageId.parse(streamId)
   // We know that the MessageSent event is always the first event in the stream

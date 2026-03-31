@@ -16,7 +16,7 @@ If you already know event sourcing, the main promise is straightforward: Equinox
 gives you the important pieces needed to build production systems without
 wrapping the domain in handler abstractions, workflow runtimes or framework glue.
 
-Out of the box the project covers the main deployment shapes:
+The docs currently cover two primary production paths:
 
 - PostgreSQL via [MessageDB](/docs/message-db)
 - Serverless deployments via [DynamoStore](/docs/dynamo-store/architecture)
