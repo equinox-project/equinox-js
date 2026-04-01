@@ -13,11 +13,11 @@ In practice that means:
 
 - your domain stays centered on deciders, folds and services
 - commands are optional rather than forced into the core model
-- handlers and process managers can be composed from the same primitives
+- projections and process managers are composed from the same primitives
 - store-specific concerns such as access strategy, caching and projection
-  behaviour stay visible
+  behavior stay visible
 
-If you already know that event sourcing lives or dies on ordering, concurrency
+If you've already accepted that event sourcing lives or dies on ordering, concurrency
 and replay semantics, this style tends to age well.
 
 ## Who is it not for?
@@ -25,7 +25,7 @@ and replay semantics, this style tends to age well.
 EquinoxJS is probably not a good fit if you want the library to hide the shape
 of event sourcing from you.
 
-- If you want an end-to-end framework with built-in command handlers, transports and workflow abstractions, choose one.
+- If you want an end-to-end framework with built-in command handlers, transports, and workflow abstractions, choose one.
 - If your problem is better modeled as CRUD plus history, event sourcing will add complexity without much payoff.
 - If you need cross-stream coordination to feel like a single ambient transaction, EquinoxJS will feel too explicit.
 - If your team does not want to think about replay, checkpointing, ordering and idempotency, the model will feel heavier than it should.
