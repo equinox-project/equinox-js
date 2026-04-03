@@ -14,7 +14,7 @@ export class MessageDbWriter {
   ): Promise<MdbWriteResult> {
     try {
       const results = await this.pool.query({
-        text: `select write_message($1, $2, $3, $4, $5, $6)`,
+        text: `select write_message($1, $2, $3, $4::jsonb, $5::jsonb, $6)`,
         name: "write_message",
         values: [
           message.id || randomUUID(),
@@ -54,7 +54,7 @@ export class MessageDbWriter {
       for (let i = 0; i < messages.length; ++i) {
         const message = messages[i]
         const results = await client.query({
-          text: `select write_message($1, $2, $3, $4, $5, $6)`,
+          text: `select write_message($1, $2, $3, $4::jsonb, $5::jsonb, $6)`,
           name: "write_message",
           values: [
             message.id || randomUUID(),
@@ -147,8 +147,8 @@ function fromDb(row: any): ITimelineEvent<Format> {
     id: row.id,
     time: new Date(row.time),
     type: row.type,
-    data: row.data,
-    meta: row.metadata,
+    data: row.data ? JSON.stringify(row.data) : undefined,
+    meta: row.metadata ? JSON.stringify(row.metadata) : undefined,
     index: BigInt(row.position),
     isUnfold: false,
   }

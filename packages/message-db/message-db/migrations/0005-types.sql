@@ -7,9 +7,9 @@ BEGIN
     stream_name varchar,
     type varchar,
     position bigint,
-    global_position bigint,
-    data varchar,
-    metadata varchar,
+    global_position xid8,
+    data jsonb,
+    metadata jsonb,
     time timestamp
   );
 END$$;

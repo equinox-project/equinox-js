@@ -12,7 +12,7 @@ BEGIN
     RETURN NULL;
   END IF;
 
-  RETURN SPLIT_PART(_id, '+', 1);
+  RETURN SPLIT_PART(_id, '_', 1);
 END;
 $$ LANGUAGE plpgsql
 IMMUTABLE;

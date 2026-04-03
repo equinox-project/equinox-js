@@ -25,46 +25,18 @@ BEGIN
       stream_name::varchar,
       type::varchar,
       position::bigint,
-      global_position::bigint,
-      data::varchar,
-      metadata::varchar,
+      xid::xid8 as global_position,
+      data::jsonb,
+      metadata::jsonb,
       time::timestamp
     FROM
       messages
     WHERE
       stream_name = $1 AND
-      position >= $2';
-
-  IF get_stream_messages.condition IS NOT NULL THEN
-    IF current_setting('message_store.sql_condition', true) IS NULL OR
-        current_setting('message_store.sql_condition', true) = 'off' THEN
-      RAISE EXCEPTION
-        'Retrieval with SQL condition is not activated';
-    END IF;
-
-    _command := _command || ' AND
-      (%s)';
-    _command := format(_command, get_stream_messages.condition);
-  END IF;
-
-  _command := _command || '
+      position >= $2
     ORDER BY
-      position ASC';
-
-  IF get_stream_messages.batch_size != -1 THEN
-    _command := _command || '
-      LIMIT
-        $3';
-  END IF;
-
-  IF current_setting('message_store.debug_get', true) = 'on' OR current_setting('message_store.debug', true) = 'on' THEN
-    RAISE NOTICE '» get_stream_messages';
-    RAISE NOTICE 'stream_name ($1): %', get_stream_messages.stream_name;
-    RAISE NOTICE 'position ($2): %', get_stream_messages.position;
-    RAISE NOTICE 'batch_size ($3): %', get_stream_messages.batch_size;
-    RAISE NOTICE 'condition ($4): %', get_stream_messages.condition;
-    RAISE NOTICE 'Generated Command: %', _command;
-  END IF;
+      position ASC
+    LIMIT $3';
 
   RETURN QUERY EXECUTE _command USING
     get_stream_messages.stream_name,

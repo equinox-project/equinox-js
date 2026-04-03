@@ -1,11 +1,10 @@
-import { test, expect, afterAll, vi } from "vitest"
+import { test, expect, afterAll } from "vitest"
 import { MessageDbSource } from "../src/index.mjs"
 import { ICheckpoints, StreamsSink } from "@equinox-js/propeller"
 import { randomUUID } from "crypto"
 import { Pool } from "pg"
 import { MessageDbConnection } from "@equinox-js/message-db"
 import { ITimelineEvent, StreamName } from "@equinox-js/core"
-import { setTimeout } from "timers/promises"
 
 class MemoryCheckpoints implements ICheckpoints {
   checkpoints = new Map<string, bigint>()
@@ -78,6 +77,7 @@ test("Ships batches to the sink", async () => {
 
   await sourceP
 })
+
 test("it fails fast", async () => {
   const category = randomUUID().replace(/-/g, "")
 
