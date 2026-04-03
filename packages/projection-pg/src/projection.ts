@@ -1,4 +1,4 @@
-import { Client, Pool } from "pg"
+import type { Client, Pool } from "pg"
 import { collapseChanges } from "./collapse"
 import { Action, Change } from "./types"
 import { ident } from "./quote"

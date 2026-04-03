@@ -317,7 +317,7 @@ describe("Caching", () => {
     const res = await service2.readStale(cartId)
     expect(res).not.toEqual(freshRes)
     assertSpans({ name: "Query", [Tags.cache_hit]: true })
-    expect(getStoreSpans()[0].attributes).not.to.have.property(Tags.batches)
+    expect(getStoreSpans()[0].attributes).not.toHaveProperty(Tags.batches)
     memoryExporter.reset()
     await service2.read(cartId)
     assertSpans({ name: "Query", [Tags.batches]: 1, [Tags.cache_hit]: true })
@@ -327,7 +327,7 @@ describe("Caching", () => {
     // As the cache is up-to-date, we can transact against the cached value and do a null transaction without a round-trip
     await CartHelpers.addAndThenRemoveItemsOptimisticManyTimesExceptTheLastOne(cartContext, cartId, skuId2, service1, 1)
     assertSpans({ name: "Transact", [Tags.cache_hit]: true, [Tags.allow_stale]: true })
-    expect(getStoreSpans()[0].attributes).not.to.have.property(Tags.batches)
+    expect(getStoreSpans()[0].attributes).not.toHaveProperty(Tags.batches)
     memoryExporter.reset()
     // As the cache is up-to-date, we can do an optimistic append, saving a Read round-trip
     const skuId3 = randomUUID() as Cart.SkuId
@@ -335,7 +335,7 @@ describe("Caching", () => {
 
     // this time, we did something, so we see the append call
     assertSpans({ name: "Transact", [Tags.cache_hit]: true, [Tags.append_count]: 1 })
-    expect(getStoreSpans()[0].attributes).not.to.have.property(Tags.batches)
+    expect(getStoreSpans()[0].attributes).not.toHaveProperty(Tags.batches)
 
     // If we don't have a cache attached, we don't benefit from / pay the price for any optimism
     memoryExporter.reset()
