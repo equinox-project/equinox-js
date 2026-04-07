@@ -63,7 +63,7 @@ namespace Impl {
       }
     }
 
-    return Object.fromEntries(Internal.keepMap(all, chooseStream))
+    return Object.fromEntries(Internal.filterMap(all, chooseStream))
   }
 
   // Includes optional hydrating of events with event bodies and/or metadata (controlled via hydrating/maybeLoad args)
@@ -82,7 +82,7 @@ namespace Impl {
     const cache = new Map<IndexStreamId, ITimelineEvent<EncodedBody>[]>()
     const materializeSpans = async () => {
       const streamsToLoad = new Set(
-        Internal.keepMap(buffer, (span) => (!cache.has(span.p) ? span.p : undefined)),
+        Internal.filterMap(buffer, (span) => (!cache.has(span.p) ? span.p : undefined)),
       )
       const loadsRequired = Array.from(streamsToLoad).map((p) => async () => {
         const items = await streamEvents[p]()
@@ -291,7 +291,7 @@ export class DynamoStoreSource {
   private inner: TailingFeedSource
   private client: DynamoStoreSourceClient
 
-  stats: TailingFeedSource['stats']
+  stats: TailingFeedSource["stats"]
 
   constructor(
     index: AppendsIndex.Reader,

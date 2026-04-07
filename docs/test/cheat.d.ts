@@ -25,4 +25,4 @@ declare module "@domain/identifiers" {
   }
 }
 
-declare function keepMap<T, V>(arr: T[], fn: (item: T) => V | undefined): V[]
+declare function filterMap<T, V>(arr: T[], fn: (item: T) => V | undefined): V[]

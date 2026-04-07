@@ -1,6 +1,6 @@
 import { setTimeout } from "timers/promises"
 
-export function keepMap<T, V>(arr: T[], map: (item: T) => V | null | undefined): V[] {
+export function filterMap<T, V>(arr: T[], map: (item: T) => V | null | undefined): V[] {
   const result = new Array<V>(arr.length)
   let idx = 0
   for (let i = 0; i < arr.length; i++) {
@@ -11,7 +11,7 @@ export function keepMap<T, V>(arr: T[], map: (item: T) => V | null | undefined):
   return result
 }
 
-export function keepMapRev<T, V>(arr: T[], map: (item: T) => V | null | undefined): V[] {
+export function filterMapRev<T, V>(arr: T[], map: (item: T) => V | null | undefined): V[] {
   const result = new Array<V>(arr.length)
   let idx = 0
   for (let i = arr.length - 1; i >= 0; i--) {

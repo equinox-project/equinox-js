@@ -963,8 +963,8 @@ namespace Query {
       [Tags.loaded_count]: events.length,
     })
 
-    const keepMap = direction === Direction.Forward ? Internal.keepMap : Internal.keepMapRev
-    const decoded = keepMap(events, (x) => x[1])
+    const filterMap = direction === Direction.Forward ? Internal.filterMap : Internal.filterMapRev
+    const decoded = filterMap(events, (x) => x[1])
     const minMax = events.reduce(
       (acc, [x]): [number, number] => {
         if (acc == null) return [x.i, x.i]

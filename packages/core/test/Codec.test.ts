@@ -1,7 +1,7 @@
 import { describe, test, expect } from "vitest"
 import { Codec } from "../src"
 import { z } from "zod"
-import { keepMap } from "../src/lib/Internal"
+import { filterMap } from "../src/lib/Internal"
 
 describe("Codec", () => {
   describe("json", () => {
@@ -118,7 +118,7 @@ describe("Codec", () => {
       const codec = Codec.keep(Codec.json(), (e): e is any => e.type === "Hello")
       const events = [{ type: "Hello" }, { type: "Goodbye" }]
       const encoded = events.map((e) => codec.encode(e))
-      expect(keepMap(encoded as any, codec.decode)).toEqual([{ type: "Hello" }])
+      expect(filterMap(encoded as any, codec.decode)).toEqual([{ type: "Hello" }])
     })
   })
 
@@ -132,7 +132,7 @@ describe("Codec", () => {
         { type: "OldEventTypeThatWeDoNotUseAnymore" },
       ]
       const encoded = events.map((e) => codec.encode(e as any))
-      expect(keepMap(encoded as any, codec.decode)).toEqual([
+      expect(filterMap(encoded as any, codec.decode)).toEqual([
         { type: "Hello" },
         { type: "Goodbye" },
       ])

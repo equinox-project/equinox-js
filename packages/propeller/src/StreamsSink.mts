@@ -23,7 +23,7 @@ export namespace StreamSpan {
   }
 
   export const merge = (min: bigint, spans: StreamSpan[]): StreamSpan[] => {
-    const candidates = Internal.keepMap(spans, (span) => {
+    const candidates = Internal.filterMap(spans, (span) => {
       if (span.length === 0) return undefined
       const trimmed = dropBeforeIndex(min, span)
       if (!trimmed || trimmed.length === 0) return undefined

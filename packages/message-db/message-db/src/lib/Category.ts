@@ -15,7 +15,7 @@ import { Format, MessageDbReader, MessageDbWriter } from "./MessageDbClient.js"
 import { Client, Pool } from "pg"
 import { CachingCategory, ICachingStrategy, IReloadableCategory, Tags } from "@equinox-js/core"
 
-const keepMap = Equinox.Internal.keepMap
+const filterMap = Equinox.Internal.filterMap
 
 type MdbSyncResult = { type: "Written"; token: StreamToken } | { type: "ConflictUnknown" }
 
@@ -64,7 +64,7 @@ export class MessageDbContext {
     // prettier-ignore
     const iterator = Read.loadForwardsFrom(conn.read, batchSize, maxBatches, streamName, version, requireLeader)
     for await (const [lastVersion, events] of iterator) {
-      state = fold(state, keepMap(events, decode))
+      state = fold(state, filterMap(events, decode))
       version = lastVersion
     }
 
@@ -79,7 +79,7 @@ export class MessageDbContext {
     initial: State,
   ): Promise<TokenAndState<State>> {
     const [version, events] = await Read.loadLastEvent(this.conn.read, requireLeader, streamName)
-    return { token: Token.create(version), state: fold(initial, keepMap(events, decode)) }
+    return { token: Token.create(version), state: fold(initial, filterMap(events, decode)) }
   }
 
   async loadSnapshot<Event>(
@@ -168,9 +168,11 @@ export namespace AccessStrategy {
   })
 }
 
-class InternalCategory<Event, State, Context>
-  implements IReloadableCategory<Event, State, Context>
-{
+class InternalCategory<Event, State, Context> implements IReloadableCategory<
+  Event,
+  State,
+  Context
+> {
   constructor(
     private readonly context: MessageDbContext,
     private readonly categoryName: string,

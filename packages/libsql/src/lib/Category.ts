@@ -15,7 +15,7 @@ import { CachingCategory, ICachingStrategy, IReloadableCategory, Tags } from "@e
 import { Client, Transaction } from "@libsql/client"
 import { randomUUID } from "crypto"
 
-const keepMap = Equinox.Internal.keepMap
+const filterMap = Equinox.Internal.filterMap
 
 type LibSqlSyncResult = { type: "Written"; token: StreamToken } | { type: "ConflictUnknown" }
 
@@ -59,7 +59,7 @@ export class LibSqlContext {
     const { conn, batchSize, maxBatches } = this
     const iterator = Read.loadForwardsFrom(conn.read, batchSize, maxBatches, streamName, version)
     for await (const [lastVersion, events] of iterator) {
-      state = fold(state, keepMap(events, decode))
+      state = fold(state, filterMap(events, decode))
       version = lastVersion
     }
 
@@ -77,7 +77,7 @@ export class LibSqlContext {
       [Tags.loaded_count]: 1,
       [Tags.read_version]: Number(version),
     })
-    return { token: Token.create(version), state: fold(initial, keepMap(events, decode)) }
+    return { token: Token.create(version), state: fold(initial, filterMap(events, decode)) }
   }
 
   async loadSnapshot<Event, State>(
@@ -118,7 +118,7 @@ export class LibSqlContext {
     // prettier-ignore
     const iterator = Read.loadForwardsFrom(conn.read, batchSize, maxBatches, streamName, streamVersion)
     for await (const [version, events] of iterator) {
-      state = fold(state, keepMap(events, decode))
+      state = fold(state, filterMap(events, decode))
       streamVersion = version
     }
     return { token: Token.create(streamVersion), state }
@@ -193,9 +193,11 @@ export namespace AccessStrategy {
   export const RollingState = <E, S>(toSnapshot: (state: S) => E): AccessStrategy<E, S> => ({ type: "RollingState", toSnapshot })
 }
 
-class InternalCategory<Event, State, Context>
-  implements IReloadableCategory<Event, State, Context>
-{
+class InternalCategory<Event, State, Context> implements IReloadableCategory<
+  Event,
+  State,
+  Context
+> {
   constructor(
     private readonly context: LibSqlContext,
     private readonly categoryName: string,

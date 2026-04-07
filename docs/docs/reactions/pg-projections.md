@@ -133,7 +133,7 @@ function change(id: AppointmentId, version: bigint, event: Appointment.Event) {
 function changes(streamName: string, events: ITimelineEvent[]): Change[] {
   const id = AppointmentId.parse(StreamName.parseId(streamName))
   const version = events[events.length - 1].index
-  return keepMap(events, Appointment.codec.decode).map((ev) => change(id, version, ev))
+  return filterMap(events, Appointment.codec.decode).map((ev) => change(id, version, ev))
 }
 
 export const createHandler = (pool: Pool) => createProjection(projection, pool, changes)
