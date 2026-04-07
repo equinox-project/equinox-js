@@ -480,7 +480,9 @@ describe("Immediately consistent projections", () => {
     const project = vi.fn().mockResolvedValue(undefined)
     const service = ContactPreferencesService.createService(client, project)
     const id = randomUUID() as ContactPreferences.ClientId
-    const value = ContactPreferences.randomPreferences()
+    let value = ContactPreferences.randomPreferences()
+    // manually set at least one value to true to ensure we're not just getting the default
+    value.littlePromotions = true
 
     await service.update(id, value)
     const expectedId = ContactPreferences.ClientId.toStreamId(id)
