@@ -13,7 +13,13 @@ interface CreateOptions {
    * @default 500
    */
   batchSize?: number
-  /** The name of the consumer group to use for checkpointing */
+  /**
+   * The name used for checkpointing and tracing.
+   *
+   * When using consumer groups, this library does not derive a per-member
+   * checkpoint key automatically. If each member should checkpoint
+   * independently, make `groupName` unique per member yourself.
+   */
   groupName: string
   /** The checkpointer to use for checkpointing */
   checkpoints: ICheckpoints
@@ -25,8 +31,12 @@ interface CreateOptions {
   tailSleepIntervalMs: number
   /** sleep time in ms between checkpoint commits */
   checkpointIntervalMs?: number
-  /** When using consumer groups: the index of the consumer. 0 <= i <= consumerGroupSize
-   * each consumer in the group maintains their own checkpoint */
+  /**
+   * When using consumer groups: the index of the consumer. 0 <= i <= consumerGroupSize.
+   *
+   * MessageDB uses this to partition streams across consumers. Checkpointing is
+   * still keyed by `groupName`.
+   */
   consumerGroupMember?: number
   /** The number of group consumers you have deployed */
   consumerGroupSize?: number

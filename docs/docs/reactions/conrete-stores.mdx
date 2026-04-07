@@ -6,7 +6,7 @@ sidebar_position: 1
 
 Equinox stores expose a `source` package to wire reactions up. In the [previous
 section](/docs/reactions) we created a `handler`. Source packages interact with
-`Sink`s rather than handler functions so we must first construct a sink wrapping 
+`Sink`s rather than handler functions so we must first construct a sink wrapping
 the handler.
 
 ```ts
@@ -21,8 +21,8 @@ const sink = StreamsSink.create({
 })
 ```
 
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
+import Tabs from "@theme/Tabs"
+import TabItem from "@theme/TabItem"
 
 <Tabs>
   <TabItem value="MessageDB">
@@ -76,7 +76,7 @@ contract a consumer group you will need to wipe the checkpoints and have all of
 the consumers in the group start from the current lowest checkpoint.
 
 You're in control of the `groupName` and should ensure that it is unique across
-all consumers in the group (e.g. by apending the `consumerGroupMember` to the
+all consumers in the group (e.g. by appending the `consumerGroupMember` to the
 group name). This is because the group name is used for checkpointing.
 
 Using a hash of the ID guarantees that all messages for a particular stream will
@@ -152,5 +152,6 @@ process.on("SIGTERM", () => ctrl.abort())
 
 await source.start(ctrl.signal)
 ```
+
   </TabItem>
 </Tabs>

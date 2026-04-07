@@ -36,3 +36,12 @@ const source = MessageDbSource.create({
 const ctrl = new AbortController()
 source.start(ctrl.signal)
 ```
+
+## Consumer Groups
+
+When using `consumerGroupMember` and `consumerGroupSize`, MessageDB partitions
+streams across consumers based on a hash of the stream id.
+
+Checkpointing still uses `groupName` as-is. If each consumer in the group
+should maintain its own checkpoint, make `groupName` unique per member yourself,
+for example `InvoiceAutoEmailer-0`, `InvoiceAutoEmailer-1`, and so on.
