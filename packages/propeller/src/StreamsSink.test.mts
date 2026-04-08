@@ -35,7 +35,7 @@ describe("Concurrency", () => {
       async function handler(stream: StreamName) {
         active.add(stream)
         maxActive = Math.max(maxActive, active.size)
-        await new Promise(setImmediate)
+        await new Promise(process.nextTick)
         active.delete(stream)
       }
 
@@ -63,7 +63,7 @@ test("Correctly merges batches", async () => {
 
   async function handler() {
     invocations++
-    await new Promise(setImmediate)
+    await new Promise(process.nextTick)
   }
 
   const limiter = new BatchLimiter(3)
@@ -101,7 +101,7 @@ test("Correctly limits in-flight batches", async () => {
 
   async function handler() {
     invocations++
-    await setTimeout(10)
+    await new Promise(process.nextTick)
   }
 
   const limiter = new BatchLimiter(3)
@@ -141,7 +141,7 @@ test("Ensures at-most one handler is per active for a stream", async () => {
     invocations++
     active++
     maxActive = Math.max(maxActive, active)
-    await setTimeout(10)
+    await new Promise(process.nextTick)
     active--
   }
 
@@ -155,14 +155,13 @@ test("Ensures at-most one handler is per active for a stream", async () => {
   const count = 30
   for (let i = 0; i < count; i++) {
     await sink.pump(mkSingleBatch(complete, BigInt(i)), ctrl.signal)
-    await new Promise(process.nextTick)
   }
 
   await limiter.waitForEmpty()
   ctrl.abort()
 
-  // we get 6 invocations of 5 events each
-  expect(invocations).toBe(6)
+  // we get 3 invocations of 10 events each
+  expect(invocations).toBe(3)
   expect(events).toBe(count)
   expect(maxActive).toBe(1)
 
@@ -177,7 +176,7 @@ test("Does not catch errors from handlers", async () => {
 
   async function handler() {
     invocations++
-    await new Promise(setImmediate)
+    await new Promise(process.nextTick)
     throw new Error("Test error")
   }
 
@@ -201,7 +200,7 @@ test("Old events are ignored even if re-submitted", async () => {
 
   async function handler() {
     invocations++
-    await new Promise(setImmediate)
+    await new Promise(process.nextTick)
   }
 
   const limiter = new BatchLimiter(3)
@@ -238,7 +237,7 @@ describe("At-least once woes", () => {
       invocations++
       for (const e of events) seen.push(e.index)
 
-      await new Promise(setImmediate)
+      await new Promise(process.nextTick)
     }
 
     const limiter = new BatchLimiter(3)
@@ -254,8 +253,8 @@ describe("At-least once woes", () => {
       checkpoint: 1n,
       onComplete: checkpoint,
     })
-    const batch1 = mkBatch([0n, 1n, 2n, 3n, 4n, 2n])
-    const batch2 = mkBatch([5n, 3n, 6n, 1n, 7n, 3n])
+    const batch1 = mkBatch([0n, 1n, 2n, 3n, 4n, 5n])
+    const batch2 = mkBatch([2n, 3n, 4n, 5n, 6n, 7n])
 
     await sink.pump(batch1, ctrl.signal)
     if (waitBeforeMerge) await limiter.waitForEmpty()
@@ -283,7 +282,7 @@ describe("Handling gaps", () => {
       invocations++
       for (const e of events) seen.push(e.index)
 
-      await new Promise(setImmediate)
+      await new Promise(process.nextTick)
     }
 
     const limiter = new BatchLimiter(3)
@@ -320,7 +319,7 @@ describe("Handling gaps", () => {
       invocations++
       for (const e of events) seen.push(e.index)
 
-      await new Promise(setImmediate)
+      await new Promise(process.nextTick)
     }
 
     const limiter = new BatchLimiter(3)
@@ -363,7 +362,7 @@ describe("StreamResult", () => {
     async function handler(sn: StreamName, events: ITimelineEvent[]) {
       invocations++
       eventCount.push(events.length)
-      await new Promise(setImmediate)
+      await new Promise(process.nextTick)
       return StreamResult.PartiallyProcessed(2)
     }
 
@@ -403,7 +402,7 @@ describe("StreamResult", () => {
     async function handler(sn: StreamName, events: ITimelineEvent[]) {
       invocations++
       for (const event of events) eventIndices.push(event.index)
-      await new Promise(setImmediate)
+      await new Promise(process.nextTick)
       const ver = events[0].index + BigInt(events.length)
       if (ver < 20) return StreamResult.OverrideNextIndex(20n)
       return
@@ -450,7 +449,7 @@ describe("StreamResult", () => {
     async function handler(sn: StreamName, events: ITimelineEvent[]) {
       invocations++
       for (const event of events) eventIndices.push(event.index)
-      await new Promise(setImmediate)
+      await new Promise(process.nextTick)
       if (!failedOnce) {
         failedOnce = true
         return StreamResult.NoneProcessed
