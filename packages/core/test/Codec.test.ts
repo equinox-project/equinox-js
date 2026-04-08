@@ -119,9 +119,17 @@ describe("Codec", () => {
     type Event = { type: "Hello"; data: { hello: Date } } | { type: "Goodbye" }
     const codec = Codec.body<Event>(Codec.json(), { Hello: HelloSchema, Goodbye: null })
     test("roundtrips", () => {
-      const events: Event[] = [{ type: "Hello", data: { hello: new Date() } }, { type: "Goodbye" }]
-      for (const event of events) {
+      const now = new Date()
+      const tt: [Event, any][] = [
+        [
+          { type: "Hello", data: { hello: now } },
+          { type: "Hello", data: JSON.stringify({ hello: now.toISOString() }) },
+        ],
+        [{ type: "Goodbye" }, { type: "Goodbye" }],
+      ]
+      for (const [event, expected] of tt) {
         const encoded = codec.encode(event)
+        expect(encoded).toEqual(expected)
         const decoded = codec.decode(encoded as any)
         expect(decoded).toStrictEqual(event)
       }
