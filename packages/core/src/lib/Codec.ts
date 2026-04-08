@@ -15,6 +15,11 @@ type MapMeta<E, C> = (
   meta?: Record<string, any>
 }
 
+interface BodyCodec<T, V> {
+  encode(t: T): V
+  decode(v: V): T
+}
+
 /** Naive json codec, will stringify data and meta */
 export function json<E extends DomainEvent>(): ICodec<E, string, void>
 export function json<E extends DomainEvent, C>(mapMeta: MapMeta<E, C>): ICodec<E, string, C>
@@ -52,8 +57,48 @@ export namespace Upcast {
       const upcast = mapping[e.type as E["type"]]
       if (!upcast) return
       const data = e.data ? upcast(e.data) : undefined
-      return { type: e.type, data } as E
+      return { ...e, data } as E
     }
+}
+
+type BodyMappingValue<E> = "data" extends keyof E
+  ? BodyCodec<E extends { data: infer Data } ? Data : never, Record<string, any>>
+  : null
+
+type BodyMapping<E extends DomainEvent> = {
+  [P in E["type"]]: BodyMappingValue<Extract<E, { type: P }>>
+}
+
+export function body<E extends DomainEvent, Format = string, Ctx = void>(
+  inner: ICodec<DomainEvent, Format, Ctx>,
+  schema: BodyMapping<E>,
+): ICodec<E, Format, Ctx> {
+  const decodeBody = (ev: DomainEvent): E => {
+    const type = ev.type as E["type"]
+    const s = schema[type]
+    if (s === null) {
+      const res = { ...ev }
+      delete res.data
+      return res as E
+    }
+    return { ...ev, data: s.decode(ev.data!) } as any as E
+  }
+
+  const encodeBody = (event: E, ctx: Ctx) => {
+    const s = schema[event.type as E["type"]]
+    if (s === null) return inner.encode(event, ctx)
+    return inner.encode({ ...event, data: s.encode(event.data as any) }, ctx)
+  }
+
+  return {
+    decode(e) {
+      const decoded = inner.decode(e)
+      if (!decoded) return
+      if (!(decoded.type in schema)) return
+      return decodeBody(decoded)
+    },
+    encode: encodeBody,
+  }
 }
 
 export const upcast = <E extends DomainEvent, Ctx = void>(

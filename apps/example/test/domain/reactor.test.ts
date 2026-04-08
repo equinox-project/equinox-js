@@ -17,11 +17,13 @@ describe("reactor", () => {
     const invoiceId = InvoiceId.create()
 
     await payer.updateProfile(payerId, { email: "test@example.com", name: "Test User" })
-    await invoice.raise(invoiceId, { payer_id: payerId, amount: 100, due_date: new Date('2021-01-01T12:00:00Z')})
+    await invoice.raise(invoiceId, {
+      payer_id: payerId,
+      amount: 100,
+      due_date: new Date("2021-01-01T12:00:00Z"),
+    })
     await store.handleFrom(0n, handler)
 
-    expect(await service.inspectState(invoiceId)).toMatchObject({
-      type: "EmailSent",
-    })
+    expect(await service.inspectState(invoiceId)).toMatchObject({ type: "EmailSent" })
   })
 })

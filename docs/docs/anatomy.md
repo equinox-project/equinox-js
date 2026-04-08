@@ -68,11 +68,13 @@ import * as z from "zod"
 import { Codec } from "@equinox-js/core"
 
 export namespace Events {
-  // prettier-ignore
-  const date = z.string().datetime().transform((x) => new Date(x))
-  export const Timestamp = z.object({ timestamp: date })
+  const DateTime = z.codec(z.iso.datetime(), z.date(), {
+    encode: (date) => date.toISOString(),
+    decode: (iso) => new Date(iso),
+  })
+  export const Timestamp = z.object({ timestamp: DateTime })
   export type Timestamp = z.infer<typeof Timestamp>
-  export const ActualsOverridden = z.object({ checkedIn: date, checkedOut: date })
+  export const ActualsOverridden = z.object({ checkedIn: DateTime, checkedOut: DateTime })
   export type ActualsOverridden = z.infer<typeof ActualsOverridden>
 
   export type Event =
@@ -80,14 +82,11 @@ export namespace Events {
     | { type: "CheckedOut"; data: Timestamp }
     | { type: "ActualsOverridden"; data: ActualsOverridden }
 
-  export const codec = Codec.upcast<Event>(
-    Codec.json(),
-    Codec.Upcast.body({
-      CheckedIn: Timestamp.parse,
-      CheckedOut: Timestamp.parse,
-      ActualsOverridden: ActualsOverridden.parse,
-    }),
-  )
+  export const codec = Codec.body<Event>(Codec.json(), {
+    CheckedIn: Timestamp,
+    CheckedOut: Timestamp,
+    ActualsOverridden: ActualsOverridden,
+  })
 }
 ```
 

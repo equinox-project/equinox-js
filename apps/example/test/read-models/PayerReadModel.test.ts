@@ -25,6 +25,7 @@ function execute(fn: (client: PoolClient) => Promise<void>) {
   }
 }
 
+// prettier-ignore
 describe("PayerReadModel", () => {
   test("Inserting a payer", () =>
     execute(async (client) => {
@@ -48,7 +49,6 @@ describe("PayerReadModel", () => {
     execute(async (client) => {
       const id = PayerId.create()
       const streamId = Payer.Stream.streamId(id)
-
       await PayerReadModel.project(client, streamId, { name: "Test", email: "test@example.com" }, 1n)
       await PayerReadModel.project(client, streamId, null, 2n)
     }))

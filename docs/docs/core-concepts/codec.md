@@ -53,50 +53,42 @@ JSON. That is, you cannot use complex types such as `Date` or `BigInt` in your
 event bodies.
 
 In order to make it easier for you to use such types in your domain we do offer
-utilities for upcasting events.
+utilities for bidirectional transformations on events.
 
 ```ts
 import { Codec } from "@equinox-js/core"
-import * as z from 'zod'
+import * as z from "zod"
 
-const date = z
-  .string()
-  .datetime()
-  .transform((x) => new Date(x))
-const CheckedInSchema = z.object({ at: date })
-const CheckedOutSchema = z.object({ at: date })
-const ChargedSchema = z.object({ chargeId: z.string().uuid(), amount: z.number(), at: date })
-const PaidSchema = z.object({ paymentId: z.string().uuid(), amount: z.number(), at: date })
+const DateTime = z.codec(z.iso.datetime(), z.date(), {
+  encode: (date) => date.toISOString(),
+  decode: (iso) => new Date(iso),
+})
+const CheckedInSchema = z.object({ at: DateTime })
+const CheckedOutSchema = z.object({ at: DateTime })
+const ChargedSchema = z.object({ chargeId: z.string().uuid(), amount: z.number(), at: DateTime })
+const PaidSchema = z.object({ paymentId: z.string().uuid(), amount: z.number(), at: DateTime })
 type Event =
   | { type: "CheckedIn"; data: z.infer<typeof CheckedInSchema> }
   | { type: "CheckedOut"; data: z.infer<typeof CheckedOutSchema> }
   | { type: "Charged"; data: z.infer<typeof ChargedSchema> }
   | { type: "Paid"; data: z.infer<typeof PaidSchema> }
 
-const codec = Codec.upcast<Event>(
-  Codec.json(),
-  Codec.Upcast.body({
-    CheckedIn: CheckedInSchema.parse,
-    CheckedOut: CheckedOutSchema.parse,
-    Charged: ChargedSchema.parse,
-    Paid: PaidSchema.parse,
-  }),
-)
+const codec = Codec.body<Event>(Codec.json(), {
+  CheckedIn: CheckedInSchema,
+  CheckedOut: CheckedOutSchema,
+  Charged: ChargedSchema,
+  Paid: PaidSchema,
+})
 ```
 
-When upcasting is used, the `decode` method of the resulting codec will drop
-events whose types are not included in the mapping. This is because it's a
-common evolution in event sourced systems for events to become dead weight, or
-unnecessary. By providing an upcast mapping you've essentially defined exactly
-the events you care about and the codec will respect that by returning `undefined`
-for events outside the mapping, and throwing when your upcast fails.
-
-:::caution
-
-When utilising something like the above transformation it is essential that the complex types
-implement a `toJSON` to ensure successful round-tripping of your data.
-
-:::
+`Codec.body` accepts a mapping of event types to codecs. zod v4 happens to
+implement the codec interface so can be used directly. If an event type arrives
+that is not included in the mapping it will be silently dropped. This is
+because it's a common evolution in event sourced systems for events to become
+dead weight, or unnecessary. By providing a body mapping you've essentially
+defined exactly the events you care about and the codec will respect that by
+returning `undefined` for events outside the mapping, and throwing when your
+decode or encode fails.
 
 # Metadata
 

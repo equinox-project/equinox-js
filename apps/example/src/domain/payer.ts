@@ -5,12 +5,11 @@ import { equals } from "ramda"
 import * as Config from "../config/equinox.js"
 import { Context } from "../context/context.js"
 import * as PayerReadModel from "../read-models/PayerReadModel.js"
-import { AccessStrategy } from "@equinox-js/message-db"
 
 export namespace Stream {
   export const category = "Payer"
-  export const streamId = StreamId.gen(PayerId.toString)
-  export const decodeId = StreamId.dec(PayerId.parse)
+  export const streamId = StreamId.gen(PayerId.encode)
+  export const decodeId = StreamId.dec(PayerId.decode)
   export const tryMatch = StreamName.tryMatch(category, decodeId)
   export const name = StreamName.gen(category, streamId)
 }
@@ -18,19 +17,16 @@ export namespace Stream {
 export namespace Events {
   export const PayerProfile = z.object({
     name: z.string(),
-    email: z.string().email(),
+    email: z.email(),
   })
   export type PayerProfile = z.infer<typeof PayerProfile>
 
   export type Event = { type: "PayerProfileUpdated"; data: PayerProfile } | { type: "PayerDeleted" }
 
-  export const codec = Codec.upcast<Event>(
-    Codec.json(Context.create),
-    Codec.Upcast.body({
-      PayerProfileUpdated: PayerProfile.parse,
-      PayerDeleted: () => undefined,
-    }),
-  )
+  export const codec = Codec.body<Event>(Codec.json(Context.create), {
+    PayerProfileUpdated: PayerProfile,
+    PayerDeleted: null,
+  })
 }
 
 export namespace Fold {

@@ -1,6 +1,6 @@
 import { describe, test, expect } from "vitest"
 import { Codec } from "../src"
-import { z } from "zod"
+import z from "zod"
 import { keepMap } from "../src/lib/Internal"
 
 describe("Codec", () => {
@@ -39,10 +39,7 @@ describe("Codec", () => {
   describe("upcast", () => {
     describe("with zod", () => {
       const HelloSchema = z.object({
-        hello: z
-          .string()
-          .datetime()
-          .transform((x) => new Date(x)),
+        hello: z.iso.datetime().transform((x) => new Date(x)),
       })
       const codec = Codec.upcast(Codec.json(), Codec.Upcast.body({ Hello: HelloSchema.parse }))
 
@@ -110,6 +107,36 @@ describe("Codec", () => {
         const encoded = codec.encode(event)
         expect(() => codec.decode(encoded as any)).toThrow()
       })
+    })
+  })
+
+  describe("body", () => {
+    const datetime = z.codec(z.iso.datetime(), z.date(), {
+      encode: (date) => date.toISOString(),
+      decode: (iso) => new Date(iso),
+    })
+    const HelloSchema = z.object({ hello: datetime })
+    type Event = { type: "Hello"; data: { hello: Date } } | { type: "Goodbye" }
+    const codec = Codec.body<Event>(Codec.json(), { Hello: HelloSchema, Goodbye: null })
+    test("roundtrips", () => {
+      const events: Event[] = [{ type: "Hello", data: { hello: new Date() } }, { type: "Goodbye" }]
+      for (const event of events) {
+        const encoded = codec.encode(event)
+        const decoded = codec.decode(encoded as any)
+        expect(decoded).toStrictEqual(event)
+      }
+    })
+    test("unknown event type is dropped", () => {
+      const event = { type: "HowdyHo", data: "{}" }
+      expect(codec.decode(event as any)).toBeUndefined()
+    })
+    test("encode fails", () => {
+      const event: any = JSON.stringify({ type: "Hello", data: { hello: "hello" } })
+      expect(() => codec.encode(event)).toThrow()
+    })
+    test("decode fails", () => {
+      const event = { type: "Hello", data: JSON.stringify({ hello: "invalid" }) }
+      expect(() => codec.decode(event as any)).toThrow()
     })
   })
 

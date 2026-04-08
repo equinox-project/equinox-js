@@ -7,19 +7,20 @@ import { Context } from "../context/context.js"
 
 export namespace Stream {
   export const category = "Invoice"
-  export const streamId = StreamId.gen(InvoiceId.toString)
-  export const decodeId = StreamId.dec(InvoiceId.parse)
+  export const streamId = StreamId.gen(InvoiceId.encode)
+  export const decodeId = StreamId.dec(InvoiceId.decode)
   export const tryMatch = StreamName.tryMatch(category, decodeId)
 }
 
 export namespace Events {
+  const DateTime = z.codec(z.iso.datetime(), z.date(), {
+    encode: (date) => date.toISOString(),
+    decode: (iso) => new Date(iso),
+  })
   export const InvoiceRaised = z.object({
-    payer_id: z.string().transform(PayerId.parse),
+    payer_id: PayerId,
     amount: z.number(),
-    due_date: z
-      .string()
-      .datetime()
-      .transform((x) => new Date(x)),
+    due_date: DateTime,
   })
   export type InvoiceRaised = z.infer<typeof InvoiceRaised>
 
@@ -31,14 +32,11 @@ export namespace Events {
     | { type: "PaymentReceived"; data: Payment }
     | { type: "InvoiceFinalized" }
 
-  export const codec = Codec.upcast<Event>(
-    Codec.json(Context.create),
-    Codec.Upcast.body({
-      InvoiceRaised: InvoiceRaised.parse,
-      PaymentReceived: Payment.parse,
-      InvoiceFinalized: () => undefined,
-    }),
-  )
+  export const codec = Codec.body<Event>(Codec.json(Context.create), {
+    InvoiceRaised: InvoiceRaised,
+    PaymentReceived: Payment,
+    InvoiceFinalized: null,
+  })
 }
 
 export namespace Fold {
@@ -165,7 +163,7 @@ namespace Query {
       case "Finalized":
         return {
           amount: state.state.amount,
-          payer_id: PayerId.toString(state.state.payer_id),
+          payer_id: PayerId.encode(state.state.payer_id),
           finalized: state.type === "Finalized",
         }
     }

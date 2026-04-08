@@ -14,7 +14,7 @@ const invoiceService = Invoice.Service.create(config)
 const app = express()
 app.use(express.json())
 
-app.get('/payers', async (req, res) => {
+app.get("/payers", async (_req, res) => {
   const payers = await payerReadModel.readAll()
   res.status(200).json(payers)
 })

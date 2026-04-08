@@ -9,18 +9,18 @@ import { Context } from "../context/context.js"
 
 export namespace Stream {
   export const category = "InvoiceAutoEmail"
-  export const streamId = StreamId.gen(InvoiceId.toString)
-  export const decodeId = StreamId.dec(InvoiceId.parse)
+  export const streamId = StreamId.gen(InvoiceId.encode)
+  export const decodeId = StreamId.dec(InvoiceId.decode)
   export const tryMatch = StreamName.tryMatch(category, decodeId)
 }
 
 export namespace Events {
   export const EmailSentSchema = z.object({
-    email: z.string().email(),
-    payer_id: z.string().uuid().transform(PayerId.parse),
+    email: z.email(),
+    payer_id: PayerId,
   })
   export const EmailFailureSchema = z.object({
-    payer_id: z.string().uuid().transform(PayerId.parse),
+    payer_id: PayerId,
     reason: z.string(),
   })
 
@@ -30,13 +30,10 @@ export namespace Events {
   export type Event =
     | { type: "EmailSent"; data: EmailSent }
     | { type: "EmailSendingFailed"; data: EmailFailure }
-  export const codec = Codec.upcast<Event, Context>(
-    Codec.json(Context.map),
-    Codec.Upcast.body({
-      EmailSent: EmailSentSchema.parse,
-      EmailSendingFailed: EmailFailureSchema.parse,
-    }),
-  )
+  export const codec = Codec.body<Event, string, Context>(Codec.json(Context.map), {
+    EmailSent: EmailSentSchema,
+    EmailSendingFailed: EmailFailureSchema,
+  })
 }
 
 export namespace Fold {

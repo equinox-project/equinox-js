@@ -1,7 +1,19 @@
-import { Uuid } from "@equinox-js/core"
+import { randomUUID } from "crypto"
+import { z } from "zod"
 
-export type PayerId = Uuid.Uuid<"PayerId">
-export const PayerId = Uuid.create<"PayerId">()
+type BrandedUUID<T extends PropertyKey> = z.ZodUUID & {
+  _zod: { output: string & z.core.$brand<T> }
+} & { create: () => string & z.core.$brand<T> }
 
-export type InvoiceId = Uuid.Uuid<"InvoiceId">
-export const InvoiceId = Uuid.create<"InvoiceId">()
+function make<T extends PropertyKey>(): BrandedUUID<T> {
+  const uuid = z.uuid().brand<T>()
+  return Object.assign(uuid, {
+    create: () => uuid.parse(randomUUID()),
+  }) as BrandedUUID<T>
+}
+
+export const PayerId = make<"PayerId">()
+export type PayerId = z.infer<typeof PayerId>
+
+export const InvoiceId = make<"InvoiceId">()
+export type InvoiceId = z.infer<typeof InvoiceId>
