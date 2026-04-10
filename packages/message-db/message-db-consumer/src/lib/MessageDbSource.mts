@@ -105,8 +105,12 @@ export class MessageDbSource {
   static create(options: Options & { pool: Pool }) {
     const client = new MessageDbCategoryReader(options.pool)
     const sink = options.sink
+    let groupName = options.groupName
+    if (options.consumerGroupMember != null) {
+      groupName = `${groupName}-${options.consumerGroupMember}`
+    }
     sink.addTracingAttrs({
-      "eqx.consumer_group": options.groupName,
+      "eqx.consumer_group": groupName,
       "eqx.tail_sleep_interval_ms": options.tailSleepIntervalMs,
       "eqx.source": "MessageDb",
       [Tags.batch_size]: options.batchSize ?? defaultBatchSize,
@@ -118,7 +122,7 @@ export class MessageDbSource {
       options.statsIntervalMs,
       options.tailSleepIntervalMs,
       options.checkpointIntervalMs ?? 5000,
-      options.groupName,
+      groupName,
       options.consumerGroupMember,
       options.consumerGroupSize,
       options.checkpoints,
