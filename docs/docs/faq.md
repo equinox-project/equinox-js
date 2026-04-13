@@ -23,7 +23,7 @@ and replay semantics, this style tends to age well.
 ## Who is it not for?
 
 EquinoxJS is probably not a good fit if your aim is to hide the shape of event
-sourcing from you rather than learn and apply it directly.
+sourcing rather than learn and apply it directly.
 
 - If you want an end-to-end framework with built-in command handlers, transports, and workflow abstractions, choose one.
 - If your problem is better modeled as CRUD plus history, event sourcing will add complexity without much payoff.
