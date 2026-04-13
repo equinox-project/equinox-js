@@ -24,8 +24,8 @@ const FeatureList = [
     description: (
       <>
         Performance characteristics stay visible at the category boundary. EquinoxJS lets you tune
-        loading and caching behavior explicitly instead of flattening everything into a generic
-        store abstraction.
+        loading and caching behavior explicitly instead of flattening everything into a
+        lowest-common-denominator generic store abstraction.
       </>
     ),
   },
@@ -34,8 +34,8 @@ const FeatureList = [
     description: (
       <>
         Ordering, idempotency, checkpointing and read lag stay explicit in the model. That makes
-        production tradeoffs visible early instead of showing up later as framework-shaped
-        surprises.
+        production tradeoffs visible early and keeps the concrete things you inspect when debugging
+        close at hand instead of buried in framework internals.
       </>
     ),
   },
@@ -53,7 +53,8 @@ const FeatureList = [
     description: (
       <>
         Reactions and projection helpers cover the common read-model and process-manager patterns
-        without locking you into one shape.
+        without locking you into one shape, so the same model can handle both the trivial cases and
+        the awkward parts of a real domain.
       </>
     ),
   },

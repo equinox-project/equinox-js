@@ -17,14 +17,14 @@ models, reactions and access strategies can still be tuned explicitly.
 If your default instinct is "we already run Postgres", this is the page to look
 at first. MessageDB gives EquinoxJS a straightforward PostgreSQL deployment
 story without pretending a generic events table and a stream store are the same
-thing.
+thing, or asking your application team to design and maintain the gap.
 
 Use MessageDB when you want:
 
 - PostgreSQL as the operational substrate
 - category-based consumers and checkpoints
 - store-supported inline projections when needed
-- a mature stream-store model rather than a generic event table
+- a mature stream-store model rather than owning a generic events table yourself
 
 The companion docs cover both [reactions](/docs/reactions) and
 [inline projections](/docs/message-db/inline-projections),
