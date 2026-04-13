@@ -22,13 +22,13 @@ and replay semantics, this style tends to age well.
 
 ## Who is it not for?
 
-EquinoxJS is probably not a good fit if you want the library to hide the shape
-of event sourcing from you.
+EquinoxJS is probably not a good fit if your aim is to hide the shape of event
+sourcing from you rather than learn and apply it directly.
 
 - If you want an end-to-end framework with built-in command handlers, transports, and workflow abstractions, choose one.
 - If your problem is better modeled as CRUD plus history, event sourcing will add complexity without much payoff.
 - If you need cross-stream coordination to feel like a single ambient transaction, EquinoxJS will feel too explicit.
-- If your team does not want to think about replay, checkpointing, ordering and idempotency, the model will feel heavier than it should.
+- If your team does not want to think about replay, checkpointing, ordering and idempotency yet, or feels those concerns would scare newcomers, the model will feel too explicit.
 
 ## What deployment paths are documented?
 
@@ -52,7 +52,8 @@ No. That is deliberate.
 
 EquinoxJS gives you the domain and store primitives needed to build a service,
 projector or process manager without prescribing transport, hosting or handler
-shape.
+shape. It is also not intended to accrete framework-style features every time a
+new use case appears.
 
 ## Why name it Equinox?
 

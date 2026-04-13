@@ -15,7 +15,9 @@ designing your reactions.
 
 This is one of the core constraints of event sourcing and it is better to make
 it explicit up front. If a reaction depends on cross-stream ordering, the
-reaction needs an explicit ordering mechanism rather than wishful thinking.
+reaction needs an explicit ordering mechanism or protocol rather than wishful
+thinking. A global total order is not automatically better than modelling the
+specific linkage a workflow actually needs.
 
 In the rare case you absolutely need ordering across streams we recommend
 creating a third stream whose purpose is to provide a repeatably read order.

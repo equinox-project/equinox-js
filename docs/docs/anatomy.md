@@ -13,7 +13,7 @@ keep the domain model explicit and testable.
 
 This is the default EquinoxJS boundary: domain logic stays close to the stream,
 while transports such as HTTP handlers, jobs or message consumers depend on a
-small service surface.
+minimal service interface.
 
 - **Stream**: shows which category the service writes to and how the identity
   of the stream is composed (and the reverse operations for when running Reaction logic)
@@ -36,7 +36,7 @@ This is one of the main reasons the pattern scales well: you keep the domain
 logic decomposed without leaking storage and stream details across the codebase.
 
 If you prefer command handlers, you can still derive them trivially from the
-service methods. EquinoxJS keeps the more reusable boundary as the default.
+service methods. EquinoxJS keeps the more generalizable boundary as the default.
 
 :::
 
