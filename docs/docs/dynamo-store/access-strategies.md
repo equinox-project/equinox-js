@@ -5,8 +5,9 @@ algorithms. For most systems, `Unoptimized` is a safe default; you can always
 switch later.
 
 This is one of the main places where EquinoxJS exposes performance choices
-directly. Different stream shapes want different loading strategies, and the
-library prefers making that visible over hiding it behind a one-size-fits-all
+directly. Different stream shapes warrant different loading strategies, but
+that does not mean you spend your days overfitting every aggregate. It means
+the seam is visible when you need it instead of hidden behind a one-size-fits-all
 store API.
 
 # Unoptimized

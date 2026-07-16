@@ -13,7 +13,7 @@ and 10 could look like this:
 
 EquinoxJS uses the decider as the core domain primitive, but deliberately keeps
 the programming model a little looser than some command-centric presentations of
-event sourcing. The library does not require a single command union or a single
+event sourcing, and thus does not dictate a single command union or a single
 handler API shape.
 
 ```ts
@@ -92,7 +92,7 @@ function would allocate a totally new Array! By using `fold` instead we can
 benefit from local mutability.
 
 ```ts
-function fold(state: State, events: Event[]) {
+function fold(state: State, events: Event[]): State {
   const newState = new Set(state)
   for (const event of events) {
     switch (event.type) {

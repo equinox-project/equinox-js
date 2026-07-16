@@ -26,7 +26,7 @@ model and a reaction.
 ## What It Demonstrates
 
 - A straightforward service-oriented EquinoxJS application
-- A category-driven reaction that performs side effects
+- A category-driven reaction that handles side effects
 - A PostgreSQL read model alongside the write model
 - Correlation and causation metadata flowing through the system
 - The smaller end of the same model that also scales to the hotel workflow example

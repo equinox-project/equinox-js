@@ -58,6 +58,10 @@ The key point is that DynamoStore is not a generic adapter layer. It is an event
 store design tuned specifically for DynamoDB so EquinoxJS can preserve explicit
 stream semantics in a serverless environment.
 
+That tuning stays at the store and category boundary. It does not leak into
+domain code or force you to turn services upside down if you later choose a
+different store.
+
 ## Table schema
 
 | Key         | Type                                | Description                                                    |

@@ -14,8 +14,9 @@ projections.
 Reactions are the primitive abstraction here. Projections and process managers
 are both special cases built on top of the same underlying shape:
 
-- A projection reacts to events in order to build a read model
-- A process manager reacts to events in order to coordinate more work
+- A projection reacts to events in order to maintain a read model
+- A process manager reacts to events in order to drive downstream work such as
+  integrations, notifications or follow-up commands
 
 See also:
 
@@ -60,7 +61,7 @@ export class MessageNotifier {
 
 Note the use of `decider.transactAsync` here. In most cases we want to use
 `transact` in its simplest form but in this case doing that would be very
-inefficent. Instead we let the notifier decide for itself whether the
+inefficient. Instead we let the notifier decide for itself whether the
 notification should be sent based on its own current state. This means we'll
 only attempt to send notifications when we haven't already tried before.
 
