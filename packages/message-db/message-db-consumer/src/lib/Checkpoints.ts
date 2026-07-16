@@ -28,7 +28,7 @@ export class PgCheckpoints implements ICheckpoints {
        on conflict do nothing;`,
       [groupName, category, pos.toString()],
     )
-    return 0n
+    return pos
   }
 
   async commit(groupName: string, category: string, position: bigint): Promise<void> {
